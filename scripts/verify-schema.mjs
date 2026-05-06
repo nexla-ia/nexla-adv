@@ -7,11 +7,13 @@ const NEW_DB_URL = process.env.NEW_DB_URL
 if (!NEW_DB_URL) { console.error('Faltando NEW_DB_URL'); process.exit(1) }
 
 const EXPECTED_TABLES = [
-  '__migrations', 'agendas', 'alerts', 'appointments', 'attendances',
-  'clientes', 'companies', 'contacts', 'conversations', 'insurance_plans',
-  'invoices', 'kanban_cards', 'kanban_columns', 'mensagens_geral',
+  '__migrations', 'agendas', 'ai_guardrails_events', 'alerts', 'appointments',
+  'attendances', 'cases', 'clientes', 'companies', 'contacts', 'conversations',
+  'fee_models', 'forensic_calendar', 'insurance_plans', 'invoices',
+  'kanban_cards', 'kanban_columns', 'mensagens_geral', 'practice_areas',
   'procedure_prices', 'procedures', 'professionals', 'saved_contacts',
-  'sector_members', 'sectors', 'support_messages', 'support_tickets', 'users',
+  'sector_members', 'sectors', 'support_messages', 'support_tickets',
+  'user_practice_areas', 'users',
 ]
 
 const EXPECTED_FUNCTIONS = [
