@@ -1,16 +1,22 @@
 # Product Marketing Context
 
-*Last updated: 2026-05-06 · V1 auto-rascunhado para área jurídica (deriva do MedicinaMKT)*
+*Last updated: 2026-05-06 · V2 — pivô para área jurídica confirmado*
 
-> **Pivô em curso:** Este repositório (`nexla-adv`) era a base MedicinaMKT (saúde). Agora foi recortado para o público jurídico. O core de centralização de mensagens, IA 24/7, agenda, multi-tenant e métricas permanece. Funcionalidades atreladas a saúde (convênios, procedimentos médicos, ficha clínica/prontuário, validação procedimento×convênio) saem ou são reformuladas para o vocabulário jurídico.
+> **Pivô em curso:** Este repositório (`nexla-adv`) era a base MedicinaMKT (saúde). Agora é o produto **jurídico** da Nexla, **generalista** (atende todas as áreas: cível, trabalhista, criminal, família, empresarial, tributário, previdenciário, consumidor). O core de centralização de mensagens, IA 24/7, agenda, multi-tenant e métricas permanece. Funcionalidades atreladas a saúde (convênios, procedimentos médicos, ficha clínica/prontuário, validação procedimento×convênio) saem ou são reformuladas para o vocabulário jurídico. **Banco novo do zero** (sem migrar dados da base saúde).
 
 ## Product Overview
 **One-liner:** A central de atendimento, agenda e gestão que seu escritório de advocacia precisa.
 **What it does:** Unifica WhatsApp, Instagram e Digisac numa caixa única, atende clientes com IA 24/7, agenda audiências, reuniões e consultas com validação automática de conflitos, e mostra cada real que entra. Tudo num painel só, sem precisar planilha paralela.
-**Product category:** Plataforma de atendimento e gestão para escritórios de advocacia (vertical legal).
+**Product category:** Plataforma de atendimento e gestão para escritórios de advocacia (vertical legal, generalista).
 **Product type:** SaaS multi-tenant.
-**Business model:** Assinatura mensal por escritório, 3 planos (Starter / Pro / Business sob medida). Sem cobrança por mensagem. Cancela quando quiser. **[CONFIRMAR — manter R$297 / R$597 ou recalibrar para o setor jurídico, onde ticket médio costuma ser maior?]**
-**Brand wordmark:** **[CONFIRMAR — sugestão "AdvogadosMKT" (paralelo a MedicinaMKT) ou "Nexla Adv"]** — tagline a definir (ex.: "Advocacia que não perde cliente no WhatsApp").
+**Business model:** Assinatura mensal por escritório, 3 planos (Starter / Pro / Business sob medida). Sem cobrança por mensagem. Cancela quando quiser. **Valores definidos no plano comercial — não exibir preço fixo na landing nem em copy público até decisão de pricing.**
+**Brand wordmark:** **Nexla Adv** (provisório — produto da Nexla, nome final será definido depois).
+**Tagline candidates** (escolher 1 — todas mantêm o paralelo "negócio + ética" do MedicinaMKT, em tom sóbrio compatível com o Provimento 205 da OAB):
+1. *"Ética e eficiência não brigam."*
+2. *"Atenda como advogado. Escale como empresa."*
+3. *"A advocacia merece um atendimento à altura."*
+4. *"Seu escritório no WhatsApp, com a sobriedade da banca."*
+5. *"Operação digital pra advocacia que não abre mão da ética."*
 
 ## Target Audience
 **Target companies:** Escritórios de advocacia (do advogado solo até bancas com 50+ profissionais), com volume relevante de atendimento via WhatsApp e que dependem de secretária/recepção pra triar contatos e agendar consultas. Inclui escritórios com filiais/correspondentes regionais.
@@ -62,7 +68,7 @@
 
 **How we do it differently:** Nasce centrado no atendimento e captação (WhatsApp+IA primeiro), agenda e ficha vieram depois. Concorrentes nasceram como gestão de processo/peticionamento e empurraram WhatsApp como afterthought.
 **Why that's better:** Onde o cliente realmente entra (WhatsApp) é onde a plataforma funciona melhor. Captação é o gargalo de quase todo escritório, não a gestão de processo (que já tem ProJuris/Astrea).
-**Why customers choose us:** Substitui parcialmente secretária CLT por **[CONFIRMAR preço]**/mês, retornando o investimento em 30 dias com 1 caso fechado.
+**Why customers choose us:** Substitui parcialmente secretária CLT (~R$3.500/mês) por uma fração do custo, retornando o investimento em 30 dias com 1 caso fechado. *(valor exato definido no plano comercial)*
 
 ## Objections
 | Objection | Response |
@@ -118,7 +124,7 @@
 **Value themes:**
 | Theme | Proof |
 |-------|-------|
-| Substitui secretária CLT | **[CONFIRMAR preço]** vs R$3.500/mês = ROI em <1 mês com 1 caso fechado |
+| Substitui secretária CLT | Fração do custo de uma CLT (R$3.500/mês) — ROI em <1 mês com 1 caso fechado |
 | IA não-besta e em conformidade com OAB | Atende 24/7, fecha agendamento, nunca dá parecer jurídico — tudo auditável |
 | Tudo num lugar | WhatsApp + Instagram + agenda + ficha + financeiro + métricas |
 
@@ -129,19 +135,149 @@
 
 ---
 
-## Pendências para você confirmar/preencher
+## Escopo do produto jurídico — rascunho de features
 
-### Críticas (bloqueiam landing/copy oficial)
-1. **Brand wordmark** — "AdvogadosMKT", "Nexla Adv", "JurisMKT", outro?
-2. **Tagline oficial** — equivalente jurídico de "Lucro e ética andam juntos"
-3. **Pricing dos 3 planos** — manter R$297/R$597 ou recalibrar pra ticket jurídico?
-4. **Validação OAB / Provimento 205** — copy precisa passar por advogado consultivo antes de ir ao ar (regras de publicidade são apertadas; usar termo "captação" pode ser problema)
-5. **Escopo de features que saem** — confirmar lista (convênio, procedimento médico, prontuário, ficha clínica → o quê fica, o quê some, o quê é renomeado)
+Premissa do recorte: a plataforma **continua sendo de centralização de atendimento + agenda + gestão leve**. Não vira software de gestão jurídica (não compete com ProJuris/Astrea no peticionamento, prazo processual sério, integração com PJe/e-SAJ etc.). Foco é o "front-office" do escritório.
 
-### Conteúdo (preencher quando tiver)
-6. **Escritórios reais no piloto** — substituir mocks (Saúde Total, Novolar, Pet Shop) por escritórios jurídicos
-7. **Testimonials reais** — 1-3 frases de sócios piloto
-8. **Métricas atuais** — quantos escritórios pagantes, MRR, distribuição por plano
-9. **Meta de negócio** — qual número você está perseguindo nos próximos 6 meses?
-10. **Stats da landing (3.2x, 68%, etc)** — re-medir no piloto jurídico ou pegar mais leve no copy
-11. **Foco de área de atuação** — generalista (qualquer advogado) ou nicho (cível/trabalhista/criminal/família/empresarial)?
+### A. Fica como está (sem mudança funcional, só verificar copy)
+- Caixa unificada WhatsApp/Instagram/Digisac
+- IA de atendimento 24/7 (com guardrails novos — ver seção D)
+- Recepção / Meu Setor / Tickets / Kanban de conversas
+- Multi-tenant (super-admin Nexla, espião, instâncias)
+- Alertas (paciente em espera → cliente em espera)
+- Métricas (6 abas — adaptar nomenclatura)
+- Tutorial / Suporte / Notícias internas
+- Billing / Limites de plano / Bloqueio de conta
+- Segurança da conta (2FA, sessões, senha)
+- Landing pública
+
+### B. Sai (saúde-específico — remover do banco e da UI)
+- Tabela de **convênios** (Unimed, Bradesco Saúde etc.) — não há equivalente direto em advocacia
+- **Procedimentos médicos** com cálculo procedimento × convênio
+- **Prontuário básico / ficha clínica** com campos médicos (medicação, alergias, diagnóstico, exames)
+- **Catálogo de procedimentos** no formato atual (substituído por "Tabela de serviços jurídicos" — ver C)
+- Página `CompanyPatientDetail` no formato saúde (vira `CompanyClientDetail`)
+- Mocks de empresas (Saúde Total, Pet Shop) — substituídos por escritórios reais
+
+### C. Renomeia / reformula (mesma mecânica, vocabulário jurídico)
+| MedicinaMKT (antes) | Nexla Adv (depois) |
+|---|---|
+| Paciente | Cliente (com distinção PF/PJ) |
+| Consulta | Atendimento (1ª consulta, reunião, audiência) |
+| Procedimento | Serviço jurídico |
+| Convênio | Forma de honorário (avulso, fixo mensal, êxito, partido) |
+| Ficha do paciente | Ficha do cliente |
+| Prontuário | Histórico de atendimentos (sem dado clínico) |
+| CRM / especialidade médica | OAB / área de atuação |
+| Tabela de procedimentos × convênios | Tabela de serviços × forma de honorário |
+| Catálogo (CompanyCatalog) | Catálogo de serviços jurídicos |
+| Métricas: "procedimento mais vendido" | Métricas: "área que mais retornou" |
+
+### D. Entra novo (advocacia-específico)
+Priorizado — **P1** = MVP, **P2** = pós-MVP, **P3** = quando houver demanda.
+
+| Prioridade | Feature | Por quê |
+|---|---|---|
+| **P1** | **Áreas de atuação** como entidade (cível, trabalhista, criminal, família, empresarial, tributário, previdenciário, consumidor, outros) — vinculadas ao advogado e ao caso/cliente | Triagem da IA, distribuição automática, métricas por área |
+| **P1** | **Tabela de serviços jurídicos** — primeira consulta, parecer, contrato, peticionamento, audiência, contrato de êxito, consultoria | Substitui catálogo médico, alimenta cálculo de honorário na agenda |
+| **P1** | **Ficha do cliente PF/PJ** — toggle no cadastro: PF (CPF, RG, profissão) vs PJ (CNPJ, razão social, representante legal) | Escritório atende ambos; saúde só PF |
+| **P1** | **Status do caso** no Kanban — Lead frio · Lead quente · Em proposta · Contrato assinado · Em andamento · Encerrado · Perdido | Substitui "agendado/atendido" do MedicinaMKT |
+| **P1** | **Distribuição por área pela IA** — IA identifica área na conversa ("quero processar empregador" → trabalhista) e roteia pro advogado certo | Equivale a "IA identificar urgência médica"; aqui é roteamento por especialidade |
+| **P1** | **Guardrails da IA conformes OAB** — bloquear: emitir parecer jurídico, prometer resultado, citar artigos como conselho, captar ativamente. Permitir: confirmar dados, marcar atendimento, repassar tabela de honorários, encaminhar humano | Provimento 205 / Código de Ética da OAB |
+| **P1** | **Calendário forense embutido na agenda** — feriados forenses, recesso (20/12 a 20/01), suspensão de prazos | Evitar marcar audiência em dia sem expediente forense |
+| **P2** | **Tipos de evento na agenda** — 1ª consulta · reunião com cliente · audiência (com vara/juízo/processo) · prazo administrativo | Hoje é só "consulta" — agenda jurídica é mais rica |
+| **P2** | **Modelo de proposta de honorários** — IA monta proposta por mensagem com base na tabela; cliente aceita pelo WhatsApp | Substitui "envio de orçamento de procedimento" |
+| **P2** | **Documentos do cliente** — upload leve (procuração, RG, contrato de honorários assinado) na ficha | Não vira gestão documental, mas precisa do mínimo |
+| **P3** | **Alerta simples de prazo** — sócio anota prazo manualmente, plataforma avisa X dias antes | Não substitui controle de prazo do ProJuris; é um "nudge" leve |
+| **P3** | **Consulta CNJ/Datajud** — cole o número do processo, plataforma busca dados públicos básicos | Útil pra ficha do caso; opcional |
+| **P3** | **Geração de contrato de honorários (PDF)** com dados da ficha | Reduz fricção; assinatura digital fica pra parceiro |
+
+### E. Métricas — adaptação das 6 abas
+| Aba | MedicinaMKT | Nexla Adv |
+|---|---|---|
+| Visão geral | Faturamento, agendamentos, IA atende | Honorários recebidos, atendimentos agendados, IA atende |
+| Atendimento | Tempo médio resposta, % IA, % humano | (igual) |
+| Equipe | Secretária mais produtiva, médico mais agendado | Recepcionista mais produtiva, sócio que mais recebeu casos |
+| Agenda | Ocupação por médico, cancelamentos | Ocupação por sócio, audiências marcadas, cancelamentos |
+| Financeiro | Faturamento por procedimento × convênio | Honorários por área de atuação × forma de honorário |
+| Leads | Origem do paciente, conversão | Origem do cliente, conversão por área |
+
+---
+
+## Schema sugerido — banco novo (Supabase)
+
+Modelo enxuto pra MVP P1. Multi-tenant via `company_id` em quase tudo (mantém padrão atual). Marcado como **NEW** o que não existe no schema MedicinaMKT, **KEEP** o que vem igual, **RENAME** o que muda nome/colunas.
+
+```
+companies                          KEEP  (escritórios — antes "clínicas")
+  id, name, plan, status, created_at, ...
+
+users                              KEEP  (advogados/secretárias — adicionar campo OAB)
+  id, company_id, name, email, role (admin/operator/viewer), oab_number NEW, ...
+
+practice_areas                     NEW   (cível, trabalhista, criminal, ...)
+  id, name, slug, color
+
+user_practice_areas                NEW   (advogado X área — N:N)
+  user_id, practice_area_id
+
+clients                            RENAME  (era "patients")
+  id, company_id, type ('PF'|'PJ') NEW, name, document (CPF|CNPJ),
+  phone, email, status, source NEW (Google/Instagram/indicação/outro),
+  primary_practice_area_id NEW, notes, created_at
+
+client_documents                   NEW
+  id, client_id, kind (procuração/RG/contrato/...), file_url, uploaded_at
+
+cases                              NEW   (caso/processo de um cliente)
+  id, client_id, practice_area_id, lead_assigned_user_id,
+  status (lead_frio/lead_quente/proposta/contrato/em_andamento/encerrado/perdido),
+  case_number NEW (CNJ — opcional), title, description,
+  created_at, closed_at
+
+services                           RENAME  (era "procedures" — agora "serviços jurídicos")
+  id, company_id, name, default_fee_type (avulso/fixo/êxito/partido),
+  base_value, practice_area_id NEW
+
+fee_models                         NEW   (substitui "convênios")
+  id, company_id, kind (avulso/fixo_mensal/exito/partido),
+  description, default_percent (pra êxito)
+
+case_fees                          NEW   (honorários combinados em um caso)
+  id, case_id, service_id, fee_model_id, value, status
+
+appointments                       KEEP+EXTEND  (renomear se preferir "events")
+  id, company_id, client_id, case_id NEW, user_id (advogado),
+  type NEW (primeira_consulta/reuniao/audiencia/prazo),
+  court NEW (vara/juízo — só pra audiência), process_number NEW,
+  starts_at, ends_at, status
+
+forensic_calendar                  NEW   (feriados/recessos forenses pré-carregados)
+  id, date, label, applies_to (federal/estadual/municipal)
+
+conversations / messages / instances / tickets    KEEP  (centralização — sem mudança)
+
+ai_guardrails_events               NEW   (log de quando IA bloqueou ação contra OAB)
+  id, company_id, conversation_id, blocked_action, reason, at
+```
+
+> Observação: pode-se manter as tabelas core de mensagens/IA (`conversations`, `messages`, `instances`, `tickets`) idênticas ao MedicinaMKT — elas são genéricas. O ganho do banco novo é começar limpo, sem `procedures` médicos, `convenios` etc.
+
+---
+
+## Pendências (o que falta confirmar/preencher)
+
+### Para fechar V2 do contexto
+- [ ] **Tagline definitiva** — escolher 1 das 5 opções acima (ou pedir variações)
+- [ ] **Validação OAB / Provimento 205** — copy passar por advogado consultivo antes de subir landing (palavras como "captação" são sensíveis)
+
+### Para fechar escopo de features
+- [ ] Confirmar lista P1/P2/P3 acima — tirar/adicionar features
+- [ ] Confirmar entidades do schema novo (clients, cases, practice_areas, services, fee_models)
+
+### Conteúdo (pode preencher depois)
+- [ ] **Escritórios piloto** — substituir mocks (Saúde Total, Novolar, Pet Shop) por escritórios jurídicos reais
+- [ ] **Testimonials reais** — 1-3 frases de sócios piloto
+- [ ] **Métricas atuais** — quantos escritórios pagantes, MRR, distribuição por plano
+- [ ] **Meta de negócio** — número-alvo nos próximos 6 meses
+- [ ] **Stats da landing (3.2x, 68%, etc)** — re-medir no piloto jurídico ou suavizar copy
