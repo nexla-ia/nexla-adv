@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -153,14 +153,14 @@ export default function CompanyContacts() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: 4 }}>
-            Pacientes
+            Clientes
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            {loading ? 'Carregando...' : `${patients.length} paciente${patients.length === 1 ? '' : 's'} cadastrado${patients.length === 1 ? '' : 's'}`}
+            {loading ? 'Carregando...' : `${patients.length} cliente${patients.length === 1 ? '' : 's'} cadastrado${patients.length === 1 ? '' : 's'}`}
           </div>
         </div>
         <button className="nx-btn-primary" onClick={openNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Plus size={14} /> Novo paciente
+          <Plus size={14} /> Novo cliente
         </button>
       </div>
 
@@ -178,7 +178,7 @@ export default function CompanyContacts() {
         <div className="nx-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <Users size={28} style={{ opacity: 0.2 }} />
           <div style={{ fontSize: 14 }}>
-            {search ? 'Nenhum paciente encontrado.' : 'Nenhum paciente cadastrado. Cadastre o primeiro ou use o botão direito numa conversa para salvar rápido.'}
+            {search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado. Cadastre o primeiro ou use o botão direito numa conversa para salvar rápido.'}
           </div>
         </div>
       )}
@@ -188,7 +188,7 @@ export default function CompanyContacts() {
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
-                <th>Paciente</th>
+                <th>Cliente</th>
                 <th>Contato</th>
                 <th>Convênio</th>
                 <th>Notas</th>
@@ -295,15 +295,15 @@ export default function CompanyContacts() {
       <ConfirmModal
         open={!!confirmDelete}
         variant="delete"
-        title="Excluir paciente"
-        message={`Tem certeza que deseja excluir o paciente "${confirmDelete?.nome || ''}"? Essa ação não pode ser desfeita.`}
-        confirmLabel="Excluir paciente"
+        title="Excluir cliente"
+        message={`Tem certeza que deseja excluir o cliente "${confirmDelete?.nome || ''}"? Essa ação não pode ser desfeita.`}
+        confirmLabel="Excluir cliente"
         loading={deletingNow}
         onConfirm={confirmDeleteAction}
         onCancel={() => setConfirmDelete(null)}
       />
 
-      {/* Modal "Novo paciente" — só nome + telefone, depois redireciona pra ficha */}
+      {/* Modal "Novo cliente" — só nome + telefone, depois redireciona pra ficha */}
       {newModal && createPortal(
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)',
@@ -313,7 +313,7 @@ export default function CompanyContacts() {
           <div className="nx-card" style={{ width: '100%', maxWidth: 460 }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>Novo paciente</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>Novo cliente</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Cadastre o básico — depois você completa a ficha.</div>
               </div>
               <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => setNewModal(null)}>
@@ -344,7 +344,7 @@ export default function CompanyContacts() {
                     maxHeight: 220, overflowY: 'auto',
                   }}>
                     <div style={{ padding: '6px 10px 4px', fontSize: 10, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Sparkles size={10} /> Já conversou com a clínica
+                      <Sparkles size={10} /> Já conversou com o escritório
                     </div>
                     {phoneSuggestions.map(p => (
                       <button key={p}

@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
-  Building2, Users, Stethoscope, ClipboardList, ShieldCheck, Calendar,
+  Building2, Users, Scale, ClipboardList, ShieldCheck, Calendar,
   CircleDollarSign, RefreshCw, TrendingUp, Award, Crown, Cake, Activity,
   ArrowUpRight, Search, Phone, MessageSquare, AlertTriangle, Kanban,
 } from 'lucide-react'
@@ -43,7 +43,7 @@ export default function AdmOperacao() {
   const [tab, setTab] = useState('overview')
   const [search, setSearch] = useState('')
 
-  const [pacientes, setPacientes]   = useState([])
+  const [clientes, setClientes]   = useState([])
   const [pros, setPros]             = useState([])
   const [procs, setProcs]           = useState([])
   const [planos, setPlanos]         = useState([])
@@ -72,7 +72,7 @@ export default function AdmOperacao() {
       supabase.from('alerts').select('id, instancia, resolved, created_at').eq('instancia', company.instance),
       supabase.from('mensagens_geral').select('id, type, created_at').eq('instancia', company.instance).gte('created_at', thirty).limit(20000),
     ])
-    setPacientes(pat.data || [])
+    setClientes(pat.data || [])
     setPros(pr.data || [])
     setProcs(prc.data || [])
     setPlanos(pl.data || [])
@@ -96,7 +96,7 @@ export default function AdmOperacao() {
       const d = new Date(a.starts_at)
       return d >= today && d < tomorrow
     }).length
-    const aniversariantes = pacientes.filter(p => {
+    const aniversariantes = clientes.filter(p => {
       if (!p.birthdate) return false
       const b = new Date(p.birthdate)
       const cur = new Date()
@@ -106,7 +106,7 @@ export default function AdmOperacao() {
       return diff <= 7
     }).length
     return { revenue, noshow, noshowPct, apptsHoje, aniversariantes }
-  }, [appts, pacientes])
+  }, [appts, clientes])
 
   // Top profissionais por agendamento e receita
   const topPros = useMemo(() => {
@@ -136,14 +136,14 @@ export default function AdmOperacao() {
   }, [procs, appts])
 
   const filteredPats = useMemo(() => {
-    if (!search.trim()) return pacientes
+    if (!search.trim()) return clientes
     const s = search.toLowerCase()
-    return pacientes.filter(p =>
+    return clientes.filter(p =>
       (p.nome || '').toLowerCase().includes(s) ||
       (p.numero || '').toLowerCase().includes(s) ||
       (p.cpf || '').toLowerCase().includes(s)
     )
-  }, [pacientes, search])
+  }, [clientes, search])
 
   const recentAppts = useMemo(() => {
     return [...appts].sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at)).slice(0, 12)
@@ -192,11 +192,11 @@ export default function AdmOperacao() {
       <div className="opx-kpi-grid">
         <div className="opx-kpi opx-kpi-blue">
           <Users size={18} />
-          <div className="opx-kpi-num">{fmtNumber(pacientes.length)}</div>
-          <div className="opx-kpi-lbl">Pacientes cadastrados</div>
+          <div className="opx-kpi-num">{fmtNumber(clientes.length)}</div>
+          <div className="opx-kpi-lbl">Clientes cadastrados</div>
         </div>
         <div className="opx-kpi opx-kpi-purple">
-          <Stethoscope size={18} />
+          <Scale size={18} />
           <div className="opx-kpi-num">{fmtNumber(pros.length)}</div>
           <div className="opx-kpi-lbl">Profissionais</div>
         </div>
@@ -274,7 +274,7 @@ export default function AdmOperacao() {
       <div className="opx-tabs">
         {[
           { k: 'overview',  l: 'Visão geral' },
-          { k: 'pacientes', l: `Pacientes (${pacientes.length})` },
+          { k: 'clientes', l: `Clientes (${clientes.length})` },
           { k: 'pros',      l: `Profissionais (${pros.length})` },
           { k: 'procs',     l: `Procedimentos (${procs.length})` },
           { k: 'planos',    l: `Convênios (${planos.length})` },
@@ -304,7 +304,7 @@ export default function AdmOperacao() {
                   </div>
                   <div className="opx-rank-stats">
                     <div className="opx-rank-money">{fmtMoney(p.revenue)}</div>
-                    <div className="opx-rank-count">{p.completed} consultas</div>
+                    <div className="opx-rank-count">{p.completed} reuniãos</div>
                   </div>
                 </div>
               ))}
@@ -342,7 +342,7 @@ export default function AdmOperacao() {
               <thead>
                 <tr>
                   <th>Quando</th>
-                  <th>Paciente</th>
+                  <th>Cliente</th>
                   <th>Profissional</th>
                   <th>Procedimento</th>
                   <th>Status</th>
@@ -374,15 +374,15 @@ export default function AdmOperacao() {
         </div>
       )}
 
-      {/* Tab: Pacientes */}
-      {tab === 'pacientes' && (
+      {/* Tab: Clientes */}
+      {tab === 'clientes' && (
         <div className="opx-card">
           <div className="opx-list-toolbar">
             <div className="opx-search-box">
               <Search size={13} />
               <input placeholder="Buscar por nome, número ou CPF..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <div className="opx-list-count">{filteredPats.length} de {pacientes.length}</div>
+            <div className="opx-list-count">{filteredPats.length} de {clientes.length}</div>
           </div>
           <table className="opx-table">
             <thead>
@@ -415,7 +415,7 @@ export default function AdmOperacao() {
                 )
               })}
               {!filteredPats.length && (
-                <tr><td colSpan={6} className="opx-table-empty">Nenhum paciente encontrado.</td></tr>
+                <tr><td colSpan={6} className="opx-table-empty">Nenhum cliente encontrado.</td></tr>
               )}
             </tbody>
           </table>
@@ -500,13 +500,13 @@ export default function AdmOperacao() {
               <tr>
                 <th>Convênio</th>
                 <th>Status</th>
-                <th>Pacientes vinculados</th>
+                <th>Clientes vinculados</th>
                 <th>Cadastrado em</th>
               </tr>
             </thead>
             <tbody>
               {planos.map(pl => {
-                const count = pacientes.filter(p => p.insurance_plan_id === pl.id).length
+                const count = clientes.filter(p => p.insurance_plan_id === pl.id).length
                 return (
                   <tr key={pl.id}>
                     <td style={{ fontWeight: 600 }}>{pl.name}</td>
@@ -529,7 +529,7 @@ export default function AdmOperacao() {
             <thead>
               <tr>
                 <th>Quando</th>
-                <th>Paciente</th>
+                <th>Cliente</th>
                 <th>Profissional</th>
                 <th>Procedimento</th>
                 <th>Status</th>

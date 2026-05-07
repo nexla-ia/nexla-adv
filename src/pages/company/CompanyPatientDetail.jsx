@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -178,7 +178,7 @@ export default function CompanyPatientDetail() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Carregando ficha...</div>
   if (!patient) return (
     <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>
-      <div>Paciente não encontrado.</div>
+      <div>Cliente não encontrado.</div>
       <button className="nx-btn-ghost" style={{ marginTop: 16 }} onClick={() => navigate('/painel/contatos')}>
         <ArrowLeft size={14} /> Voltar
       </button>
@@ -199,7 +199,7 @@ export default function CompanyPatientDetail() {
     <div className="pat-root">
       {/* Voltar */}
       <button className="pat-back" onClick={() => navigate('/painel/contatos')}>
-        <ArrowLeft size={14} /> Voltar para Pacientes
+        <ArrowLeft size={14} /> Voltar para Clientes
       </button>
 
       {/* Banner aniversário */}
@@ -263,7 +263,7 @@ export default function CompanyPatientDetail() {
         {[
           { key: 'resumo',    label: 'Resumo' },
           { key: 'cadastro',  label: 'Cadastro' },
-          { key: 'saude',     label: 'Saúde' },
+          { key: 'saude',     label: 'Jurídico' },
           { key: 'historico', label: `Histórico (${appointments.length})` },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`pat-tab ${tab === t.key ? 'active' : ''}`}>
@@ -280,7 +280,7 @@ export default function CompanyPatientDetail() {
               icon={<Calendar size={18} />}
               color="#2563EB"
               bg="#EFF6FF"
-              label="Próxima consulta"
+              label="Próxima reunião"
               value={futureAppts.length ? new Date(futureAppts[futureAppts.length - 1].starts_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}
               sub={futureAppts.length ? new Date(futureAppts[futureAppts.length - 1].starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Sem agendamento'}
             />
@@ -288,7 +288,7 @@ export default function CompanyPatientDetail() {
               icon={<CheckCircle2 size={18} />}
               color="#16A34A"
               bg="#F0FDF4"
-              label="Consultas realizadas"
+              label="Reuniãos realizadas"
               value={concluded}
               sub={`de ${appointments.length} agendamentos`}
             />
@@ -298,7 +298,7 @@ export default function CompanyPatientDetail() {
               bg="#F5F3FF"
               label="Total pago"
               value={`R$ ${totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`}
-              sub="histórico do paciente"
+              sub="histórico do cliente"
             />
             <KpiCard
               icon={<Clock size={18} />}
@@ -327,24 +327,24 @@ export default function CompanyPatientDetail() {
             </div>
 
             <div className="pat-section-card">
-              <SectionTitle icon={Heart} title="Resumo de saúde" />
+              <SectionTitle icon={Briefcase} title="Perfil jurídico" />
               {!patient.allergies && !patient.chronic_conditions && !patient.medications ? (
-                <p className="pat-empty">Sem informações de saúde cadastradas.</p>
+                <p className="pat-empty">Sem informações jurídicas cadastradas.</p>
               ) : (
                 <>
                   {patient.allergies && (
                     <div className="pat-health-tag pat-health-allergy">
-                      <AlertTriangle size={12} /> <strong>Alergias:</strong> {patient.allergies}
+                      <Briefcase size={12} /> <strong>Área de atuação:</strong> {patient.allergies}
                     </div>
                   )}
                   {patient.chronic_conditions && (
                     <div className="pat-health-tag pat-health-chronic">
-                      <Activity size={12} /> <strong>Crônicas:</strong> {patient.chronic_conditions}
+                      <Activity size={12} /> <strong>Tipo de processo:</strong> {patient.chronic_conditions}
                     </div>
                   )}
                   {patient.medications && (
                     <div className="pat-health-tag pat-health-meds">
-                      <Pill size={12} /> <strong>Medicamentos:</strong> {patient.medications}
+                      <FileText size={12} /> <strong>Honorário:</strong> {patient.medications}
                     </div>
                   )}
                 </>
@@ -386,44 +386,34 @@ export default function CompanyPatientDetail() {
           </div>
 
           <div className="pat-section-card">
-            <SectionTitle icon={Activity} title="Antropometria" />
+            <SectionTitle icon={Briefcase} title="Dados jurídicos" />
             <FieldGrid>
-              <Field label="Tipo sanguíneo" value={patient.blood_type || '—'} />
-              <Field label="Peso" value={patient.weight ? `${patient.weight} kg` : '—'} />
-              <Field label="Altura" value={patient.height ? `${patient.height} m` : '—'} />
-              {patient.weight && patient.height && (
-                <Field label="IMC" value={`${(patient.weight / (patient.height * patient.height)).toFixed(1)}`} />
-              )}
+              <Field label="Área de atuação" value={patient.allergies || '—'} />
+              <Field label="Tipo de processo" value={patient.chronic_conditions || '—'} />
+              <Field label="Tipo de honorário" value={patient.medications || '—'} />
             </FieldGrid>
           </div>
 
-          <div className="pat-section-card">
-            <SectionTitle icon={ShieldCheck} title="Convênio" />
-            <FieldGrid>
-              <Field label="Plano" value={plan?.name || 'Particular'} />
-              <Field label="Carteirinha" value={patient.insurance_card || '—'} mono />
-            </FieldGrid>
-          </div>
         </div>
       )}
 
       {tab === 'saude' && (
         <div className="pat-resumo">
           <div className="pat-section-card">
-            <SectionTitle icon={AlertTriangle} title="Alergias" />
-            <p className="pat-text-block">{patient.allergies || 'Sem alergias registradas.'}</p>
+            <SectionTitle icon={Briefcase} title="Área de atuação" />
+            <p className="pat-text-block">{patient.allergies || 'Sem área de atuação registrada.'}</p>
           </div>
           <div className="pat-section-card">
-            <SectionTitle icon={Activity} title="Condições crônicas" />
-            <p className="pat-text-block">{patient.chronic_conditions || 'Sem condições crônicas registradas.'}</p>
+            <SectionTitle icon={Activity} title="Tipo de processo" />
+            <p className="pat-text-block">{patient.chronic_conditions || 'Sem tipo de processo registrado.'}</p>
           </div>
           <div className="pat-section-card">
-            <SectionTitle icon={Pill} title="Medicamentos em uso" />
-            <p className="pat-text-block">{patient.medications || 'Sem medicamentos registrados.'}</p>
+            <SectionTitle icon={FileText} title="Tipo de honorário" />
+            <p className="pat-text-block">{patient.medications || 'Sem honorário registrado.'}</p>
           </div>
           <div className="pat-section-card">
-            <SectionTitle icon={FileText} title="Observações clínicas" />
-            <p className="pat-text-block">{patient.clinical_notes || 'Sem observações clínicas.'}</p>
+            <SectionTitle icon={FileText} title="Observações jurídicas" />
+            <p className="pat-text-block">{patient.clinical_notes || 'Sem observações jurídicas.'}</p>
           </div>
         </div>
       )}
@@ -433,10 +423,10 @@ export default function CompanyPatientDetail() {
           {appointments.length === 0 ? (
             <div className="pat-empty-card">
               <Calendar size={28} style={{ opacity: 0.2 }} />
-              <span>Nenhum agendamento ainda. Quando marcar uma consulta, aparece aqui.</span>
+              <span>Nenhum agendamento ainda. Quando marcar uma reunião, aparece aqui.</span>
               {patient.numero && (
                 <button className="pat-btn pat-btn-primary" onClick={() => navigate(`/painel/agenda?numero=${patient.numero}&nome=${encodeURIComponent(patient.nome)}`)}>
-                  <Plus size={13} /> Agendar primeira consulta
+                  <Plus size={13} /> Agendar primeira reunião
                 </button>
               )}
             </div>
@@ -448,7 +438,7 @@ export default function CompanyPatientDetail() {
                 icon={<Plus size={14} />}
                 color="#9CA3AF"
                 date={fmtDate(patient.created_at?.split('T')[0])}
-                title="Cadastrado na clínica"
+                title="Cadastrado no escritório"
                 subtitle={`Adicionado por ${patient.created_by_email || 'sistema'}`}
               />
               {appointments.map(a => {
@@ -489,9 +479,9 @@ export default function CompanyPatientDetail() {
       <ConfirmModal
         open={confirmDelete}
         variant="delete"
-        title="Excluir paciente"
+        title="Excluir cliente"
         message={`Tem certeza que deseja excluir "${patient.nome}"? Todos os dados e histórico cadastrados serão removidos. Essa ação não pode ser desfeita.`}
-        confirmLabel="Excluir paciente"
+        confirmLabel="Excluir cliente"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
@@ -562,8 +552,8 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
       <div className="pat-modal">
         <div className="pat-modal-head">
           <div>
-            <div className="pat-modal-title">Editar ficha do paciente</div>
-            <div className="pat-modal-sub">{editing.nome || 'Novo paciente'}</div>
+            <div className="pat-modal-title">Editar ficha do cliente</div>
+            <div className="pat-modal-sub">{editing.nome || 'Novo cliente'}</div>
           </div>
           <button onClick={onClose} className="pat-modal-close"><X size={16} /></button>
         </div>
@@ -592,8 +582,7 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
             {[
               { key: 'identificacao', label: 'Identificação' },
               { key: 'contato',       label: 'Contato' },
-              { key: 'convenio',      label: 'Convênio' },
-              { key: 'saude',         label: 'Saúde' },
+              { key: 'saude',         label: 'Jurídico' },
               { key: 'notas',         label: 'Notas' },
             ].map(t => (
               <button key={t.key} type="button" onClick={() => setSection(t.key)} className={`pat-modal-tab ${section === t.key ? 'active' : ''}`}>
@@ -608,7 +597,7 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
                 <input className="nx-input" autoFocus value={editing.nome || ''} onChange={e => update('nome', e.target.value)} />
               </ModalField>
               <ModalField label="Nome social (opcional)">
-                <input className="nx-input" placeholder="Como o paciente prefere ser chamado" value={editing.nome_social || ''} onChange={e => update('nome_social', e.target.value)} />
+                <input className="nx-input" placeholder="Como o cliente prefere ser chamado" value={editing.nome_social || ''} onChange={e => update('nome_social', e.target.value)} />
               </ModalField>
               <Row>
                 <ModalField label="CPF">
@@ -640,7 +629,7 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
                   <input className="nx-input" value={editing.profession || ''} onChange={e => update('profession', e.target.value)} />
                 </ModalField>
               </Row>
-              <ModalField label="Origem / Como conheceu a clínica">
+              <ModalField label="Origem / Como conheceu o escritório">
                 <select className="nx-select" value={editing.referral_source || ''} onChange={e => update('referral_source', e.target.value)}>
                   <option value="">—</option>
                   {REFERRAL_OPTIONS.map(r => <option key={r}>{r}</option>)}
@@ -684,47 +673,20 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
             </div>
           )}
 
-          {section === 'convenio' && (
-            <div className="pat-modal-fields">
-              <ModalField label="Plano">
-                <select className="nx-select" value={editing.insurance_plan_id || ''} onChange={e => update('insurance_plan_id', e.target.value || null)}>
-                  <option value="">Particular</option>
-                  {insurancePlans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </ModalField>
-              <ModalField label="Número da carteirinha">
-                <input className="nx-input" value={editing.insurance_card || ''} onChange={e => update('insurance_card', e.target.value)} />
-              </ModalField>
-            </div>
-          )}
 
           {section === 'saude' && (
             <div className="pat-modal-fields">
-              <Row>
-                <ModalField label="Tipo sanguíneo">
-                  <select className="nx-select" value={editing.blood_type || ''} onChange={e => update('blood_type', e.target.value)}>
-                    <option value="">—</option>
-                    {BLOOD_OPTIONS.map(b => <option key={b}>{b}</option>)}
-                  </select>
-                </ModalField>
-                <ModalField label="Peso (kg)">
-                  <input className="nx-input" type="number" step="0.1" placeholder="Ex: 72.5" value={editing.weight || ''} onChange={e => update('weight', e.target.value)} />
-                </ModalField>
-                <ModalField label="Altura (m)">
-                  <input className="nx-input" type="number" step="0.01" placeholder="Ex: 1.78" value={editing.height || ''} onChange={e => update('height', e.target.value)} />
-                </ModalField>
-              </Row>
-              <ModalField label="Alergias">
-                <textarea className="nx-input" rows={2} placeholder="Ex: penicilina, dipirona..." value={editing.allergies || ''} onChange={e => update('allergies', e.target.value)} />
+              <ModalField label="Área de atuação">
+                <textarea className="nx-input" rows={2} placeholder="Ex: Trabalhista, Cível, Família..." value={editing.allergies || ''} onChange={e => update('allergies', e.target.value)} />
               </ModalField>
-              <ModalField label="Condições crônicas">
-                <textarea className="nx-input" rows={2} placeholder="Ex: hipertensão, diabetes tipo 2..." value={editing.chronic_conditions || ''} onChange={e => update('chronic_conditions', e.target.value)} />
+              <ModalField label="Tipo de processo">
+                <textarea className="nx-input" rows={2} placeholder="Ex: Demissão sem justa causa, Divórcio..." value={editing.chronic_conditions || ''} onChange={e => update('chronic_conditions', e.target.value)} />
               </ModalField>
-              <ModalField label="Medicamentos em uso">
-                <textarea className="nx-input" rows={2} placeholder="Ex: Losartana 50mg, Metformina..." value={editing.medications || ''} onChange={e => update('medications', e.target.value)} />
+              <ModalField label="Tipo de honorário">
+                <textarea className="nx-input" rows={2} placeholder="Ex: Êxito 20%, Fixo R$ 3.000, Hora..." value={editing.medications || ''} onChange={e => update('medications', e.target.value)} />
               </ModalField>
-              <ModalField label="Observações clínicas">
-                <textarea className="nx-input" rows={3} placeholder="Histórico, observações relevantes..." value={editing.clinical_notes || ''} onChange={e => update('clinical_notes', e.target.value)} />
+              <ModalField label="Observações jurídicas">
+                <textarea className="nx-input" rows={3} placeholder="Histórico do caso, observações relevantes..." value={editing.clinical_notes || ''} onChange={e => update('clinical_notes', e.target.value)} />
               </ModalField>
             </div>
           )}

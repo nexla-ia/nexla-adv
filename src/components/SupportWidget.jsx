@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import {
@@ -123,7 +123,7 @@ export default function SupportWidget({ session }) {
               )}
               <div className="sw-header-info">
                 <div className="sw-header-title">
-                  {view === 'chat' ? (activeTicket?.subject || 'Chamado') : view === 'new' ? 'Conta pra gente' : 'Suporte MedicinaMKT'}
+                  {view === 'chat' ? (activeTicket?.subject || 'Chamado') : view === 'new' ? 'Conta pra gente' : 'Suporte NexlaADV'}
                 </div>
                 <div className="sw-header-sub">
                   {view === 'chat'

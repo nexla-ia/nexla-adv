@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -6,8 +6,8 @@ import ConfirmModal from '../../components/ConfirmModal'
 import LimitReachedModal from '../../components/LimitReachedModal'
 import { getEffectiveLimits, reachedLimit, upgradeMessage, formatLimit } from '../../lib/planLimits'
 import {
-  Plus, X, Pencil, Trash2, Stethoscope, ClipboardList, ShieldCheck, DollarSign,
-  Tag, Lock,
+  Plus, X, Pencil, Trash2, Briefcase, ClipboardList, Handshake, DollarSign,
+  Tag, Lock, Scale,
 } from 'lucide-react'
 import './Company.css'
 
@@ -22,9 +22,10 @@ const DAYS_OF_WEEK = [
   { num: 6, label: 'Sáb' },
 ]
 const PROC_TYPES = [
-  { value: 'consulta',     label: 'Consulta',     color: '#2563EB' },
-  { value: 'exame',        label: 'Exame',        color: '#7C3AED' },
-  { value: 'procedimento', label: 'Procedimento', color: '#16A34A' },
+  { value: 'consulta',   label: 'Consulta',   color: '#2563EB' },
+  { value: 'audiencia',  label: 'Audiência',  color: '#DC2626' },
+  { value: 'reuniao',    label: 'Reunião',    color: '#7C3AED' },
+  { value: 'diligencia', label: 'Diligência', color: '#D97706' },
 ]
 
 const labelStyle = {
@@ -38,9 +39,9 @@ function fmtMoney(v) {
 }
 
 const TABS = [
-  { key: 'profissionais', label: 'Profissionais', icon: Stethoscope },
-  { key: 'procedimentos', label: 'Procedimentos / Exames / Consultas', icon: ClipboardList },
-  { key: 'convenios',     label: 'Convênios',     icon: ShieldCheck },
+  { key: 'profissionais', label: 'Advogados',                          icon: Scale },
+  { key: 'procedimentos', label: 'Serviços / Audiências / Diligências', icon: ClipboardList },
+  { key: 'convenios',     label: 'Parcerias',                           icon: Briefcase },
 ]
 
 export default function CompanyCatalog() {
@@ -132,7 +133,7 @@ export default function CompanyCatalog() {
   // ─── Procedimentos ─────────────────────────────────────────────────────────
   function openNewProc() {
     setProcModal({
-      name: '', type: 'consulta',
+      name: '', type: 'reunião',
       duration_minutes: 30, price_particular: 0,
       professional_id: null, active: true,
       _prices: {}, // map insurance_plan_id → price
@@ -152,7 +153,7 @@ export default function CompanyCatalog() {
     setSaving(true)
     const payload = {
       name: procModal.name.trim(),
-      type: procModal.type || 'consulta',
+      type: procModal.type || 'reunião',
       duration_minutes: parseInt(procModal.duration_minutes) || 30,
       price_particular: parseFloat(procModal.price_particular) || 0,
       professional_id: procModal.professional_id || null,
@@ -222,10 +223,10 @@ export default function CompanyCatalog() {
     <div style={{ padding: '1.5rem' }}>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)' }}>
-          Catálogo Clínico
+          Catálogo Jurídico
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          Cadastre profissionais, procedimentos, exames, valores e convênios da clínica.
+          Cadastre advogados, serviços, honorários e parcerias do escritório.
         </div>
       </div>
 
@@ -250,7 +251,7 @@ export default function CompanyCatalog() {
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-              {pros.filter(p => p.active !== false).length} de {formatLimit(limits.professionals)} profissionais
+              {pros.filter(p => p.active !== false).length} de {formatLimit(limits.professionals)} advogados
               {proLimitReached && <span style={{ marginLeft: 8, color: '#C9A074', fontWeight: 700 }}>· limite atingido</span>}
             </div>
             <button
@@ -260,17 +261,17 @@ export default function CompanyCatalog() {
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 opacity: proLimitReached ? 0.7 : 1,
               }}
-              title={proLimitReached ? `Limite de ${limits.professionals} profissionais atingido — clique pra ver opções` : ''}>
-              {proLimitReached ? <Lock size={13} /> : <Plus size={14} />} Novo profissional
+              title={proLimitReached ? `Limite de ${limits.professionals} advogados atingido — clique pra ver opções` : ''}>
+              {proLimitReached ? <Lock size={13} /> : <Plus size={14} />} Novo advogado
             </button>
           </div>
           {pros.length === 0 ? (
-            <EmptyCard icon={Stethoscope} text={loading ? 'Carregando...' : 'Nenhum profissional cadastrado ainda.'} />
+            <EmptyCard icon={Scale} text={loading ? 'Carregando...' : 'Nenhum advogado cadastrado ainda.'} />
           ) : (
             <div className="nx-card" style={{ padding: 0, overflow: 'hidden' }}>
               <table className="data-table" style={{ width: '100%' }}>
                 <thead>
-                  <tr><th>Nome</th><th>Especialidade</th><th>Atendimento</th><th>Status</th><th style={{ textAlign: 'right' }}>Ação</th></tr>
+                  <tr><th>Nome</th><th>Área do Direito</th><th>Disponibilidade</th><th>Status</th><th style={{ textAlign: 'right' }}>Ação</th></tr>
                 </thead>
                 <tbody>
                   {pros.map(p => {
@@ -328,11 +329,11 @@ export default function CompanyCatalog() {
         <>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
             <button className="nx-btn-primary" onClick={openNewProc} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Plus size={14} /> Novo procedimento
+              <Plus size={14} /> Novo serviço
             </button>
           </div>
           {procs.length === 0 ? (
-            <EmptyCard icon={ClipboardList} text={loading ? 'Carregando...' : 'Nenhum procedimento cadastrado.'} />
+            <EmptyCard icon={ClipboardList} text={loading ? 'Carregando...' : 'Nenhum serviço cadastrado.'} />
           ) : (
             <div className="nx-card" style={{ padding: 0, overflow: 'hidden' }}>
               <table className="data-table" style={{ width: '100%' }}>
@@ -351,7 +352,7 @@ export default function CompanyCatalog() {
                             {t?.label || p.type}
                           </span>
                         </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{pro ? pro.name : 'Toda clínica'}</td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{pro ? pro.name : 'Todo o escritório'}</td>
                         <td style={{ fontSize: 12 }}>{p.duration_minutes} min</td>
                         <td style={{ fontSize: 12, fontWeight: 600 }}>{fmtMoney(p.price_particular)}</td>
                         <td>
@@ -375,16 +376,16 @@ export default function CompanyCatalog() {
         </>
       )}
 
-      {/* CONVÊNIOS */}
+      {/* PARCERIAS */}
       {tab === 'convenios' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
             <button className="nx-btn-primary" onClick={openNewPlan} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Plus size={14} /> Novo convênio
+              <Plus size={14} /> Nova parceria
             </button>
           </div>
           {plans.length === 0 ? (
-            <EmptyCard icon={ShieldCheck} text={loading ? 'Carregando...' : 'Nenhum convênio cadastrado. Particular sempre estará disponível por padrão.'} />
+            <EmptyCard icon={Briefcase} text={loading ? 'Carregando...' : 'Nenhuma parceria cadastrada. Honorário avulso sempre estará disponível por padrão.'} />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
               {plans.map(p => (
@@ -392,7 +393,7 @@ export default function CompanyCatalog() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
-                        <ShieldCheck size={15} />
+                        <Briefcase size={15} />
                       </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
@@ -413,18 +414,18 @@ export default function CompanyCatalog() {
 
       {/* Modal profissional */}
       {proModal && createPortal(
-        <Modal title={proModal.id ? 'Editar profissional' : 'Novo profissional'} onClose={() => setProModal(null)}>
+        <Modal title={proModal.id ? 'Editar advogado' : 'Novo advogado'} onClose={() => setProModal(null)}>
           <ModalBody>
             <Field label="Nome">
               <input className="nx-input" autoFocus placeholder="Ex: Dr. João Silva"
                 value={proModal.name} onChange={e => setProModal(p => ({ ...p, name: e.target.value }))} />
             </Field>
-            <Field label="Especialidade">
-              <input className="nx-input" placeholder="Ex: Cardiologia"
+            <Field label="Área do Direito">
+              <input className="nx-input" placeholder="Ex: Trabalhista, Cível, Família, Criminal..."
                 value={proModal.specialty || ''} onChange={e => setProModal(p => ({ ...p, specialty: e.target.value }))} />
             </Field>
-            <Field label="Registro (CRM/CRO/etc)">
-              <input className="nx-input" placeholder="Ex: CRM-DF 12345"
+            <Field label="OAB">
+              <input className="nx-input" placeholder="Ex: OAB/DF 12345"
                 value={proModal.registration || ''} onChange={e => setProModal(p => ({ ...p, registration: e.target.value }))} />
             </Field>
             <Field label="Cor">
@@ -499,7 +500,7 @@ export default function CompanyCatalog() {
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
               <input type="checkbox" checked={proModal.active !== false} onChange={e => setProModal(p => ({ ...p, active: e.target.checked }))} style={{ width: 16, height: 16 }} />
-              Profissional ativo
+              Advogado ativo
             </label>
           </ModalBody>
           <ModalFooter err={err} onCancel={() => setProModal(null)} onSave={handleSavePro} saving={saving} />
@@ -507,10 +508,10 @@ export default function CompanyCatalog() {
 
       {/* Modal procedimento */}
       {procModal && createPortal(
-        <Modal title={procModal.id ? 'Editar procedimento' : 'Novo procedimento'} onClose={() => setProcModal(null)} maxWidth={520}>
+        <Modal title={procModal.id ? 'Editar serviço' : 'Novo serviço'} onClose={() => setProcModal(null)} maxWidth={520}>
           <ModalBody>
             <Field label="Nome">
-              <input className="nx-input" autoFocus placeholder="Ex: Consulta cardiológica, Eletrocardiograma..."
+              <input className="nx-input" autoFocus placeholder="Ex: Consulta inicial, Audiência trabalhista, Revisão contratual..."
                 value={procModal.name} onChange={e => setProcModal(p => ({ ...p, name: e.target.value }))} />
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -524,24 +525,24 @@ export default function CompanyCatalog() {
                   value={procModal.duration_minutes} onChange={e => setProcModal(p => ({ ...p, duration_minutes: e.target.value }))} />
               </Field>
             </div>
-            <Field label="Profissional (deixe vazio para toda clínica)">
+            <Field label="Advogado responsável (deixe vazio para todo o escritório)">
               <select className="nx-select" value={procModal.professional_id || ''}
                 onChange={e => setProcModal(p => ({ ...p, professional_id: e.target.value || null }))}>
-                <option value="">Toda a clínica</option>
+                <option value="">Todo o escritório</option>
                 {pros.filter(p => p.active !== false).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
-            <Field label="Valor — Particular (R$)">
+            <Field label="Valor — Avulso / Particular (R$)">
               <input className="nx-input" type="number" step="0.01" min={0}
                 value={procModal.price_particular} onChange={e => setProcModal(p => ({ ...p, price_particular: e.target.value }))} />
             </Field>
             {plans.filter(p => p.active !== false).length > 0 && (
               <div>
-                <label style={labelStyle}>Valores por convênio</label>
+                <label style={labelStyle}>Valores por parceria</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px', background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 8 }}>
                   {plans.filter(p => p.active !== false).map(plan => (
                     <div key={plan.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
-                      <ShieldCheck size={13} style={{ color: '#2563EB', flexShrink: 0 }} />
+                      <Briefcase size={13} style={{ color: '#2563EB', flexShrink: 0 }} />
                       <span style={{ flex: 1, fontWeight: 500 }}>{plan.name}</span>
                       <span style={{ color: 'var(--text-muted)' }}>R$</span>
                       <input className="nx-input" type="number" step="0.01" min={0}
@@ -559,7 +560,7 @@ export default function CompanyCatalog() {
             )}
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
               <input type="checkbox" checked={procModal.active !== false} onChange={e => setProcModal(p => ({ ...p, active: e.target.checked }))} style={{ width: 16, height: 16 }} />
-              Procedimento ativo
+              Serviço ativo
             </label>
           </ModalBody>
           <ModalFooter err={err} onCancel={() => setProcModal(null)} onSave={handleSaveProc} saving={saving} />
@@ -567,15 +568,15 @@ export default function CompanyCatalog() {
 
       {/* Modal convênio */}
       {planModal && createPortal(
-        <Modal title={planModal.id ? 'Editar convênio' : 'Novo convênio'} onClose={() => setPlanModal(null)}>
+        <Modal title={planModal.id ? 'Editar parceria' : 'Nova parceria'} onClose={() => setPlanModal(null)}>
           <ModalBody>
-            <Field label="Nome do convênio">
-              <input className="nx-input" autoFocus placeholder="Ex: Unimed, Bradesco Saúde..."
+            <Field label="Nome da parceria">
+              <input className="nx-input" autoFocus placeholder="Ex: Sindicato dos Metalúrgicos, Empresa XYZ, Associação ABC..."
                 value={planModal.name} onChange={e => setPlanModal(p => ({ ...p, name: e.target.value }))} />
             </Field>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
               <input type="checkbox" checked={planModal.active !== false} onChange={e => setPlanModal(p => ({ ...p, active: e.target.checked }))} style={{ width: 16, height: 16 }} />
-              Convênio ativo
+              Parceria ativa
             </label>
           </ModalBody>
           <ModalFooter err={err} onCancel={() => setPlanModal(null)} onSave={handleSavePlan} saving={saving} />
@@ -584,7 +585,7 @@ export default function CompanyCatalog() {
       <ConfirmModal
         open={!!confirmDelete}
         variant="delete"
-        title={confirmDelete?.type === 'pro' ? 'Excluir profissional' : confirmDelete?.type === 'proc' ? 'Excluir procedimento' : 'Excluir convênio'}
+        title={confirmDelete?.type === 'pro' ? 'Excluir advogado' : confirmDelete?.type === 'proc' ? 'Excluir serviço' : 'Excluir parceria'}
         message={`Tem certeza que deseja excluir "${confirmDelete?.item?.name || ''}"? Essa ação não pode ser desfeita.`}
         confirmLabel="Excluir"
         loading={deletingNow}

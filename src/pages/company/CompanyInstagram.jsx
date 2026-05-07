@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -626,7 +626,7 @@ function InstagramInbox() {
               <Instagram size={40} />
             </div>
             <h3>Suas mensagens</h3>
-            <p>Selecione uma conversa pra começar a responder seus pacientes do Instagram.</p>
+            <p>Selecione uma conversa pra começar a responder seus clientes do Instagram.</p>
           </div>
         ) : (
           <>
@@ -662,7 +662,7 @@ function InstagramInbox() {
                     <button
                       className="ig-action-btn"
                       onClick={() => navigate(`/painel/agenda?numero=${selected.handle}`)}
-                      title="Agendar consulta"
+                      title="Agendar reunião"
                     >
                       <Calendar size={14} />
                       <span>Agendar</span>
@@ -904,8 +904,8 @@ function InstagramLockedScreen({ company }) {
     const userName = session?.user?.name || 'Cliente'
     const subject  = 'Liberação do Instagram Direct'
     const message  =
-      `Olá, time da MedicinaMKT! 👋\n\n` +
-      `Sou da clínica ${company?.name || ''} e gostaria de liberar o ` +
+      `Olá, time da NexlaADV! 👋\n\n` +
+      `Sou do escritório ${company?.name || ''} e gostaria de liberar o ` +
       `Instagram Direct na plataforma.\n\n` +
       `Podemos avançar com o setup (Meta Business API + n8n)?`
 
@@ -960,7 +960,7 @@ function InstagramLockedScreen({ company }) {
         </h1>
 
         <p className="ig-locked-sub">
-          Pra ativar o Instagram aqui na sua clínica, a gente precisa configurar a integração
+          Pra ativar o Instagram aqui na seu escritório, a gente precisa configurar a integração
           com a Meta Business API e conectar com a IA. <strong>Fala com o time</strong> que a gente
           libera o setup pra você.
         </p>
@@ -972,7 +972,7 @@ function InstagramLockedScreen({ company }) {
               <Instagram size={14} />
               <span>Direct</span>
               <span className="ig-locked-preview-dot" />
-              <span className="ig-locked-preview-handle">@suaclinica</span>
+              <span className="ig-locked-preview-handle">@suaescritorio</span>
             </div>
             <div className="ig-locked-preview-body">
               <div className="ig-locked-preview-dm">
@@ -1034,7 +1034,7 @@ function InstagramLockedScreen({ company }) {
             </div>
             <div>
               <div className="ig-locked-feature-title">Agenda integrada</div>
-              <div className="ig-locked-feature-desc">Pacientes agendam pelo Insta como pelo WhatsApp</div>
+              <div className="ig-locked-feature-desc">Clientes agendam pelo Insta como pelo WhatsApp</div>
             </div>
           </div>
         </div>

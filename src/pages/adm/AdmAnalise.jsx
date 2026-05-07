@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
-  Users, Stethoscope, ClipboardList, ShieldCheck, Calendar, CircleDollarSign,
+  Users, Scale, ClipboardList, ShieldCheck, Calendar, CircleDollarSign,
   Clock, Inbox, AlertOctagon, MessageSquare, Bot, Activity, RefreshCw,
   Building2, Crown, Award, TrendingUp, AlertTriangle, ChevronRight, Hourglass,
   Zap, Eye, Search, Wrench, User, Sparkles, FileText, Cake, Kanban, Filter,
@@ -89,7 +89,7 @@ export default function AdmAnalise() {
   const company = companies.find(c => c.id === selectedId) || companies[0]
 
   const [data, setData] = useState({
-    msgs: [], convs: [], atts: [], appts: [], pacientes: [], pros: [], procs: [],
+    msgs: [], convs: [], atts: [], appts: [], clientes: [], pros: [], procs: [],
     planos: [], alerts: [], kanbanCards: [], users: [],
   })
   const [wppState, setWppState] = useState('unknown')
@@ -99,7 +99,7 @@ export default function AdmAnalise() {
     setLoading(true)
     const since = new Date(Date.now() - (period === '24h' ? 1 : period === '7d' ? 7 : 30) * 86400000).toISOString()
     const inst = company.instance
-    const [msgs, convs, atts, appts, pacientes, pros, procs, planos, alerts, kanban, users] = await Promise.all([
+    const [msgs, convs, atts, appts, clientes, pros, procs, planos, alerts, kanban, users] = await Promise.all([
       supabase.from('mensagens_geral').select('id, numero, mensagem, base64, type, "horaLastMessage", created_at').eq('instancia', inst).gte('created_at', since).order('id', { ascending: false }).limit(20000),
       supabase.from('conversations').select('session_id, instancia, reason, closed_at').eq('instancia', inst),
       supabase.from('attendances').select('numero, instancia, user_id').eq('instancia', inst),
@@ -117,7 +117,7 @@ export default function AdmAnalise() {
       convs: convs.data || [],
       atts: atts.data || [],
       appts: appts.data || [],
-      pacientes: pacientes.data || [],
+      clientes: clientes.data || [],
       pros: pros.data || [],
       procs: procs.data || [],
       planos: planos.data || [],
@@ -252,7 +252,7 @@ function TabOperacao({ data, loading }) {
       const d = new Date(a.starts_at)
       return d >= today && d < tomorrow
     }).length
-    const aniversariantes = data.pacientes.filter(p => {
+    const aniversariantes = data.clientes.filter(p => {
       const b = p.birth_date || p.birthdate
       if (!b) return false
       const dt = new Date(b); const cur = new Date()
@@ -293,8 +293,8 @@ function TabOperacao({ data, loading }) {
   return (
     <>
       <div className="an-kpi-grid">
-        <KpiBig icon={Users}            color="#2563EB" bg="#EFF6FF" value={fmtNum(data.pacientes.length)} label="Pacientes" />
-        <KpiBig icon={Stethoscope}      color="#7C3AED" bg="#EDE9FE" value={fmtNum(data.pros.length)}      label="Profissionais" />
+        <KpiBig icon={Users}            color="#2563EB" bg="#EFF6FF" value={fmtNum(data.clientes.length)} label="Clientes" />
+        <KpiBig icon={Scale}      color="#7C3AED" bg="#EDE9FE" value={fmtNum(data.pros.length)}      label="Advogados" />
         <KpiBig icon={ClipboardList}    color="#DB2777" bg="#FCE7F3" value={fmtNum(data.procs.length)}     label="Procedimentos" />
         <KpiBig icon={ShieldCheck}      color="#0891B2" bg="#CFFAFE" value={fmtNum(data.planos.length)}    label="Convênios" />
         <KpiBig icon={Calendar}         color="#16A34A" bg="#D1FAE5" value={fmtNum(data.appts.length)}     label="Agendamentos" sub={`${stats.apptsHoje} hoje`} />
@@ -324,7 +324,7 @@ function TabOperacao({ data, loading }) {
                   </div>
                   <div className="an-rank-stats">
                     <div className="an-rank-money">{fmtMoney(p.revenue)}</div>
-                    <div className="an-rank-count">{p.completed} consultas</div>
+                    <div className="an-rank-count">{p.completed} reuniãos</div>
                   </div>
                 </div>
               ))}
@@ -360,7 +360,7 @@ function TabOperacao({ data, loading }) {
           <thead>
             <tr>
               <th>Quando</th>
-              <th>Paciente</th>
+              <th>Cliente</th>
               <th>Profissional</th>
               <th>Procedimento</th>
               <th>Status</th>
@@ -508,7 +508,7 @@ function TabQualidade({ data, period, loading }) {
           {topPending.length > 0 && <span className="an-pending-count">{topPending.length}</span>}
         </div>
         {topPending.length === 0 ? (
-          <div className="an-empty-card"><Sparkles size={20} style={{ color: '#16A34A' }} /><p>Nenhum paciente pendente. Bom trabalho.</p></div>
+          <div className="an-empty-card"><Sparkles size={20} style={{ color: '#16A34A' }} /><p>Nenhum cliente pendente. Bom trabalho.</p></div>
         ) : (
           <div className="an-pending-list">
             {topPending.map(s => {
@@ -585,9 +585,9 @@ function TabEspiao({ data, company, loading }) {
 
   const contactByNum = useMemo(() => {
     const m = {}
-    data.pacientes.forEach(p => { if (p.numero) m[p.numero] = p })
+    data.clientes.forEach(p => { if (p.numero) m[p.numero] = p })
     return m
-  }, [data.pacientes])
+  }, [data.clientes])
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
@@ -203,7 +203,7 @@ export default function AdmEspiao() {
             <Eye size={13} /> Modo Espião
           </div>
           <h1 className="esp-head-title">Espelho de conversas</h1>
-          <p className="esp-head-sub">Escolhe a empresa e leia <strong>tudo</strong> que entra e sai dela — pra achar fala errada da IA, bug, paciente bravo. Você está como observador, sem mexer em nada.</p>
+          <p className="esp-head-sub">Escolhe a empresa e leia <strong>tudo</strong> que entra e sai dela — pra achar fala errada da IA, bug, cliente bravo. Você está como observador, sem mexer em nada.</p>
         </div>
         <div className="esp-head-right">
           <div className="esp-stat">

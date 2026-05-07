@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
   Building2, Users, MessageSquare, AlertTriangle, Activity, Wifi, WifiOff,
   Calendar, BarChart3, Clock, TrendingUp, RefreshCw, Sparkles, Bot,
-  CircleDollarSign, Zap, Stethoscope, ArrowUpRight, ChevronRight, X, Bell,
+  CircleDollarSign, Zap, Scale, ArrowUpRight, ChevronRight, X, Bell,
 } from 'lucide-react'
 import './AdmDashboard.css'
 
@@ -334,7 +334,7 @@ export default function AdmDashboard() {
           color="#22D3EE"
           label="Agendamentos (30d)"
           value={fmtNumber(kpis.totalAppts)}
-          sub={`em todas as clínicas`}
+          sub={`em todos os escritórios`}
         />
         <KpiBig
           icon={<CircleDollarSign size={18} />}
@@ -432,7 +432,7 @@ export default function AdmDashboard() {
                     <div className="adm-cmd-top-name">{c.name}</div>
                     <div className="adm-cmd-top-meta">
                       <span className={`adm-cmd-plan-chip ${c.plan?.toLowerCase()}`}>{c.plan}</span>
-                      · {c.activeUsers} usuários · {c.savedCt} pacientes
+                      · {c.activeUsers} usuários · {c.savedCt} clientes
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -501,7 +501,7 @@ export default function AdmDashboard() {
                 <th>Plano</th>
                 <th>WhatsApp</th>
                 <th>Usuários</th>
-                <th>Pacientes</th>
+                <th>Clientes</th>
                 <th>Mensagens 7d</th>
                 <th>Tickets ativos</th>
                 <th>Agend. (30d)</th>

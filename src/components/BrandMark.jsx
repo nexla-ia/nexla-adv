@@ -1,7 +1,7 @@
-/**
+﻿/**
  * BrandMark — Monograma "NA" NexlaAdv
  * Círculo com "N" + "A" estilizados em traços finos elegantes (cor padrão cobre).
- * Mesmo estilo visual da versão MedicinaMKT, adaptado pra NexlaAdv.
+ * Mesmo estilo visual da versão NexlaADV, adaptado pra NexlaAdv.
  */
 export default function BrandMark({ size = 32, color = '#C9A074', strokeWidth = 1.4 }) {
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import LimitReachedModal from '../../components/LimitReachedModal'
@@ -6,7 +6,7 @@ import { getEffectiveLimits, upgradeMessage } from '../../lib/planLimits'
 import {
   Users, MessageSquare, TrendingUp, Clock, Inbox, BarChart2, RefreshCw,
   Calendar, BellRing, Kanban, Headset, CheckCircle2, XCircle, AlertCircle,
-  Phone, Bot, ListChecks, Flag, ChevronRight, Layers, DollarSign, Stethoscope, Lock,
+  Phone, Bot, ListChecks, Flag, ChevronRight, Layers, DollarSign, Scale, Lock,
 } from 'lucide-react'
 import './Company.css'
 
@@ -842,7 +842,7 @@ function AgendaTab({ appts, range, period, loading }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<Calendar size={18} color="#2563EB" />} bg="#EFF6FF" value={total} label="Total" sub={periodLabel(period)} loading={loading} />
         <KpiCard icon={<CheckCircle2 size={18} color="#16A34A" />} bg="#F0FDF4" value={`${taxaConfirm}%`} label="Confirmação" sub="confirmado + concluído" loading={loading} />
-        <KpiCard icon={<AlertCircle size={18} color="#D97706" />} bg="#FFFBEB" value={`${taxaNoShow}%`} label="No-show" sub="pacientes que faltaram" loading={loading} alert={taxaNoShow > 15} />
+        <KpiCard icon={<AlertCircle size={18} color="#D97706" />} bg="#FFFBEB" value={`${taxaNoShow}%`} label="No-show" sub="clientes que faltaram" loading={loading} alert={taxaNoShow > 15} />
         <KpiCard icon={<XCircle size={18} color="#DC2626" />} bg="#FEF2F2" value={`${taxaCancel}%`} label="Cancelamento" sub="taxa de cancelamento" loading={loading} alert={taxaCancel > 20} />
       </div>
 
@@ -976,12 +976,12 @@ function FinanceiroTab({ appts, professionals, procedures, insurancePlans, range
         <KpiCard icon={<DollarSign size={18} color="#16A34A" />} bg="#F0FDF4" value={fmtMoney(faturado)} label="Faturado" sub={periodLabel(period)} loading={loading} />
         <KpiCard icon={<Clock size={18} color="#D97706" />} bg="#FFFBEB" value={fmtMoney(aReceber)} label="A receber" sub="agendamentos pendentes" loading={loading} alert={aReceber > 0} />
         <KpiCard icon={<TrendingUp size={18} color="#2563EB" />} bg="#EFF6FF" value={fmtMoney(ticketMedio)} label="Ticket médio" sub={`${concluidos} pagamentos`} loading={loading} />
-        <KpiCard icon={<XCircle size={18} color="#DC2626" />} bg="#FEF2F2" value={fmtMoney(perdidoFaltas)} label="Perdido em faltas" sub="pacientes que faltaram" loading={loading} alert={perdidoFaltas > 0} />
+        <KpiCard icon={<XCircle size={18} color="#DC2626" />} bg="#FEF2F2" value={fmtMoney(perdidoFaltas)} label="Perdido em faltas" sub="clientes que faltaram" loading={loading} alert={perdidoFaltas > 0} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
-          <SectionTitle icon={Stethoscope} text="Faturamento por profissional" right={periodLabel(period)} />
+          <SectionTitle icon={Scale} text="Faturamento por advogado" right={periodLabel(period)} />
           {byProfessional.length === 0 ? <Empty /> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {byProfessional.map((p, i) => (

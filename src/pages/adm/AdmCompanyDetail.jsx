@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -568,7 +568,7 @@ export default function AdmCompanyDetail() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Instância WhatsApp</label>
-                  <input className="nx-input" placeholder="Ex: clinica-saude" value={companyForm.instance} onChange={e => setCompanyForm(p => ({ ...p, instance: e.target.value.trim() }))} />
+                  <input className="nx-input" placeholder="Ex: silva-associados" value={companyForm.instance} onChange={e => setCompanyForm(p => ({ ...p, instance: e.target.value.trim() }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>API Instância <span style={{ color: '#DC2626' }}>*</span></label>
@@ -709,7 +709,7 @@ export default function AdmCompanyDetail() {
                       }}>n8n.nexladesenvolvimento.com.br/webhook/</span>
                       <input
                         className="nx-input"
-                        placeholder="envioNexlainstagram_clinicaXYZ"
+                        placeholder="envioNexlainstagram_escritorioXYZ"
                         value={companyForm.instagramWebhookPath}
                         onChange={e => setCompanyForm(p => ({ ...p, instagramWebhookPath: e.target.value.trim() }))}
                         style={{
@@ -719,7 +719,7 @@ export default function AdmCompanyDetail() {
                       />
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                      Cada clínica tem um workflow próprio no n8n com a credencial da Meta API dela.
+                      Cado escritório tem um workflow próprio no n8n com a credencial da Meta API dela.
                     </div>
                   </div>
                 )}

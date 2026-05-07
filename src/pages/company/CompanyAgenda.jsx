@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -268,7 +268,7 @@ export default function CompanyAgenda() {
     }
   }, [searchParams, agendas, selectedAgendaId])
 
-  // Carrega últimas mensagens do paciente quando o modal abre com número
+  // Carrega últimas mensagens do cliente quando o modal abre com número
   useEffect(() => {
     const num = apptModal?.contact_numero?.replace(/\D/g, '')
     if (!num || !instance) { setPatientHistory([]); return }
@@ -296,7 +296,7 @@ export default function CompanyAgenda() {
   }
 
   async function handleSaveAppt() {
-    if (!apptModal.contact_nome?.trim()) { setApptErr('Nome do paciente é obrigatório'); return }
+    if (!apptModal.contact_nome?.trim()) { setApptErr('Nome do cliente é obrigatório'); return }
     if (!apptModal.date || !apptModal.time) { setApptErr('Data e hora são obrigatórios'); return }
     const startsAt = new Date(`${apptModal.date}T${apptModal.time}:00`)
     const duration = parseInt(apptModal.duration_minutes) || 30
@@ -385,7 +385,7 @@ export default function CompanyAgenda() {
     setSavingAppt(false)
     if (error) { setApptErr('Erro: ' + error.message); return }
 
-    // Registra evento na conversa do paciente (se tem número)
+    // Registra evento na conversa do cliente (se tem número)
     if (numero) {
       const sessionId = `${numero}@s.whatsapp.net`
       const dateStr = startsAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -410,7 +410,7 @@ export default function CompanyAgenda() {
         })
       }
 
-      // Cancelamento: envia mensagem WhatsApp via webhook avisando o paciente
+      // Cancelamento: envia mensagem WhatsApp via webhook avisando o cliente
       if (!isNew && prevStatus !== 'cancelado' && payload.status === 'cancelado') {
         const aviso = `Olá ${payload.contact_nome.split(' ')[0]}, infelizmente seu agendamento de ${dateStr} foi cancelado. Em caso de dúvidas, entre em contato.`
         await supabase.rpc('send_mensagem_geral', {
@@ -707,7 +707,7 @@ export default function CompanyAgenda() {
             <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={labelStyle}>Nome</label>
-                <input className="nx-input" autoFocus placeholder="Ex: Dr. João — Cardiologia"
+                <input className="nx-input" autoFocus placeholder="Ex: Dr. João — Trabalhista"
                   value={agendaModal.name} onChange={e => setAgendaModal(p => ({ ...p, name: e.target.value }))} />
               </div>
               <div>
@@ -773,7 +773,7 @@ export default function CompanyAgenda() {
                     {professionals.map(p => <option key={p.id} value={p.id}>{p.name}{p.specialty ? ` — ${p.specialty}` : ''}</option>)}
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Quando vinculado, os procedimentos do profissional + da clínica ficam disponíveis no agendamento.
+                    Quando vinculado, os procedimentos do profissional + do escritório ficam disponíveis no agendamento.
                   </div>
                 </div>
               )}
@@ -839,7 +839,7 @@ export default function CompanyAgenda() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Nome do paciente</label>
+                <label style={labelStyle}>Nome do cliente</label>
                 <input className="nx-input" autoFocus list="agenda-contact-list" placeholder="Digite ou escolha um contato salvo"
                   value={apptModal.contact_nome}
                   onChange={e => {
@@ -888,7 +888,7 @@ export default function CompanyAgenda() {
 
               {procedures.length > 0 && (
                 <div>
-                  <label style={labelStyle}>Procedimento / Consulta / Exame</label>
+                  <label style={labelStyle}>Procedimento / Reunião / Exame</label>
                   <select className="nx-select" value={apptModal.procedure_id || ''}
                     onChange={e => {
                       const procId = e.target.value || null

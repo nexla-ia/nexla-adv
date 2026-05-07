@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight, ArrowUpRight, Sparkles, MessageSquare, Calendar, BarChart3,
@@ -314,7 +314,7 @@ export default function Landing() {
                 <ul className="lp-sofia-rules-list">
                   <li><Check size={11} /> Nunca dá parecer jurídico</li>
                   <li><Check size={11} /> Nunca promete resultado</li>
-                  <li><Check size={11} /> Encaminha consulta pro advogado</li>
+                  <li><Check size={11} /> Encaminha reunião pro advogado</li>
                   <li><Check size={11} /> Verifica conflito de interesse</li>
                 </ul>
               </div>
@@ -453,7 +453,7 @@ export default function Landing() {
         <div className="lp-container">
           <SectionHeader
             kicker="O que faz por você"
-            title={<>Tudo que sua escritório<br /><em>precisa em um só lugar</em></>}
+            title={<>Tudo que seu escritório<br /><em>precisa em um só lugar</em></>}
           />
 
           <div className="lp-features-grid">
@@ -494,7 +494,7 @@ export default function Landing() {
             <FeatureCard
               icon={<ImageIcon size={22} />}
               title="IA cria posts para Instagram"
-              description="A IA escreve legendas, sugere imagens e agenda postagens com base nos serviço jurídicos, datas e promoções da sua escritório."
+              description="A IA escreve legendas, sugere imagens e agenda postagens com base nos serviço jurídicos, datas e promoções do seu escritório."
               soon
             />
             <FeatureCard
@@ -692,7 +692,7 @@ export default function Landing() {
               <div>
                 <div className="lp-team-rule-title">Setores que organizam</div>
                 <div className="lp-team-rule-desc">
-                  Recepção, triagem, advogados, financeiro — você divide do jeito que faz sentido pra escritório.
+                  Recepção, triagem, advogados, financeiro — você divide do jeito que faz sentido pro escritório.
                   Cada atendente só vê o que é dele.
                 </div>
               </div>
@@ -731,7 +731,7 @@ export default function Landing() {
         <div className="lp-container">
           <SectionHeader
             kicker="Ficha do cliente"
-            title={<>Cada cliente, <em>uma ficha de dossiê</em><br />que respira com sua escritório</>}
+            title={<>Cada cliente, <em>uma ficha de dossiê</em><br />que respira com seu escritório</>}
           />
 
           <div className="lp-ficha-stage">
@@ -1086,7 +1086,7 @@ export default function Landing() {
         <div className="lp-container">
           <SectionHeader
             kicker="Pra quem é"
-            title={<>Feita pra escritórios que levam<br /><em>crescimento a sério</em></>}
+            title={<>Feita pro escritórios que levam<br /><em>crescimento a sério</em></>}
           />
           <p className="lp-icp-intro">
             Quatro perfis que a gente atende todo dia. <strong>Provavelmente um deles é você.</strong>
@@ -1267,7 +1267,7 @@ export default function Landing() {
             title={<>Do solo à banca inteira.<br /><em>O comercial te ajuda a escolher.</em></>}
           />
           <p className="lp-pricing-anchor lp-pricing-anchor-soft">
-            Cada escritório tem um tamanho — e cada tamanho um plano.
+            Cado escritório tem um tamanho — e cada tamanho um plano.
             <strong> A gente conversa rápido, entende seu cenário e mostra o que cabe melhor.</strong>
           </p>
 
@@ -1293,7 +1293,7 @@ export default function Landing() {
               featured
               name="Banca"
               tier="Mais escolhido"
-              tagline="Pra escritório pequeno societário (até 8 advogados)"
+              tagline="Pro escritório pequeno societário (até 8 advogados)"
               features={[
                 'Até 8 advogados cadastrados',
                 'Até 15 usuários na equipe',
@@ -1310,8 +1310,8 @@ export default function Landing() {
             />
             <PricingTier
               name="Custom"
-              tier="Sob consulta"
-              tagline="Pra escritórios médios e grandes (>8 advogados), redes e bancas"
+              tier="Sob reunião"
+              tagline="Pro escritórios médios e grandes (>8 advogados), redes e bancas"
               features={[
                 'Advogados e usuários ilimitados',
                 'Multi-filial e correspondentes',
@@ -1395,7 +1395,7 @@ export default function Landing() {
                 </div>
               </Link>
               <p>
-                Atendimento e captação inbound para escritórios de advocacia.
+                Atendimento e captação inbound paro escritórios de advocacia.
                 Um produto Nexla Automação e IA.
               </p>
             </div>
@@ -1544,7 +1544,7 @@ function FichaMock() {
       <div className="lp-ficha-antro">
         <div><strong>0028</strong><span>Pasta</span></div>
         <div><strong>3</strong><span>Casos</span></div>
-        <div><strong>R$ 850</strong><span>1ª consulta</span></div>
+        <div><strong>R$ 850</strong><span>1ª reunião</span></div>
         <div><strong>2</strong><span>Reuniões</span></div>
       </div>
 
@@ -1840,7 +1840,7 @@ function DashboardMock() {
           <div className="lp-mock-dots">
             <span /><span /><span />
           </div>
-          <div className="lp-mock-url">app.medicinamkt.com / {view}</div>
+          <div className="lp-mock-url">app.nexlaadv.com / {view}</div>
         </div>
         <div className="lp-mock-body">
           <div className="lp-mock-side">
@@ -2096,7 +2096,7 @@ function SceneMetricas() {
 
 function SceneCatalogo() {
   const procs = [
-    { name: 'Primeira consulta',     price: 'R$ 350', type: 'Avulso', color: '#A78BFA' },
+    { name: 'Primeira reunião',     price: 'R$ 350', type: 'Avulso', color: '#A78BFA' },
     { name: 'Petição inicial',       price: 'R$ 1.200', type: 'Avulso', color: '#4ADE80' },
     { name: 'Ecocardiograma',        price: 'R$ 420', type: 'Exame',    color: '#4ADE80' },
     { name: 'Holter 24h',            price: 'R$ 580', type: 'Serviço jurídico', color: '#FB923C' },
@@ -2107,7 +2107,7 @@ function SceneCatalogo() {
       <div className="lp-scene-header">
         <div>
           <div className="lp-scene-title">Serviço jurídicos</div>
-          <div className="lp-scene-sub">Catálogo da escritório</div>
+          <div className="lp-scene-sub">Catálogo do escritório</div>
         </div>
         <div className="lp-scene-pill">Trabalhista</div>
       </div>
@@ -2135,7 +2135,7 @@ function SceneEquipe() {
   const team = [
     { name: 'Dra. Camila', role: 'Trabalhista',  status: 'online',  load: 4, color: '#A78BFA' },
     { name: 'Dr. Lucas',   role: 'Pediatria',    status: 'online',  load: 6, color: '#4ADE80' },
-    { name: 'Dra. Bia',    role: 'Dermatologia', status: 'busy',    load: 8, color: '#F472B6' },
+    { name: 'Dra. Ana',    role: 'Família', status: 'busy',    load: 8, color: '#F472B6' },
     { name: 'Dr. Hugo',    role: 'Cível',    status: 'online',  load: 3, color: '#FB923C' },
     { name: 'Dra. Lara',   role: 'Família',    status: 'offline', load: 0, color: '#94A3B8' },
   ]

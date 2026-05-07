@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Sidebar from '../../components/Sidebar'
@@ -6,7 +6,7 @@ import BillingBanner from '../../components/BillingBanner'
 import BlockedScreen from '../../components/BlockedScreen'
 import SupportWidget from '../../components/SupportWidget'
 import { shouldBlockAccess } from '../../lib/billing'
-import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Stethoscope, GraduationCap, Instagram, ShieldCheck } from 'lucide-react'
+import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { latestUpdateDate } from '../../data/updates'
@@ -90,7 +90,7 @@ export default function CompanyLayout() {
       badge: activeCount > 0 ? activeCount : null, badgeColor: 'cyan' },
     ...(aiEnabled ? [{ to: '/painel/historico', icon: History, label: 'Conversas IA' }] : []),
     { to: '/painel/instagram', icon: Instagram,     label: 'Instagram', badge: 'Em breve', badgeColor: 'pink' },
-    { to: '/painel/contatos',  icon: Contact2,      label: 'Pacientes' },
+    { to: '/painel/contatos',  icon: Contact2,      label: 'Clientes' },
     { to: '/painel/agenda',    icon: Calendar,      label: 'Agenda' },
     { to: '/painel/atividades', icon: Kanban,       label: 'Atividades' },
     { to: '/painel/alertas',   icon: BellRing,      label: 'Alertas',
@@ -101,7 +101,7 @@ export default function CompanyLayout() {
     { to: '/painel/seguranca', icon: ShieldCheck,   label: 'Segurança' },
     ...(isAdmin ? [
       { to: '/painel/metricas', icon: BarChart2,    label: 'Métricas' },
-      { to: '/painel/catalogo', icon: Stethoscope,  label: 'Catálogo Clínico' },
+      { to: '/painel/catalogo', icon: Scale,  label: 'Catálogo Jurídico' },
       { to: '/painel/admin',    icon: Settings2,    label: 'Administração' },
     ] : []),
   ]

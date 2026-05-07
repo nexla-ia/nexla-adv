@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+﻿import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ─── Mock data (contacts/conversations/alerts — migrar para API depois) ────────
 export const mockContacts = {
   'comp-1': [
-    { id: 'c1', name: 'Roberto Alves',    phone: '+55 11 91234-5678', status: 'attended',  lastMsg: 'Quero agendar uma consulta para amanhã.', time: '14:32', unread: 0 },
+    { id: 'c1', name: 'Roberto Alves',    phone: '+55 11 91234-5678', status: 'attended',  lastMsg: 'Quero agendar uma reunião para amanhã.', time: '14:32', unread: 0 },
     { id: 'c2', name: 'Patrícia Souza',   phone: '+55 11 99876-5432', status: 'waiting',   lastMsg: 'Olá, vocês têm horário na sexta?',          time: '13:10', unread: 2 },
     { id: 'c3', name: 'Fernando Rocha',   phone: '+55 21 98765-4321', status: 'help',      lastMsg: 'Não consigo entender o que a IA disse...',  time: '12:55', unread: 1 },
     { id: 'c4', name: 'Camila Nunes',     phone: '+55 11 94567-8901', status: 'scheduled', lastMsg: 'Confirmado! Às 15h de quinta.',              time: '11:30', unread: 0 },
@@ -23,32 +23,32 @@ export const mockContacts = {
 
 export const mockConversations = {
   c1: [
-    { id: 1, from: 'client', text: 'Boa tarde! Gostaria de agendar uma consulta.',        time: '14:20' },
-    { id: 2, from: 'ai',     text: 'Olá! Sou a assistente da Clínica Saúde Total. Posso te ajudar com o agendamento. Qual especialidade você precisa?', time: '14:20' },
-    { id: 3, from: 'client', text: 'Clínica geral, por favor.',                           time: '14:25' },
+    { id: 1, from: 'client', text: 'Boa tarde! Gostaria de marcar uma reunião de consulta jurídica.',  time: '14:20' },
+    { id: 2, from: 'ai',     text: 'Olá! Sou a assistente do Escritório Silva & Associados. Posso te ajudar com o agendamento. Qual área jurídica você precisa?', time: '14:20' },
+    { id: 3, from: 'client', text: 'Direito trabalhista, por favor.',                                  time: '14:25' },
     { id: 4, from: 'ai',     text: 'Perfeito! Temos horários disponíveis na terça (manhã e tarde) e quinta (tarde). Qual preferir?', time: '14:25' },
-    { id: 5, from: 'client', text: 'Terça de manhã seria ótimo.',                         time: '14:28' },
+    { id: 5, from: 'client', text: 'Terça de manhã seria ótimo.',                                      time: '14:28' },
     { id: 6, from: 'ai',     text: 'Ótimo! Tenho disponível às 9h, 10h e 11h. Qual horário prefere?', time: '14:28' },
-    { id: 7, from: 'client', text: 'Às 10h perfeito.',                                    time: '14:30' },
-    { id: 8, from: 'ai',     text: '✅ Agendamento confirmado! Terça-feira às 10h com Dr. Marcos. Vou te enviar o endereço e instruções. Até lá!', time: '14:32', type: 'scheduled' },
+    { id: 7, from: 'client', text: 'Às 10h perfeito.',                                                 time: '14:30' },
+    { id: 8, from: 'ai',     text: '✅ Reunião confirmada! Terça-feira às 10h com Dr. Marcos. Vou te enviar o endereço e instruções. Até lá!', time: '14:32', type: 'scheduled' },
   ],
   c2: [
     { id: 1, from: 'client', text: 'Olá, vocês têm horário disponível na sexta-feira?',  time: '13:05' },
-    { id: 2, from: 'ai',     text: 'Olá! Sexta-feira temos alguns horários. Para qual especialidade você precisa?', time: '13:06' },
-    { id: 3, from: 'client', text: 'Dermatologista.',                                     time: '13:10' },
-    { id: 4, from: 'ai',     text: 'Verificando disponibilidade para dermatologia na sexta...', time: '13:10', pending: true },
+    { id: 2, from: 'ai',     text: 'Olá! Sexta-feira temos alguns horários. Para qual área jurídica você precisa atendimento?', time: '13:06' },
+    { id: 3, from: 'client', text: 'Direito de família — quero entender meus direitos na separação.', time: '13:10' },
+    { id: 4, from: 'ai',     text: 'Verificando disponibilidade para direito de família na sexta...', time: '13:10', pending: true },
   ],
   c3: [
-    { id: 1, from: 'client', text: 'Oi, quero saber sobre exames de sangue.',            time: '12:40' },
-    { id: 2, from: 'ai',     text: 'Claro! Realizamos diversos exames laboratoriais. Quer agendar ou tem alguma dúvida específica?', time: '12:41' },
-    { id: 3, from: 'client', text: 'Preciso saber se o plano de saúde cobre.',           time: '12:50' },
-    { id: 4, from: 'ai',     text: '🆘 Preciso de ajuda para responder sobre cobertura de plano de saúde. Aguardando atendente humano.', time: '12:55', type: 'help' },
+    { id: 1, from: 'client', text: 'Oi, quero saber sobre abertura de processo trabalhista.',         time: '12:40' },
+    { id: 2, from: 'ai',     text: 'Claro! Podemos ajudar com processos trabalhistas. Quer agendar uma consulta ou tem alguma dúvida específica?', time: '12:41' },
+    { id: 3, from: 'client', text: 'Preciso saber se meu caso tem chance de ganhar.',                 time: '12:50' },
+    { id: 4, from: 'ai',     text: '🆘 Preciso de ajuda para avaliar as chances do processo. Aguardando atendente humano.', time: '12:55', type: 'help' },
   ],
 }
 
 export const mockAlerts = {
   'comp-1': [
-    { id: 'a1', contactName: 'Fernando Rocha',   phone: '+55 21 98765-4321', type: 'help',      message: 'Cliente perguntou sobre cobertura de plano de saúde. IA não conseguiu responder adequadamente.', time: '12:55', resolved: false },
+    { id: 'a1', contactName: 'Fernando Rocha',   phone: '+55 21 98765-4321', type: 'help',      message: 'Cliente perguntou sobre chances de ganhar processo trabalhista. IA não conseguiu avaliar adequadamente.', time: '12:55', resolved: false },
     { id: 'a2', contactName: 'Patrícia Souza',   phone: '+55 11 99876-5432', type: 'schedule',  message: 'Cliente quer agendar para sexta, mas sistema não tem disponibilidade. Verificar agenda manual.', time: '13:10', resolved: false },
     { id: 'a3', contactName: 'Camila Nunes',     phone: '+55 11 94567-8901', type: 'schedule',  message: 'Agendamento confirmado: quinta-feira às 15h. Contato notificado com sucesso.', time: '11:30', resolved: true },
   ],

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -209,7 +209,7 @@ export default function AdmCompanies() {
               {/* Nome da empresa */}
               <div>
                 <label style={labelStyle}>Nome da empresa</label>
-                <input className="nx-input" placeholder="Ex: Clínica Saúde Total"
+                <input className="nx-input" placeholder="Ex: Silva & Associados Advocacia"
                   value={form.name} onChange={e => handleCompanyName(e.target.value)} autoFocus />
                 {form.name && (
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
@@ -228,7 +228,7 @@ export default function AdmCompanies() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                       <label style={labelStyle}>Instância WhatsApp</label>
-                      <input className="nx-input" placeholder="Ex: clinica-saude"
+                      <input className="nx-input" placeholder="Ex: silva-associados"
                         value={form.instance} onChange={e => setForm(p => ({ ...p, instance: e.target.value.trim() }))} />
                     </div>
                     <div>
@@ -247,7 +247,7 @@ export default function AdmCompanies() {
                     </div>
                     <div>
                       <label style={labelStyle}>Tabela de histórico IA</label>
-                      <input className="nx-input" placeholder="Ex: historico_clinica"
+                      <input className="nx-input" placeholder="Ex: historico_escritorio"
                         value={form.historyTable} onChange={e => setForm(p => ({ ...p, historyTable: e.target.value }))} />
                     </div>
                   </div>

@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   GraduationCap, MessageSquare, History, Calendar, Kanban, BellRing,
-  BarChart3, Stethoscope, Settings2, Sparkles, Check, ArrowRight, Lightbulb,
+  BarChart3, Settings2, Sparkles, Check, ArrowRight, Lightbulb,
   PartyPopper, BookOpen, ChevronRight, Bot, Headset, Phone, Star, Zap,
   Mic, Paperclip, FileText, Trophy, Inbox, Users, Flag, Clock, ShieldCheck,
   Camera, Cake, Heart, Instagram, UserPlus, UserCheck, ClipboardList,
-  TrendingUp, AlertCircle,
+  TrendingUp, AlertCircle, Briefcase,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import ConfirmModal from '../../components/ConfirmModal'
@@ -24,7 +24,7 @@ const MODULES = [
     emoji: '💬',
     title: 'Conversas',
     subtitle: 'O coração do atendimento',
-    intro: 'Aqui você vê tudo que chega da sua clínica em tempo real — WhatsApp, Instagram, Digisac, tudo no mesmo lugar.',
+    intro: 'Aqui você vê tudo que chega do seu escritório em tempo real — WhatsApp, Instagram, Digisac, tudo no mesmo lugar.',
     steps: [
       {
         title: 'Três abas para organizar tudo',
@@ -41,16 +41,16 @@ const MODULES = [
       },
       {
         title: 'Salvar contato direto no header',
-        desc: 'Botão "Salvar contato" agora fica visível no topo da conversa, do lado de Agendar e Finalizar. Quando o paciente já tá fichado, o botão fica verde mostrando "Editar [nome]". Sem precisar mais lembrar de clicar com botão direito.',
+        desc: 'Botão "Salvar contato" agora fica visível no topo da conversa, do lado de Agendar e Finalizar. Quando o cliente já tá fichado, o botão fica verde mostrando "Editar [nome]". Sem precisar mais lembrar de clicar com botão direito.',
         chips: [{ icon: UserPlus, label: 'Salvar' }, { icon: UserCheck, label: 'Editar' }],
       },
       {
-        title: 'Origem do paciente detectada sozinha',
-        desc: 'Se o paciente disser "vi vocês no Instagram" ou "minha amiga indicou" nas primeiras mensagens, a plataforma identifica e marca a origem dele automaticamente — sem você precisar perguntar.',
+        title: 'Origem do cliente detectada sozinha',
+        desc: 'Se o cliente disser "vi vocês no Instagram" ou "minha amiga indicou" nas primeiras mensagens, a plataforma identifica e marca a origem dele automaticamente — sem você precisar perguntar.',
       },
       {
-        title: 'Abrir ficha do paciente em 1 clique',
-        desc: 'Clica no nome ou na foto do paciente no header do chat e abre a ficha completa: cadastro, histórico clínico, timeline de atendimentos e mais.',
+        title: 'Abrir ficha do cliente em 1 clique',
+        desc: 'Clica no nome ou na foto do cliente no header do chat e abre a ficha completa: cadastro, histórico jurídico, timeline de atendimentos e mais.',
         chips: [{ icon: Camera, label: 'Foto' }, { icon: ClipboardList, label: 'Ficha' }],
       },
       {
@@ -58,7 +58,7 @@ const MODULES = [
         desc: 'Ao terminar, clica em "Finalizar conversa" e escolhe: Agendado, Resolvido, Encaminhado ou Desistiu. Isso vai virar métrica depois.',
       },
     ],
-    tip: 'Tickets sem atividade por 2h fecham automaticamente como "Expirado". Se o paciente voltar, o ticket reabre na Recepção sozinho — sem trabalho manual pra equipe.',
+    tip: 'Tickets sem atividade por 2h fecham automaticamente como "Expirado". Se o cliente voltar, o ticket reabre na Recepção sozinho — sem trabalho manual pra equipe.',
     cta: { label: 'Abrir Conversas', to: '/painel/conversas' },
   },
   {
@@ -69,7 +69,7 @@ const MODULES = [
     emoji: '🤖',
     title: 'Conversas IA',
     subtitle: 'O histórico completo da IA',
-    intro: 'Aqui ficam todas as mensagens que a IA processou — útil para auditar respostas e entender o que sua assistente virtual está dizendo aos pacientes.',
+    intro: 'Aqui ficam todas as mensagens que a IA processou — útil para auditar respostas e entender o que sua assistente virtual está dizendo aos clientes.',
     steps: [
       {
         title: 'Veja só as conversas com IA',
@@ -81,57 +81,57 @@ const MODULES = [
       },
       {
         title: 'Pesquise por número',
-        desc: 'Use a busca para encontrar rápido o histórico de um paciente específico.',
+        desc: 'Use a busca para encontrar rápido o histórico de um cliente específico.',
       },
     ],
     tip: 'Empresas com IA desativada não veem essa aba — só faz sentido se você usa IA.',
     cta: { label: 'Abrir Conversas IA', to: '/painel/historico' },
   },
   {
-    key: 'pacientes',
+    key: 'clientes',
     icon: Users,
     color: '#16A34A',
     bg: '#DCFCE7',
-    emoji: '🧑‍⚕️',
-    title: 'Pacientes',
-    subtitle: 'Ficha completa de cada paciente',
-    intro: 'A antiga aba "Contatos" virou Pacientes — agora com ficha clínica completa, foto, timeline de atendimentos e tudo que uma clínica precisa pra acompanhar quem é atendido ali.',
+    emoji: '⚖️',
+    title: 'Clientes',
+    subtitle: 'Ficha completa de cada cliente',
+    intro: 'A antiga aba "Contatos" virou Clientes — agora com ficha jurídica completa, foto, timeline de atendimentos e tudo que um escritório de advocacia precisa pra acompanhar cada cliente.',
     steps: [
       {
         title: 'Cadastro novo com autocomplete',
-        desc: 'Clica em "Novo paciente" e o sistema sugere números que já conversaram com vocês mas ainda não foram cadastrados. Um clique e o telefone vai pro formulário.',
+        desc: 'Clica em "Novo cliente" e o sistema sugere números que já conversaram com vocês mas ainda não foram cadastrados. Um clique e o telefone vai pro formulário.',
         chips: [{ icon: UserPlus, label: 'Cadastro rápido' }, { icon: Phone, label: 'Sugere telefone' }],
       },
       {
         title: 'Foto no perfil',
-        desc: 'Cada paciente pode ter uma foto. Ela aparece como avatar nas Conversas, no header do chat, nos cards de agendamento — toda a plataforma fica com cara de gente.',
+        desc: 'Cada cliente pode ter uma foto. Ela aparece como avatar nas Conversas, no header do chat, nos cards de agendamento — toda a plataforma fica com cara de gente.',
         chips: [{ icon: Camera, label: 'Avatar em todo lugar' }],
       },
       {
         title: 'Ficha em 4 abas',
-        desc: 'Resumo (visão geral) · Cadastro (dados pessoais, contato, convênio) · Saúde (alergias, medicações, condições, histórico) · Histórico (timeline de atendimentos e agendamentos).',
-        chips: [{ icon: ClipboardList, label: 'Resumo' }, { icon: FileText, label: 'Cadastro' }, { icon: Heart, label: 'Saúde' }, { icon: History, label: 'Histórico' }],
+        desc: 'Resumo (visão geral) · Cadastro (dados pessoais, contato, convênio) · Jurídico (área de atuação, tipo de processo, honorário) · Histórico (timeline de atendimentos e agendamentos).',
+        chips: [{ icon: ClipboardList, label: 'Resumo' }, { icon: FileText, label: 'Cadastro' }, { icon: Briefcase, label: 'Jurídico' }, { icon: History, label: 'Histórico' }],
       },
       {
         title: 'Banner de aniversário',
-        desc: 'Quando o paciente faz aniversário nos próximos 7 dias, a ficha mostra um banner dourado lembrando — perfeito pra mandar mensagem carinhosa e fortalecer relacionamento.',
+        desc: 'Quando o cliente faz aniversário nos próximos 7 dias, a ficha mostra um banner dourado lembrando — perfeito pra mandar mensagem carinhosa e fortalecer relacionamento.',
         chips: [{ icon: Cake, label: 'Lembrete automático' }],
       },
       {
         title: 'Edição em formulário guiado',
-        desc: 'Clica em "Editar" e abre um modal com sub-abas: Identificação, Contato, Convênio, Saúde, Notas. Cada campo no lugar certo, sem se perder.',
+        desc: 'Clica em "Editar" e abre um modal com sub-abas: Identificação, Contato, Jurídico, Notas. Cada campo no lugar certo, sem se perder.',
       },
       {
         title: 'Atalho pra Conversar',
-        desc: 'Em qualquer card de paciente, botão verde "Conversar" abre o ticket existente ou cria um novo. E clicando na linha, abre direto a ficha completa.',
+        desc: 'Em qualquer card de cliente, botão verde "Conversar" abre o ticket existente ou cria um novo. E clicando na linha, abre direto a ficha completa.',
       },
       {
         title: 'Origem detectada sozinha',
-        desc: 'Não precisa perguntar "como conheceu a clínica?". A plataforma lê as primeiras mensagens do paciente e detecta automaticamente: Indicação, Instagram, Google, Facebook, Anúncio, Site... Tudo isso vira métrica em Métricas → Leads.',
+        desc: 'Não precisa perguntar "como conheceu o escritório?". A plataforma lê as primeiras mensagens do cliente e detecta automaticamente: Indicação, Instagram, Google, Facebook, Anúncio, Site... Tudo isso vira métrica em Métricas → Leads.',
       },
     ],
-    tip: 'Use a aba Saúde pra registrar alergias, condições crônicas e medicações em uso — esses campos ficam visíveis no Resumo da ficha, ajudando profissionais a tomar decisão rápida durante o atendimento.',
-    cta: { label: 'Abrir Pacientes', to: '/painel/contatos' },
+    tip: 'Use a aba Jurídico pra registrar área de atuação, tipo de processo e honorário — esses campos ficam visíveis no Resumo da ficha, ajudando a equipe na tomada de decisão rápida durante o atendimento.',
+    cta: { label: 'Abrir Clientes', to: '/painel/contatos' },
   },
   {
     key: 'agenda',
@@ -140,8 +140,8 @@ const MODULES = [
     bg: '#CFFAFE',
     emoji: '📅',
     title: 'Agenda',
-    subtitle: 'Marque consultas direto da plataforma',
-    intro: 'Calendário semanal com os agendamentos da clínica. Cria múltiplas agendas (uma por médico ou por sala) com horários, dias e duração de slot configuráveis.',
+    subtitle: 'Marque reuniãos direto da plataforma',
+    intro: 'Calendário semanal com os agendamentos do escritório. Cria múltiplas agendas (uma por advogado ou por sala) com horários, dias e duração de slot configuráveis.',
     steps: [
       {
         title: 'Crie agendas na aba "Agendas"',
@@ -157,14 +157,14 @@ const MODULES = [
       },
       {
         title: 'Validações automáticas',
-        desc: 'Não deixa marcar fora do dia/horário do médico, nem dentro do intervalo, nem em conflito com outro paciente do mesmo profissional.',
+        desc: 'Não deixa marcar fora do dia/horário do advogado, nem dentro do intervalo, nem em conflito com outro cliente do mesmo profissional.',
       },
       {
         title: 'Integração com Conversas',
-        desc: 'Cada vez que cria/altera/cancela um agendamento, registra mensagem no chat do paciente. Cancelar manda automaticamente um aviso pelo WhatsApp.',
+        desc: 'Cada vez que cria/altera/cancela um agendamento, registra mensagem no chat do cliente. Cancelar manda automaticamente um aviso pelo WhatsApp.',
       },
     ],
-    tip: 'Na lista de Conversas aparece uma tag roxa "📅 hoje 14:30" no contato que tem agendamento futuro. Visualmente indica quem espera consulta.',
+    tip: 'Na lista de Conversas aparece uma tag roxa "📅 hoje 14:30" no contato que tem agendamento futuro. Visualmente indica quem espera reunião.',
     cta: { label: 'Abrir Agenda', to: '/painel/agenda' },
   },
   {
@@ -175,7 +175,7 @@ const MODULES = [
     emoji: '📋',
     title: 'Atividades',
     subtitle: 'Quadro Kanban para tarefas internas',
-    intro: 'Crie colunas (A Fazer, Em Andamento, Concluído ou o que preferir) e cards de tarefas. Use para checklists internos, follow-up de pacientes, manutenção da clínica.',
+    intro: 'Crie colunas (A Fazer, Em Andamento, Concluído ou o que preferir) e cards de tarefas. Use para checklists internos, follow-up de clientes, manutenção do escritório.',
     steps: [
       {
         title: 'Crie suas colunas',
@@ -235,15 +235,15 @@ const MODULES = [
     emoji: '📸',
     title: 'Instagram',
     subtitle: 'Em breve · DMs unificadas + IA criando posts',
-    intro: 'A aba Instagram já existe no menu (com badge "Em breve") como teaser do que tá vindo. A ideia é centralizar tudo do Insta da clínica dentro da plataforma.',
+    intro: 'A aba Instagram já existe no menu (com badge "Em breve") como teaser do que tá vindo. A ideia é centralizar tudo do Insta do escritório dentro da plataforma.',
     steps: [
       {
         title: 'DMs do Instagram nas Conversas',
         desc: 'Mesma caixa de entrada do WhatsApp — DM cai como ticket, IA filtra, equipe assume. Sem precisar abrir o app do celular.',
       },
       {
-        title: 'IA gera posts pra clínica',
-        desc: 'Conta pra IA o tema (ex: "5 dúvidas sobre clareamento dental") e ela monta carrossel completo: copy, sugestão visual, hashtags. Você só revisa e aprova.',
+        title: 'IA gera posts pro escritório',
+        desc: 'Conta pra IA o tema (ex: "5 direitos do trabalhador que você não conhece") e ela monta carrossel completo: copy, sugestão visual, hashtags. Você só revisa e aprova.',
       },
       {
         title: 'Calendário editorial integrado',
@@ -302,28 +302,28 @@ const MODULES = [
   },
   {
     key: 'catalogo',
-    icon: Stethoscope,
+    icon: Briefcase,
     color: '#A855F7',
     bg: '#F3E8FF',
-    emoji: '🩺',
-    title: 'Catálogo Clínico',
-    subtitle: 'Médicos, procedimentos e convênios',
-    intro: 'Aqui é onde você cadastra a estrutura da clínica. Tudo que cadastrar aparece automaticamente nos modais de agendamento.',
+    emoji: '⚖️',
+    title: 'Catálogo Jurídico',
+    subtitle: 'Advogados, serviços e convênios',
+    intro: 'Aqui é onde você cadastra a estrutura do escritório. Tudo que cadastrar aparece automaticamente nos modais de agendamento.',
     steps: [
       {
         title: 'Profissionais',
-        desc: 'Nome, especialidade, registro (CRM/CRO), cor, dias e horários de atendimento, intervalo (almoço). Tudo isso vira validação na agenda.',
+        desc: 'Nome, especialidade, registro (OAB), cor, dias e horários de atendimento, intervalo. Tudo isso vira validação na agenda.',
       },
       {
-        title: 'Procedimentos',
-        desc: 'Tipo (Consulta/Exame/Procedimento), duração padrão e valor particular. Pode ser específico de um profissional ou da clínica toda.',
+        title: 'Serviços',
+        desc: 'Tipo (Consulta/Audiência/Reunião), duração padrão e valor particular. Pode ser específico de um advogado ou do escritório todo.',
       },
       {
         title: 'Convênios e valores',
         desc: 'Cadastre os planos aceitos. Em cada procedimento, defina o valor diferenciado por convênio. O sistema usa o valor certo conforme a forma de pagamento escolhida.',
       },
     ],
-    tip: 'No agendamento, ao escolher procedimento + convênio, o valor é preenchido automaticamente. Se o paciente pagar diferente, é só editar no campo.',
+    tip: 'No agendamento, ao escolher procedimento + convênio, o valor é preenchido automaticamente. Se o cliente pagar diferente, é só editar no campo.',
     cta: { label: 'Abrir Catálogo', to: '/painel/catalogo' },
   },
   {

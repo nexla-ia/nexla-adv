@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -409,12 +409,12 @@ export default function AdmQualidade() {
       <div className="qm-card">
         <div className="qm-card-head">
           <Hourglass size={14} /> Top pendências aguardando humano
-          {topPending.length > 0 && <span className="qm-pending-count">{topPending.length} pacientes</span>}
+          {topPending.length > 0 && <span className="qm-pending-count">{topPending.length} clientes</span>}
         </div>
         {topPending.length === 0 ? (
           <div className="qm-empty">
             <CheckCircle2 size={26} style={{ color: '#16A34A' }} />
-            <p>Nenhum paciente pendente. Bom trabalho.</p>
+            <p>Nenhum cliente pendente. Bom trabalho.</p>
           </div>
         ) : (
           <div className="qm-pending-list">

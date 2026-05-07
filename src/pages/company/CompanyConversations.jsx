@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -1034,7 +1034,7 @@ export default function CompanyConversations() {
                         cursor: saved ? 'pointer' : 'default',
                       }}
                       onClick={() => saved && navigate(`/painel/contatos/${saved.id}`)}
-                      title={saved ? 'Abrir ficha do paciente' : ''}
+                      title={saved ? 'Abrir ficha do cliente' : ''}
                     >
                       {saved?.photo
                         ? <img src={saved.photo} alt={saved.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1569,7 +1569,7 @@ export default function CompanyConversations() {
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <User size={13} />
-                {saved ? 'Editar paciente' : 'Salvar paciente'}
+                {saved ? 'Editar cliente' : 'Salvar cliente'}
               </button>
             )
           })()}
@@ -1586,7 +1586,7 @@ export default function CompanyConversations() {
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>
-                  {saveContactModal.id ? 'Editar paciente' : 'Salvar paciente'}
+                  {saveContactModal.id ? 'Editar cliente' : 'Salvar cliente'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, fontFamily: 'monospace' }}>
                   {saveContactModal.numero}

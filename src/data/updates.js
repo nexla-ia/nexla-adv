@@ -1,4 +1,4 @@
-// Lista de novidades/atualizações da plataforma
+﻿// Lista de novidades/atualizações da plataforma
 // Sempre que houver mudanças relevantes, adicionar uma entrada NO TOPO desta lista.
 // Tom: conversa direta com o cliente — "vocês podem", "desenvolvemos para vocês", etc.
 
@@ -9,10 +9,10 @@ export const UPDATES = [
     type: 'feature',
     tags: ['Privacidade', 'LGPD'],
     items: [
-      'Nova aba "Segurança" no menu, com explicação clara de como a gente trata os dados de vocês e dos pacientes.',
-      'Nove pilares navegáveis: privacidade da conversa, infraestrutura AWS Brasil, criptografia (TLS 1.3 + AES-256), métricas vs bisbilhotagem, LGPD na prática, controlador vs operadora, transparência total, direitos do paciente, plano de incidente.',
-      'Sem rodeio: deixamos preto no branco o que a equipe vê (números agregados) e o que NUNCA vê sem autorização (conteúdo de mensagens, áudios, prontuário).',
-      'Ideal pra mostrar pra paciente que perguntar "pra onde vai meu dado?" — vocês têm a resposta pronta na plataforma.',
+      'Nova aba "Segurança" no menu, com explicação clara de como a gente trata os dados de vocês e dos clientes.',
+      'Nove pilares navegáveis: privacidade da conversa, infraestrutura AWS Brasil, criptografia (TLS 1.3 + AES-256), métricas vs bisbilhotagem, LGPD na prática, controlador vs operadora, transparência total, direitos do cliente, plano de incidente.',
+      'Sem rodeio: deixamos preto no branco o que a equipe vê (números agregados) e o que NUNCA vê sem autorização (conteúdo de mensagens, áudios, processo).',
+      'Ideal pra mostrar pra cliente que perguntar "pra onde vai meu dado?" — vocês têm a resposta pronta na plataforma.',
     ],
   },
   {
@@ -33,12 +33,12 @@ export const UPDATES = [
     date: '2026-04-30',
     title: 'Status do lead identificado automaticamente',
     type: 'improvement',
-    tags: ['Pacientes', 'Métricas'],
+    tags: ['Clientes', 'Métricas'],
     items: [
       'A plataforma agora classifica cada lead sozinha em 5 estágios: Novo (caiu na recepção sem resposta) · Em atendimento (alguém respondeu) · Agendado · Encerrado · Perdido.',
       'Não precisa mais lembrar de classificar manualmente — o status atualiza com base no que está acontecendo na conversa real.',
       'Aparece direto na aba Métricas → Leads, com cores distintas pra cada estágio.',
-      'Origens (Instagram / Indicação / Google / Facebook / Anúncio) também estão sendo detectadas automaticamente: a IA lê as primeiras mensagens do paciente e identifica.',
+      'Origens (Instagram / Indicação / Google / Facebook / Anúncio) também estão sendo detectadas automaticamente: a IA lê as primeiras mensagens do cliente e identifica.',
     ],
   },
   {
@@ -62,8 +62,8 @@ export const UPDATES = [
     items: [
       'Antes pra salvar contato precisava clicar com botão direito na lista lateral — escondido, fácil de esquecer.',
       'Agora tem botão visível no topo da conversa, ao lado de "Agendar" e "Finalizar conversa".',
-      'Quando o paciente já está fichado, o botão fica verde mostrando "Editar [nome]" — feedback visual claro.',
-      'Bonus: a IA agora detecta sozinha de onde o paciente veio (Instagram, indicação, Google...) lendo as primeiras mensagens.',
+      'Quando o cliente já está fichado, o botão fica verde mostrando "Editar [nome]" — feedback visual claro.',
+      'Bonus: a IA agora detecta sozinha de onde o cliente veio (Instagram, indicação, Google...) lendo as primeiras mensagens.',
     ],
   },
   {
@@ -94,54 +94,54 @@ export const UPDATES = [
     date: '2026-04-29',
     title: 'Origem do lead detectada automaticamente nas conversas',
     type: 'feature',
-    tags: ['Pacientes', 'Métricas'],
+    tags: ['Clientes', 'Métricas'],
     items: [
       'Não precisa mais perguntar "como você nos conheceu?" — a plataforma lê as primeiras 5 mensagens do cliente e identifica sozinha.',
       'Detecta: Instagram, Indicação ("minha amiga me indicou"), Google, Facebook, TikTok, YouTube, Site, Anúncio.',
-      'Atualiza o campo origem do paciente automaticamente, sem sobrescrever o que vocês já preencheram manualmente.',
-      'Aparece direto nas Métricas → Leads, ajudando a saber qual canal mais traz paciente.',
+      'Atualiza o campo origem do cliente automaticamente, sem sobrescrever o que vocês já preencheram manualmente.',
+      'Aparece direto nas Métricas → Leads, ajudando a saber qual canal mais traz cliente.',
     ],
   },
   {
     date: '2026-04-28',
-    title: 'Ficha do paciente turbinada — foto na conversa, autocomplete e mais campos',
+    title: 'Ficha do cliente turbinada — foto na conversa, autocomplete e mais campos',
     type: 'improvement',
-    tags: ['Pacientes'],
+    tags: ['Clientes'],
     items: [
-      'Cliquem agora no nome do paciente lá na lista e vocês caem direto na ficha completa. Sem modal feio no caminho.',
-      'A foto que vocês cadastram na ficha aparece como avatar do paciente nas conversas e no header do chat — clica nela e abre a ficha.',
-      'Cadastrando paciente novo: comecem a digitar o telefone e a gente sugere automaticamente os números que já conversaram com a clínica e ainda não foram cadastrados. Acelera muito.',
-      'Adicionamos campos que toda clínica tem na ficha: nome social, estado civil, tipo sanguíneo, peso, altura (com IMC calculado), responsável legal e telefone do responsável.',
-      'Aba "Origem / Indicação": vocês escolhem como o paciente conheceu a clínica (Instagram, Facebook, Google, indicação...) — pra rastrear depois nas métricas.',
-      'O modal de "Novo paciente" ficou só com nome + telefone — depois vocês são levados pra ficha completa pra preencher o resto. Sem ter que fazer cadastro gigante de uma vez só.',
+      'Cliquem agora no nome do cliente lá na lista e vocês caem direto na ficha completa. Sem modal feio no caminho.',
+      'A foto que vocês cadastram na ficha aparece como avatar do cliente nas conversas e no header do chat — clica nela e abre a ficha.',
+      'Cadastrando cliente novo: comecem a digitar o telefone e a gente sugere automaticamente os números que já conversaram com o escritório e ainda não foram cadastrados. Acelera muito.',
+      'Adicionamos campos que todo escritório tem na ficha: nome social, estado civil, OAB, área de atuação, responsável legal e telefone do responsável.',
+      'Aba "Origem / Indicação": vocês escolhem como o cliente conheceu o escritório (Instagram, Facebook, Google, indicação...) — pra rastrear depois nas métricas.',
+      'O modal de "Novo cliente" ficou só com nome + telefone — depois vocês são levados pra ficha completa pra preencher o resto. Sem ter que fazer cadastro gigante de uma vez só.',
     ],
   },
   {
     date: '2026-04-28',
-    title: 'Ficha de paciente completa — prontuário, foto e linha do tempo',
+    title: 'Ficha de cliente completa — processo, foto e linha do tempo',
     type: 'feature',
-    tags: ['Pacientes', 'Saúde'],
+    tags: ['Clientes', 'Jurídico'],
     items: [
-      'Cliquem em qualquer paciente da lista e vocês caem numa ficha completa, estilo prontuário. Fica bonito.',
-      'Foto do paciente: subam uma JPG/PNG até 500 KB e ela aparece no avatar do cabeçalho, na lista e onde mais aparecer aquele paciente.',
+      'Cliquem em qualquer cliente da lista e vocês caem numa ficha completa, estilo processo. Fica bonito.',
+      'Foto do cliente: subam uma JPG/PNG até 500 KB e ela aparece no avatar do cabeçalho, na lista e onde mais aparecer aquele cliente.',
       'Cadastro expandido: identificação completa (nome, CPF, RG, nascimento, gênero, profissão), contatos múltiplos (telefone principal/secundário, e-mail, endereço, contato de emergência), convênio e carteirinha.',
-      'Aba Saúde com alergias, condições crônicas, medicamentos em uso e observações clínicas — tudo separado, fácil de bater o olho na hora da consulta.',
-      'Linha do tempo do paciente: cadastro, todas as consultas (passadas e futuras) ordenadas por data, com status colorido. Vocês veem a história inteira numa rolada só.',
-      'Aniversário do paciente está chegando? Banner colorido aparece automaticamente na ficha — vocês conseguem fazer aquele follow-up especial.',
-      'Resumo no topo: próxima consulta, total de consultas realizadas, valor total pago e data de cadastro. Tudo num piscar de olhos.',
+      'Aba Jurídico com área de atuação, tipo de processo, honorário e observações — tudo separado, fácil de consultar durante o atendimento.',
+      'Linha do tempo do cliente: cadastro, todas as reuniãos (passadas e futuras) ordenadas por data, com status colorido. Vocês veem a história inteira numa rolada só.',
+      'Aniversário do cliente está chegando? Banner colorido aparece automaticamente na ficha — vocês conseguem fazer aquele follow-up especial.',
+      'Resumo no topo: próxima reunião, total de reuniãos realizadas, valor total pago e data de cadastro. Tudo num piscar de olhos.',
     ],
   },
   {
     date: '2026-04-28',
-    title: 'A aba "Contatos" virou "Pacientes" — agora com cadastro completo',
+    title: 'A aba "Contatos" virou "Clientes" — agora com cadastro completo',
     type: 'feature',
-    tags: ['Pacientes'],
+    tags: ['Clientes'],
     items: [
-      'Vocês não estão atendendo contato — estão atendendo paciente. Mudamos o nome pra refletir isso.',
+      'Vocês não estão atendendo contato — estão atendendo cliente. Mudamos o nome pra refletir isso.',
       'Agora vocês cadastram nome completo, CPF, data de nascimento, e-mail, endereço, plano de convênio, número da carteirinha e notas privadas. Tudo num modal só.',
-      'O telefone (que era o "contato") virou só mais um campo dentro do cadastro. Continua sendo o que liga o paciente ao chat e à agenda.',
+      'O telefone (que era o "contato") virou só mais um campo dentro do cadastro. Continua sendo o que liga o cliente ao chat e à agenda.',
       'A busca agora cobre nome, telefone, CPF e e-mail. Encontrem qualquer um em segundos.',
-      'Botão "Conversar" continua lá, abrindo o chat direto. Botão direito numa conversa também — só que agora ele diz "Salvar paciente".',
+      'Botão "Conversar" continua lá, abrindo o chat direto. Botão direito numa conversa também — só que agora ele diz "Salvar cliente".',
     ],
   },
   {
@@ -152,7 +152,7 @@ export const UPDATES = [
     items: [
       'Vocês reparam que o logo MM em cobre apareceu por todos os cantos? Sim, é a nossa identidade oficial agora — pensamos numa cara mais sóbria, sem perder a vivacidade do produto.',
       'A frase "Lucro e ética andam juntos" virou nossa tagline oficial. Vocês vão ver ela aparecendo em pontos discretos, lembrando o porquê de tudo isso existir.',
-      'O nome "MedicinaMKT" continua o mesmo — só ficou mais bonito em cima do monograma novo.',
+      'O nome "NexlaADV" continua o mesmo — só ficou mais bonito em cima do monograma novo.',
     ],
   },
   {
@@ -162,8 +162,8 @@ export const UPDATES = [
     tags: ['Em breve'],
     items: [
       'Vocês pediram, a gente está construindo: o Instagram Direct vai entrar na mesma caixa do WhatsApp. Atender comentário e DM no mesmo lugar, com a mesma equipe.',
-      'A IA também vai virar criadora de conteúdo: ela escreve legenda, sugere imagem e agenda os posts da clínica de vocês.',
-      'E para a parte clínica de verdade: vocês recebem o laudo no chat, a IA lê, resume e prepara a triagem para o médico. Economia real de tempo da equipe.',
+      'A IA também vai virar criadora de conteúdo: ela escreve legenda, sugere imagem e agenda os posts do escritório de vocês.',
+      'E para a parte escritório de verdade: vocês recebem o laudo no chat, a IA lê, resume e prepara a triagem para o advogado. Economia real de tempo da equipe.',
       'Tudo isso vai aparecendo aos poucos, com o badge "Em breve" no menu. Quem quiser entrar na waitlist do Instagram já pode pela aba dele.',
     ],
   },
@@ -173,10 +173,10 @@ export const UPDATES = [
     type: 'feature',
     tags: ['Marketing'],
     items: [
-      'Repaginamos a página inicial (medicinamktatendimento.com) para vocês compartilharem com confiança. Tipografia nova, cores vivas, mais espaço para o produto respirar.',
+      'Repaginamos a página inicial (nexlaadvatendimento.com) para vocês compartilharem com confiança. Tipografia nova, cores vivas, mais espaço para o produto respirar.',
       'O hero ficou mais limpo, os números agora têm contexto ("média dos clientes nos últimos 6 meses") e os planos têm uma comparação justa: secretária CLT custa R$ 3.500+/mês.',
-      'Adicionamos uma seção falando sobre LGPD e segurança — algo que clínica grande sempre pergunta antes de fechar.',
-      'Vocês podem mandar o link da landing pros pacientes que perguntam "como funciona esse sistema de vocês?". Vai vender por vocês.',
+      'Adicionamos uma seção falando sobre LGPD e segurança — algo que escritório grande sempre pergunta antes de fechar.',
+      'Vocês podem mandar o link da landing pros clientes que perguntam "como funciona esse sistema de vocês?". Vai vender por vocês.',
     ],
   },
   {
@@ -193,14 +193,14 @@ export const UPDATES = [
   },
   {
     date: '2026-04-28',
-    title: 'Quadro Kanban para organizar a rotina da clínica',
+    title: 'Quadro Kanban para organizar a rotina do escritório',
     type: 'feature',
     tags: ['Atividades'],
     items: [
       'Demos pra vocês um quadro Kanban dentro da plataforma. Aquele estilo "A Fazer / Em Andamento / Concluído" que todo mundo conhece.',
       'Vocês criam as colunas que quiserem (admin), atribuem cards a qualquer atendente, definem prioridade e data de vencimento.',
       'Arrastar e soltar funciona. Filtros de "Meus cards" e por prioridade também. Cards atrasados ficam vermelhos automaticamente.',
-      'Use pra organizar follow-ups de pacientes, manutenção da clínica, lista de compras — qualquer rotina interna.',
+      'Use pra organizar follow-ups de clientes, manutenção do escritório, lista de compras — qualquer rotina interna.',
     ],
   },
   {
@@ -217,14 +217,14 @@ export const UPDATES = [
   },
   {
     date: '2026-04-28',
-    title: 'Catálogo da clínica — médicos, procedimentos e convênios cadastrados',
+    title: 'Catálogo do escritório — advogados, procedimentos e convênios cadastrados',
     type: 'feature',
     tags: ['Catálogo'],
     items: [
-      'Demos pra vocês uma página inteira só pra cadastrar a estrutura da clínica. Médicos, procedimentos, exames, convênios — tudo lá.',
-      'Cadastrem dias e horários de atendimento de cada profissional, intervalo de almoço, registro (CRM/CRO). A agenda usa isso pra validar marcações automaticamente.',
+      'Demos pra vocês uma página inteira só pra cadastrar a estrutura do escritório. Advogados, procedimentos, exames, convênios — tudo lá.',
+      'Cadastrem dias e horários de atendimento de cada advogado, intervalo, número da OAB. A agenda usa isso pra validar marcações automaticamente.',
       'Cadastrem procedimentos com valor particular e valor por convênio. No agendamento, a forma de pagamento já puxa o preço certo. Sem planilha paralela.',
-      'Tudo isso virou base também para o financeiro: faturamento por médico, por procedimento, por convênio. Vocês veem o que rende mais.',
+      'Tudo isso virou base também para o financeiro: faturamento por advogado, por procedimento, por convênio. Vocês veem o que rende mais.',
     ],
   },
   {
@@ -233,10 +233,10 @@ export const UPDATES = [
     type: 'feature',
     tags: ['Agenda'],
     items: [
-      'Lançamos a Agenda dentro da plataforma. Vocês criam quantas agendas quiserem (uma por médico, por sala, por consultório), com horários e dias configuráveis.',
+      'Lançamos a Agenda dentro da plataforma. Vocês criam quantas agendas quiserem (uma por advogado, por sala, por consultório), com horários e dias configuráveis.',
       'O calendário semanal mostra tudo visualmente. Cliquem num horário vazio e marquem direto. Auto-completa nome dos contatos salvos. Valida conflitos sozinho.',
-      'Aqui vai o pulo do gato: a agenda conversa com o chat. Quando vocês marcam um agendamento, fica registrado na conversa do paciente. Cancelamento manda mensagem automática avisando.',
-      'Na lista de Conversas aparece uma tag roxa "📅 hoje 14:30" no contato que tem agendamento futuro. Visualmente vocês sabem quem espera consulta.',
+      'Aqui vai o pulo do gato: a agenda conversa com o chat. Quando vocês marcam um agendamento, fica registrado na conversa do cliente. Cancelamento manda mensagem automática avisando.',
+      'Na lista de Conversas aparece uma tag roxa "📅 hoje 14:30" no contato que tem agendamento futuro. Visualmente vocês sabem quem espera reunião.',
     ],
   },
   {
@@ -256,9 +256,9 @@ export const UPDATES = [
     type: 'feature',
     tags: ['Contatos'],
     items: [
-      'Vocês podem salvar pacientes recorrentes com nome e notas. Em vez de ver "5561991234567" na lista, vocês veem "Maria Silva" — bem mais humano.',
+      'Vocês podem salvar clientes recorrentes com nome e notas. Em vez de ver "5561991234567" na lista, vocês veem "Maria Silva" — bem mais humano.',
       'Pra salvar é simples: cliquem com o botão direito sobre uma conversa e escolham "Salvar contato". Coloquem nome, número e qualquer observação.',
-      'A aba Contatos mostra todos juntos, com busca rápida e botão verde "Conversar" que já abre o chat com aquele paciente. Marcar consulta? Direto dali.',
+      'A aba Contatos mostra todos juntos, com busca rápida e botão verde "Conversar" que já abre o chat com aquele cliente. Marcar reunião? Direto dali.',
     ],
   },
   {
@@ -279,7 +279,7 @@ export const UPDATES = [
     type: 'feature',
     tags: ['Equipe'],
     items: [
-      'Tinha clínica reclamando que o atendente da estética via conversa do urologista. Resolvido: agora vocês criam setores (Comercial, Suporte, Recepção, etc).',
+      'Tinha escritório reclamando que o atendente do cível via conversa do trabalhista. Resolvido: agora vocês criam setores (Trabalhista, Cível, Família, Recepção, etc).',
       'Cada conversa, ao ser assumida, fica no setor de quem assumiu. Os outros atendentes daquele setor enxergam, mas operadores de fora não.',
       'Admin sempre vê tudo. Operador comum vê só o seu setor + Recepção (a fila de quem ainda não foi atendido).',
     ],
@@ -291,7 +291,7 @@ export const UPDATES = [
     tags: ['Conversas'],
     items: [
       'Conversa parada há mais de 6h vira "Expirado" automaticamente. Vocês não precisam ficar finalizando ticket por ticket que esfriou.',
-      'Se o paciente voltar a falar depois, o ticket reabre na Recepção como novo atendimento. Sem perder histórico.',
+      'Se o cliente voltar a falar depois, o ticket reabre na Recepção como novo atendimento. Sem perder histórico.',
       'Bônus: quando o atendente manda mensagem numa conversa não atribuída, o sistema assume automaticamente em nome dele. Menos cliques.',
     ],
   },

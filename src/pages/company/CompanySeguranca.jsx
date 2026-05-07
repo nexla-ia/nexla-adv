@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import {
   ShieldCheck, Lock, Server, BarChart3, FileCheck2, Database,
   Cloud, KeyRound, Check, X, AlertTriangle, Sparkles, Headset,
@@ -15,13 +15,13 @@ const PILLARS = [
     color: '#C9A074',
     bg: '#FFFBEB',
     emoji: '🔒',
-    title: 'A conversa do seu paciente é da sua clínica',
+    title: 'A conversa do seu cliente é do seu escritório',
     subtitle: 'Sem bisbilhotagem, sem uso comercial',
-    intro: 'Ninguém da MedicinaMKT abre o chat de um paciente por curiosidade ou pra uso comercial. Em nenhuma hipótese usamos seus dados pra treinar IA externa, vender insight ou benchmark sem anonimizar.',
+    intro: 'Ninguém da NexlaADV abre o chat de um cliente por curiosidade ou pra uso comercial. Em nenhuma hipótese usamos seus dados pra treinar IA externa, vender insight ou benchmark sem anonimizar.',
     steps: [
       { title: 'Acesso técnico só com propósito', desc: 'Quando precisamos olhar uma conversa específica (ex: você abriu chamado e pediu ajuda), a equipe acessa só aquela. Tudo registrado em log de auditoria.' },
-      { title: 'Sem treinar IA externa com seus dados', desc: 'O conteúdo das suas conversas nunca alimenta modelo de terceiros. A IA que atende seus pacientes usa contexto da sua clínica, não da clínica vizinha.' },
-      { title: 'Sem benchmark identificável', desc: 'Quando comparamos métricas entre clínicas pra te dar insight, todos os dados são anonimizados — você não aparece nominalmente em relatório nenhum.' },
+      { title: 'Sem treinar IA externa com seus dados', desc: 'O conteúdo das suas conversas nunca alimenta modelo de terceiros. A IA que atende seus clientes usa contexto do seu escritório, não do escritório vizinha.' },
+      { title: 'Sem benchmark identificável', desc: 'Quando comparamos métricas entre escritórios pra te dar insight, todos os dados são anonimizados — você não aparece nominalmente em relatório nenhum.' },
     ],
     tip: 'Acesso técnico existe pra suporte (você pediu, equipe olhou) e auditoria de bugs — sempre registrado.',
   },
@@ -35,7 +35,7 @@ const PILLARS = [
     subtitle: 'Servidores em São Paulo, soberania nacional',
     intro: 'Servidores na AWS São Paulo com replicação geográfica e backups diários automáticos. Latência baixa, soberania de dados nacional, sem dúvida sobre transferência internacional.',
     steps: [
-      { title: 'Região AWS sa-east-1', desc: 'Toda infra hospedada em São Paulo. Seus dados não saem do Brasil — atende exigência da LGPD pra dados sensíveis de saúde.' },
+      { title: 'Região AWS sa-east-1', desc: 'Toda infra hospedada em São Paulo. Seus dados não saem do Brasil — atende exigência da LGPD pra dados jurídicos sensíveis.' },
       { title: 'Banco de dados gerenciado', desc: 'PostgreSQL gerenciado pela Supabase rodando em cima de AWS RDS. Alta disponibilidade, replicação síncrona, ponto de recuperação a cada minuto.' },
       { title: 'Backups diários replicados', desc: 'Snapshots do banco feitos automaticamente todo dia, retidos por 30 dias, replicados pra outra região AWS pra recuperação em caso de desastre.' },
       { title: 'Monitoramento 24/7', desc: 'Alertas automáticos de latência, erros e indisponibilidade. Equipe técnica notificada em segundos se algo sair do padrão.' },
@@ -55,7 +55,7 @@ const PILLARS = [
       { title: 'TLS 1.3 em trânsito', desc: 'Toda comunicação entre o navegador da sua equipe e nossos servidores passa por canal criptografado. Mesmo num WiFi público, ninguém intercepta o conteúdo.' },
       { title: 'AES-256 at-rest', desc: 'O banco inteiro fica criptografado no disco. Se alguém roubar fisicamente o servidor (cenário improvável), os dados ficam ilegíveis sem a chave mestra.' },
       { title: 'Senhas com hash bcrypt + salt', desc: 'Senha de operador nunca é guardada em texto. É processada por bcrypt com salt único — mesmo um admin do banco não consegue ver senha de ninguém.' },
-      { title: 'Tokens de API individuais', desc: 'Cada empresa tem chave própria, isolada. Token comprometido afeta só uma clínica e pode ser revogado em segundos.' },
+      { title: 'Tokens de API individuais', desc: 'Cada empresa tem chave própria, isolada. Token comprometido afeta só um escritório e pode ser revogado em segundos.' },
     ],
     tip: 'Senhas com hash bcrypt + salt. Tokens de API individuais por empresa.',
   },
@@ -67,11 +67,11 @@ const PILLARS = [
     emoji: '📊',
     title: 'Métricas pra te ajudar — não pra bisbilhotar',
     subtitle: 'Números agregados, nunca conteúdo nominal',
-    intro: 'A equipe MedicinaMKT acompanha números, não conteúdo: tempo de resposta médio, taxa de no-show, volume de mensagens. Isso vira recomendação concreta pra sua operação melhorar — não relatório de cotação pra terceiros.',
+    intro: 'A equipe NexlaADV acompanha números, não conteúdo: tempo de resposta médio, taxa de no-show, volume de mensagens. Isso vira recomendação concreta pra sua operação melhorar — não relatório de cotação pra terceiros.',
     steps: [
       { title: 'O que vemos', desc: 'Volume de mensagens por dia, tempo médio até primeira resposta, taxa de conversão, status agregado de tickets. Tudo número, nada nome.' },
-      { title: 'O que NÃO vemos rotineiramente', desc: 'Conteúdo das mensagens, áudios, fotos, prontuário, dados clínicos do paciente. Pra acessar algo assim precisa autorização sua + log de auditoria.' },
-      { title: 'Pra que serve', desc: 'Identificar gargalos no atendimento (ex: "sua clínica X tá demorando muito pra responder"), te ajudar a treinar a equipe, melhorar a plataforma com base em uso real.' },
+      { title: 'O que NÃO vemos rotineiramente', desc: 'Conteúdo das mensagens, áudios, fotos, processo, dados clínicos do cliente. Pra acessar algo assim precisa autorização sua + log de auditoria.' },
+      { title: 'Pra que serve', desc: 'Identificar gargalos no atendimento (ex: "seu escritório X tá demorando muito pra responder"), te ajudar a treinar a equipe, melhorar a plataforma com base em uso real.' },
     ],
     tip: 'Quando precisamos olhar um caso real, é via suporte, com sua autorização e registro em auditoria.',
   },
@@ -83,14 +83,14 @@ const PILLARS = [
     emoji: '✅',
     title: 'LGPD na prática, não no slide',
     subtitle: 'DPO, contrato e direitos cumpridos',
-    intro: 'Contrato com cláusula de tratamento de dados, DPO designado pela MedicinaMKT, política de retenção configurável por clínica. Cumprimos os direitos do paciente — acesso, retificação e exclusão — em prazos legais.',
+    intro: 'Contrato com cláusula de tratamento de dados, DPO designado pela NexlaADV, política de retenção configurável por escritório. Cumprimos os direitos do cliente — acesso, retificação e exclusão — em prazos legais.',
     steps: [
       { title: 'Cláusula de tratamento no contrato', desc: 'Todo cliente recebe contrato com adendo de tratamento de dados especificando: o que coletamos, pra quê, por quanto tempo, e como cumprimos a LGPD.' },
-      { title: 'DPO designado', desc: 'MedicinaMKT tem encarregado de proteção de dados (DPO) responsável por dúvidas. Email direto pra ele aparece no rodapé do contrato — sem URA, sem ticket genérico.' },
-      { title: 'Retenção configurável', desc: 'Você define por quanto tempo guardar histórico de conversas (padrão: indefinido, mas pode ajustar). Mensagens de pacientes que pediram exclusão são anonimizadas em 30 dias.' },
-      { title: 'Direitos do paciente em 2 cliques', desc: 'Botão na ficha do paciente: exportar dados (PDF), retificar campo, excluir cadastro. Sua equipe atende em segundos — sem ter que abrir ticket de TI.' },
+      { title: 'DPO designado', desc: 'NexlaADV tem encarregado de proteção de dados (DPO) responsável por dúvidas. Email direto pra ele aparece no rodapé do contrato — sem URA, sem ticket genérico.' },
+      { title: 'Retenção configurável', desc: 'Você define por quanto tempo guardar histórico de conversas (padrão: indefinido, mas pode ajustar). Mensagens de clientes que pediram exclusão são anonimizadas em 30 dias.' },
+      { title: 'Direitos do cliente em 2 cliques', desc: 'Botão na ficha do cliente: exportar dados (PDF), retificar campo, excluir cadastro. Sua equipe atende em segundos — sem ter que abrir ticket de TI.' },
     ],
-    tip: 'Você pode solicitar exportação ou exclusão de qualquer paciente em 2 cliques na ficha dele.',
+    tip: 'Você pode solicitar exportação ou exclusão de qualquer cliente em 2 cliques na ficha dele.',
   },
   {
     key: 'controlador',
@@ -98,13 +98,13 @@ const PILLARS = [
     color: '#0891B2',
     bg: '#ECFEFF',
     emoji: '🗄️',
-    title: 'Você é o controlador, a MedicinaMKT é operadora',
-    subtitle: 'Os dados são da sua clínica — você pode levar embora',
-    intro: 'Os dados dos pacientes são da sua clínica. A MedicinaMKT processa em nome de vocês, conforme contrato. Se quiser sair da plataforma, faz a exportação completa em CSV/JSON — leva embora tudo que é seu.',
+    title: 'Você é o controlador, a NexlaADV é operadora',
+    subtitle: 'Os dados são do seu escritório — você pode levar embora',
+    intro: 'Os dados dos clientes são do seu escritório. A NexlaADV processa em nome de vocês, conforme contrato. Se quiser sair da plataforma, faz a exportação completa em CSV/JSON — leva embora tudo que é seu.',
     steps: [
-      { title: 'Você é o controlador (LGPD)', desc: 'Pela lei, quem decide o que faz com os dados dos pacientes é a clínica — não a MedicinaMKT. A gente só processa em nome de vocês conforme o contrato.' },
-      { title: 'Exportação completa sem fee', desc: 'Botão "Exportar tudo" disponível no painel. Gera CSV/JSON com pacientes, mensagens, agendamentos, financeiro, etc. Sem cobrar fee, sem reter nada.' },
-      { title: 'Migração assistida', desc: 'Se você decidir ir pra outra plataforma, a equipe MedicinaMKT ajuda a migrar — sem ressentimento. Não é vingança fazer cliente ficar refém.' },
+      { title: 'Você é o controlador (LGPD)', desc: 'Pela lei, quem decide o que faz com os dados dos clientes é o escritório — não a NexlaADV. A gente só processa em nome de vocês conforme o contrato.' },
+      { title: 'Exportação completa sem fee', desc: 'Botão "Exportar tudo" disponível no painel. Gera CSV/JSON com clientes, mensagens, agendamentos, financeiro, etc. Sem cobrar fee, sem reter nada.' },
+      { title: 'Migração assistida', desc: 'Se você decidir ir pra outra plataforma, a equipe NexlaADV ajuda a migrar — sem ressentimento. Não é vingança fazer cliente ficar refém.' },
       { title: 'Direito ao esquecimento', desc: 'Cancelou a conta? Em 30 dias os dados são deletados permanentemente. Você recebe confirmação por email + log de auditoria do que foi removido.' },
     ],
     tip: 'Migração assistida sem custo. Você não fica refém da plataforma — é seu direito.',
@@ -116,17 +116,17 @@ const PILLARS = [
     bg: '#ECFDF5',
     emoji: '👁️',
     title: 'Transparência total — sem zona cinza',
-    subtitle: 'O que a MedicinaMKT vê e o que NÃO vê',
-    intro: 'Aqui está exatamente o que a equipe MedicinaMKT acessa no dia-a-dia e o que nunca chega aos olhos dela sem autorização. Sem rodeio, sem letra miúda.',
+    subtitle: 'O que a NexlaADV vê e o que NÃO vê',
+    intro: 'Aqui está exatamente o que a equipe NexlaADV acessa no dia-a-dia e o que nunca chega aos olhos dela sem autorização. Sem rodeio, sem letra miúda.',
     steps: [
-      { title: '✅ Métricas agregadas', desc: 'Volume, tempo, conversão (números, não nomes). Aparecem no painel da MedicinaMKT pra acompanhar performance.' },
+      { title: '✅ Métricas agregadas', desc: 'Volume, tempo, conversão (números, não nomes). Aparecem no painel da NexlaADV pra acompanhar performance.' },
       { title: '✅ Status de tickets', desc: 'Abertos, fechados, expirados — sem ler conteúdo das mensagens. É só pra dimensionar suporte.' },
       { title: '✅ Performance técnica', desc: 'Uptime, latência, taxa de erro do sistema. Aparece em logs anonimizados pra time de engenharia.' },
       { title: '✅ Uso de features', desc: 'Quais telas vocês usam mais (pra priorizar evolução do produto). Sem associar a usuário específico.' },
-      { title: '❌ Conteúdo das mensagens', desc: 'Texto entre paciente e clínica não é acessado rotineiramente. Só com autorização sua via suporte.' },
-      { title: '❌ Áudios, fotos, prontuários', desc: 'Mídia e dados clínicos ficam isolados. Nem visualização rápida pra debug — sempre criptografados, sempre privados.' },
-      { title: '❌ Dados financeiros nominais', desc: 'A gente vê faturamento agregado da clínica (pra benchmarks), nunca quanto cada paciente pagou.' },
-      { title: '❌ Senhas dos seus operadores', desc: 'São guardadas com hash. Nem o admin do banco da MedicinaMKT consegue ver — só você sabe a sua.' },
+      { title: '❌ Conteúdo das mensagens', desc: 'Texto entre cliente e escritório não é acessado rotineiramente. Só com autorização sua via suporte.' },
+      { title: '❌ Áudios, fotos, processos', desc: 'Mídia e dados clínicos ficam isolados. Nem visualização rápida pra debug — sempre criptografados, sempre privados.' },
+      { title: '❌ Dados financeiros nominais', desc: 'A gente vê faturamento agregado do escritório (pra benchmarks), nunca quanto cada cliente pagou.' },
+      { title: '❌ Senhas dos seus operadores', desc: 'São guardadas com hash. Nem o admin do banco da NexlaADV consegue ver — só você sabe a sua.' },
     ],
     tip: 'Acesso a conteúdo só com sua autorização explícita via suporte — fica registrado em log permanente de auditoria.',
   },
@@ -136,16 +136,16 @@ const PILLARS = [
     color: '#EA580C',
     bg: '#FFF7ED',
     emoji: '💛',
-    title: 'Direitos do paciente — você atende em 2 cliques',
+    title: 'Direitos do cliente — você atende em 2 cliques',
     subtitle: 'A LGPD não é burocracia, é reputação',
-    intro: 'A plataforma já tem tudo embarcado pra você responder qualquer pedido em segundos. Paciente quer ver os dados dele? Quer corrigir? Quer ser apagado? Tudo na ficha.',
+    intro: 'A plataforma já tem tudo embarcado pra você responder qualquer pedido em segundos. Cliente quer ver os dados dele? Quer corrigir? Quer ser apagado? Tudo na ficha.',
     steps: [
-      { title: 'Acesso aos próprios dados', desc: 'Paciente pediu o que vocês têm sobre ele? Abre a ficha dele, clica em "Exportar PDF" — pronto. Em segundos vocês entregam o relatório completo.' },
+      { title: 'Acesso aos próprios dados', desc: 'Cliente pediu o que vocês têm sobre ele? Abre a ficha dele, clica em "Exportar PDF" — pronto. Em segundos vocês entregam o relatório completo.' },
       { title: 'Retificação', desc: 'Erro no cadastro? Edita direto na ficha. Histórico de alterações fica registrado pra auditoria — quem mudou, quando, o que.' },
-      { title: 'Exclusão / esquecimento', desc: 'Paciente quer ser apagado? Botão "Excluir cadastro" na ficha. As mensagens dele são anonimizadas em 30 dias automaticamente.' },
-      { title: 'Portabilidade', desc: 'Vai migrar de plataforma? Exporta tudo em CSV / JSON. Sem fee, sem retenção do dado. É direito do paciente, e o seu também.' },
+      { title: 'Exclusão / esquecimento', desc: 'Cliente quer ser apagado? Botão "Excluir cadastro" na ficha. As mensagens dele são anonimizadas em 30 dias automaticamente.' },
+      { title: 'Portabilidade', desc: 'Vai migrar de plataforma? Exporta tudo em CSV / JSON. Sem fee, sem retenção do dado. É direito do cliente, e o seu também.' },
     ],
-    tip: 'Os direitos do paciente são automatizados — não dá trabalho cumprir LGPD na operação do dia-a-dia.',
+    tip: 'Os direitos do cliente são automatizados — não dá trabalho cumprir LGPD na operação do dia-a-dia.',
   },
   {
     key: 'incidente',
@@ -162,7 +162,7 @@ const PILLARS = [
       { title: 'Notificação à ANPD', desc: 'Conforme prazo legal, a ANPD é notificada pelo nosso DPO. Você não precisa se preocupar com a parte regulatória — a gente cuida.' },
       { title: 'Pós-incidente: relatório completo', desc: 'Depois que tudo for resolvido, você recebe relatório transparente: causa raiz, impacto, ações tomadas, plano pra evitar repetição. Sem desculpa, sem rodeio.' },
     ],
-    tip: 'Sem maquiar, sem esconder. Reputação se constrói com transparência em momento difícil — é assim que a MedicinaMKT joga.',
+    tip: 'Sem maquiar, sem esconder. Reputação se constrói com transparência em momento difícil — é assim que a NexlaADV joga.',
   },
 ]
 
@@ -200,8 +200,8 @@ export default function CompanySeguranca() {
             Segurança & privacidade
           </div>
           <h1 className="seg-hero-title">
-            Sua clínica é <em>sua</em>.<br />
-            Seus pacientes, idem.
+            Suo escritório é <em>sua</em>.<br />
+            Seus clientes, idem.
           </h1>
           <p className="seg-hero-sub">
             A gente cuida da plataforma — você cuida da sua gente. Aqui está,

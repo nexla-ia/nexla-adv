@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -94,11 +94,11 @@ export default function CompanyAlerts() {
 
   useEffect(() => {
     if (unreadCount > 0) {
-      document.title = `(${unreadCount}) Alertas — MedicinaMKT`
+      document.title = `(${unreadCount}) Alertas — NexlaADV`
     } else {
-      document.title = 'MedicinaMKT'
+      document.title = 'NexlaADV'
     }
-    return () => { document.title = 'MedicinaMKT' }
+    return () => { document.title = 'NexlaADV' }
   }, [unreadCount])
 
   useEffect(() => {
