@@ -176,6 +176,195 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* SOFIA — IA atendente */}
+      <section className="lp-sofia" id="sofia">
+        <div className="lp-container">
+          <div className="lp-sofia-header">
+            <div className="lp-sofia-eyebrow">
+              <span className="lp-sofia-eyebrow-pulse" />
+              Sofia · IA atendente
+            </div>
+            <h2 className="lp-h2 lp-sofia-title">
+              Treinada com a <em>cara do seu escritório</em>.
+              <br />
+              Atende como se fosse <span className="lp-sofia-title-accent">você</span>.
+            </h2>
+            <p className="lp-sofia-sub">
+              Sofia aprende seu nome, sua tabela de honorários, suas áreas de atuação e
+              suas regras éticas. Recebe o cliente, classifica o caso, marca a reunião
+              e ainda lembra do compromisso — <strong>24/7, sem você responder.</strong>
+            </p>
+          </div>
+
+          <div className="lp-sofia-stage">
+            {/* CHAT — Sofia em ação */}
+            <div className="lp-sofia-chat">
+              <div className="lp-sofia-chat-bar">
+                <div className="lp-sofia-chat-avatar">S</div>
+                <div>
+                  <div className="lp-sofia-chat-name">Sofia · Mendes Advocacia</div>
+                  <div className="lp-sofia-chat-status">
+                    <span className="lp-sofia-chat-dot" />
+                    online · respondendo agora
+                  </div>
+                </div>
+                <div className="lp-sofia-chat-tag">IA · 24/7</div>
+              </div>
+
+              <div className="lp-sofia-chat-msgs">
+                <div className="lp-sofia-day-mark">Hoje · 02:14</div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-out">
+                  Boa noite, vi um anúncio de vocês. Tô precisando de um advogado.
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-in">
+                  Olá! Sou a <strong>Sofia</strong>, atendente do <strong>Mendes Advocacia</strong>.
+                  Posso te ajudar a marcar uma conversa com um dos sócios.
+                  Antes, me conta resumidamente o que aconteceu?
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-out">
+                  Fui demitido por justa causa mas não foi justa
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-meta">
+                  <Sparkles size={11} /> Sofia classificou: <strong>Trabalhista</strong> · roteando pro Dr. Rafael
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-in">
+                  Entendi. Esse caso é da área de <strong>Trabalhista</strong>, e o sócio responsável
+                  é o <strong>Dr. Rafael Mendes</strong>. Tenho horário <strong>quinta às 14h</strong> ou
+                  <strong> sexta às 10h</strong>. Qual fica melhor pra você?
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-out">
+                  Quinta às 14h
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-in lp-sofia-bubble-confirm">
+                  ✓ Reunião marcada · <strong>quinta 30/04 às 14h</strong> com Dr. Rafael Mendes.
+                  Vou te lembrar 1 dia antes. Até lá!
+                </div>
+                <div className="lp-sofia-bubble lp-sofia-bubble-meta">
+                  <Calendar size={11} /> Adicionado ao Google Calendar do Dr. Rafael · ficha da cliente criada
+                </div>
+              </div>
+            </div>
+
+            {/* PERSONALIZAÇÃO — Painel de configuração */}
+            <div className="lp-sofia-config">
+              <div className="lp-sofia-config-bar">
+                <div className="lp-sofia-config-title">
+                  <Bot size={14} /> Configuração da Sofia
+                </div>
+                <div className="lp-sofia-config-meta">Mendes Advocacia</div>
+              </div>
+
+              <div className="lp-sofia-config-row">
+                <div className="lp-sofia-config-label">Nome da assistente</div>
+                <div className="lp-sofia-config-value">
+                  <strong>Sofia</strong>
+                  <span className="lp-sofia-config-hint">Pode ser outro</span>
+                </div>
+              </div>
+
+              <div className="lp-sofia-config-row">
+                <div className="lp-sofia-config-label">Tom de voz</div>
+                <div className="lp-sofia-config-value">
+                  <span className="lp-sofia-pill">Profissional</span>
+                  <span className="lp-sofia-pill">Acolhedor</span>
+                  <span className="lp-sofia-pill">Direto</span>
+                </div>
+              </div>
+
+              <div className="lp-sofia-config-row">
+                <div className="lp-sofia-config-label">Áreas de atuação</div>
+                <div className="lp-sofia-config-value">
+                  <span className="lp-sofia-area" style={{ color: '#F59E0B', background: 'rgba(245, 158, 11, 0.12)' }}>Trabalhista</span>
+                  <span className="lp-sofia-area" style={{ color: '#3B82F6', background: 'rgba(59, 130, 246, 0.12)' }}>Cível</span>
+                  <span className="lp-sofia-area" style={{ color: '#A855F7', background: 'rgba(168, 85, 247, 0.12)' }}>Família</span>
+                  <span className="lp-sofia-area" style={{ color: '#10B981', background: 'rgba(16, 185, 129, 0.12)' }}>Empresarial</span>
+                </div>
+              </div>
+
+              <div className="lp-sofia-config-row">
+                <div className="lp-sofia-config-label">Tabela de honorários</div>
+                <div className="lp-sofia-config-value">
+                  <strong>12 serviços</strong> cadastrados
+                  <span className="lp-sofia-config-hint">avulso · fixo · êxito</span>
+                </div>
+              </div>
+
+              <div className="lp-sofia-config-row">
+                <div className="lp-sofia-config-label">Agenda integrada</div>
+                <div className="lp-sofia-config-value">
+                  <div className="lp-sofia-agenda-pills">
+                    <span className="lp-sofia-pill lp-sofia-pill-on"><Video size={11} /> Teams</span>
+                    <span className="lp-sofia-pill lp-sofia-pill-on"><Calendar size={11} /> Calendar</span>
+                    <span className="lp-sofia-pill"><Building2 size={11} /> Interna</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lp-sofia-config-rules">
+                <div className="lp-sofia-rules-title">
+                  <ShieldCheck size={13} /> Regras OAB embutidas
+                </div>
+                <ul className="lp-sofia-rules-list">
+                  <li><Check size={11} /> Nunca dá parecer jurídico</li>
+                  <li><Check size={11} /> Nunca promete resultado</li>
+                  <li><Check size={11} /> Encaminha consulta pro advogado</li>
+                  <li><Check size={11} /> Verifica conflito de interesse</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 capacidades — strip */}
+          <div className="lp-sofia-caps">
+            <div className="lp-sofia-cap">
+              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#16A34A' }}>
+                <MessageSquare size={20} />
+              </div>
+              <div className="lp-sofia-cap-num">01</div>
+              <h3 className="lp-sofia-cap-title">Atende</h3>
+              <p>Recebe o cliente com o nome do escritório, em tom profissional e acolhedor — em qualquer horário.</p>
+            </div>
+            <div className="lp-sofia-cap">
+              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706' }}>
+                <GitBranch size={20} />
+              </div>
+              <div className="lp-sofia-cap-num">02</div>
+              <h3 className="lp-sofia-cap-title">Classifica</h3>
+              <p>Identifica a área (cível, trabalhista, família…) e roteia automaticamente pro sócio especialista.</p>
+            </div>
+            <div className="lp-sofia-cap">
+              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(124, 58, 237, 0.12)', color: '#7C3AED' }}>
+                <Calendar size={20} />
+              </div>
+              <div className="lp-sofia-cap-num">03</div>
+              <h3 className="lp-sofia-cap-title">Agenda</h3>
+              <p>Marca a reunião direto no Teams, Google Calendar ou agenda interna — sem ping-pong de mensagens.</p>
+            </div>
+            <div className="lp-sofia-cap">
+              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#2563EB' }}>
+                <Clock size={20} />
+              </div>
+              <div className="lp-sofia-cap-num">04</div>
+              <h3 className="lp-sofia-cap-title">Lembra</h3>
+              <p>Avisa o cliente antes da reunião e o sócio antes da audiência — ninguém perde compromisso.</p>
+            </div>
+          </div>
+
+          <div className="lp-sofia-foot">
+            <div className="lp-sofia-foot-marker">
+              <Sparkles size={14} />
+            </div>
+            <div>
+              <strong>Sofia é o coração do NexlaAdv.</strong> Você não compra só uma plataforma —
+              você compra a IA atendente que a Nexla já validou em escritórios reais.
+            </div>
+            <a href="#planos" className="lp-sofia-foot-cta">
+              Quero ver na minha banca <ArrowUpRight size={14} />
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* QUALQUER OPERAÇÃO */}
       <section className="lp-versatility">
         <div className="lp-container">
@@ -1067,17 +1256,17 @@ export default function Landing() {
         <div className="lp-container">
           <SectionHeader
             kicker="Planos"
-            title={<>Do solo à banca inteira.<br /><em>Com pricing transparente.</em></>}
+            title={<>Do solo à banca inteira.<br /><em>O comercial te ajuda a escolher.</em></>}
           />
           <p className="lp-pricing-anchor lp-pricing-anchor-soft">
-            Sem cobrança por mensagem. Sem fidelidade. Cancele quando quiser.
-            <strong> 30 dias de garantia integral.</strong>
+            Cada escritório tem um tamanho — e cada tamanho um plano.
+            <strong> A gente conversa rápido, entende seu cenário e mostra o que cabe melhor.</strong>
           </p>
 
           <div className="lp-pricing-grid">
             <PricingTier
               name="Solo"
-              tier="R$ 247/mês"
+              tier="Para começar"
               tagline="Pra advogado solo ou autônomo (até 2 advogados)"
               features={[
                 'Até 2 advogados cadastrados',
@@ -1095,7 +1284,7 @@ export default function Landing() {
             <PricingTier
               featured
               name="Banca"
-              tier="R$ 597/mês · mais escolhido"
+              tier="Mais escolhido"
               tagline="Pra escritório pequeno societário (até 8 advogados)"
               features={[
                 'Até 8 advogados cadastrados',

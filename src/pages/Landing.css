@@ -4404,3 +4404,493 @@
   .lp-team-sub { font-size: 14.5px; }
   .lp-team-phone-msgs { min-height: 180px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SOFIA — IA atendente (seção dedicada à venda da IA personalizada)
+   ════════════════════════════════════════════════════════════════════════════ */
+.lp-sofia {
+  padding: 96px 0 110px;
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(201, 160, 116, 0.08) 0%, transparent 55%),
+    var(--bg-base);
+  position: relative;
+  overflow: hidden;
+}
+@media (max-width: 720px) { .lp-sofia { padding: 64px 0 80px; } }
+
+.lp-sofia::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(15, 14, 27, 0.08), transparent);
+}
+
+.lp-sofia-header {
+  max-width: 760px;
+  margin: 0 auto 56px;
+  text-align: center;
+}
+
+.lp-sofia-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #6D28D9;
+  margin-bottom: 22px;
+}
+.lp-sofia-eyebrow-pulse {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #7C3AED;
+  box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.5);
+  animation: lpSofiaPulse 2s infinite;
+}
+@keyframes lpSofiaPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55); }
+  70%  { box-shadow: 0 0 0 9px rgba(124, 58, 237, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+}
+
+.lp-sofia-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4.6vw, 52px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+.lp-sofia-title em {
+  font-style: italic;
+  font-weight: 500;
+  color: #7C3AED;
+}
+.lp-sofia-title-accent {
+  background: linear-gradient(135deg, #C9A074 0%, #B8895C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.lp-sofia-sub {
+  margin-top: 22px;
+  font-size: 1.08rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.lp-sofia-sub strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ─── STAGE: chat + config side-by-side ─── */
+.lp-sofia-stage {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 32px;
+  align-items: stretch;
+  margin-bottom: 64px;
+}
+@media (max-width: 980px) {
+  .lp-sofia-stage { grid-template-columns: 1fr; gap: 24px; }
+}
+
+/* CHAT */
+.lp-sofia-chat {
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 rgba(15, 14, 27, 0.04),
+    0 24px 48px -28px rgba(15, 14, 27, 0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.lp-sofia-chat-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  color: #FFFFFF;
+}
+.lp-sofia-chat-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #C9A074, #B8895C);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: #FFFFFF;
+}
+.lp-sofia-chat-name {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.lp-sofia-chat-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  opacity: 0.85;
+  margin-top: 1px;
+}
+.lp-sofia-chat-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #4ADE80;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
+  animation: lpSofiaPulse2 2s infinite;
+}
+@keyframes lpSofiaPulse2 {
+  0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6); }
+  70%  { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+.lp-sofia-chat-tag {
+  margin-left: auto;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  padding: 4px 9px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.lp-sofia-chat-msgs {
+  padding: 20px 20px 24px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0,
+      transparent 24px,
+      rgba(124, 58, 237, 0.018) 24px,
+      rgba(124, 58, 237, 0.018) 48px
+    ),
+    #FAFAFB;
+  display: grid;
+  gap: 8px;
+}
+
+.lp-sofia-day-mark {
+  align-self: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: rgba(15, 14, 27, 0.06);
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin: 4px 0 8px;
+}
+
+.lp-sofia-bubble {
+  max-width: 78%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.93rem;
+  line-height: 1.45;
+  position: relative;
+}
+.lp-sofia-bubble strong { font-weight: 600; }
+
+.lp-sofia-bubble-out {
+  align-self: flex-end;
+  background: #DCFCE7;
+  color: #14532D;
+  border-bottom-right-radius: 4px;
+  margin-left: auto;
+}
+.lp-sofia-bubble-in {
+  align-self: flex-start;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+.lp-sofia-bubble-confirm {
+  background: linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%);
+  border-color: #93C5FD;
+  color: #1E3A8A;
+}
+.lp-sofia-bubble-meta {
+  align-self: center;
+  background: rgba(124, 58, 237, 0.08);
+  color: #6D28D9;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.lp-sofia-bubble-meta svg { flex-shrink: 0; }
+.lp-sofia-bubble-meta strong { color: #7C3AED; font-weight: 700; }
+
+/* CONFIG PANEL */
+.lp-sofia-config {
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 rgba(15, 14, 27, 0.04),
+    0 24px 48px -28px rgba(15, 14, 27, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.lp-sofia-config-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #FAFAFB 0%, #FFFFFF 100%);
+}
+.lp-sofia-config-title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+.lp-sofia-config-title svg { color: #7C3AED; }
+.lp-sofia-config-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.lp-sofia-config-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px dashed rgba(15, 14, 27, 0.08);
+  align-items: center;
+}
+.lp-sofia-config-row:last-of-type { border-bottom: none; }
+@media (max-width: 540px) {
+  .lp-sofia-config-row { grid-template-columns: 1fr; gap: 8px; }
+}
+.lp-sofia-config-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.lp-sofia-config-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+.lp-sofia-config-value strong { font-weight: 600; }
+.lp-sofia-config-hint {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.lp-sofia-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 14, 27, 0.05);
+  border: 1px solid rgba(15, 14, 27, 0.08);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.lp-sofia-pill svg { color: var(--text-secondary); }
+.lp-sofia-pill-on {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.25);
+  color: #6D28D9;
+}
+.lp-sofia-pill-on svg { color: #7C3AED; }
+
+.lp-sofia-area {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.lp-sofia-agenda-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lp-sofia-config-rules {
+  background: linear-gradient(180deg, #FEFBF6 0%, #FFFFFF 100%);
+  border-top: 1px solid var(--border);
+  padding: 18px 20px 20px;
+}
+.lp-sofia-rules-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #B8895C;
+  margin-bottom: 10px;
+}
+.lp-sofia-rules-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 14px;
+}
+@media (max-width: 540px) { .lp-sofia-rules-list { grid-template-columns: 1fr; } }
+.lp-sofia-rules-list li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+.lp-sofia-rules-list svg {
+  flex-shrink: 0;
+  color: #16A34A;
+}
+
+/* ─── 4 CAPS — strip ─── */
+.lp-sofia-caps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+@media (max-width: 980px) { .lp-sofia-caps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 540px) { .lp-sofia-caps { grid-template-columns: 1fr; } }
+
+.lp-sofia-cap {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 22px 22px;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.lp-sofia-cap:hover {
+  transform: translateY(-3px);
+  border-color: rgba(124, 58, 237, 0.3);
+  box-shadow: 0 18px 40px -24px rgba(124, 58, 237, 0.25);
+}
+.lp-sofia-cap-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.lp-sofia-cap-num {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+.lp-sofia-cap-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.lp-sofia-cap p {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* ─── Footer da seção — venda da IA ─── */
+.lp-sofia-foot {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 28px;
+  background: linear-gradient(135deg, #1E1B2E 0%, #2A2440 100%);
+  color: #FFFFFF;
+  border-radius: 14px;
+  flex-wrap: wrap;
+}
+.lp-sofia-foot-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(201, 160, 116, 0.2);
+  color: #C9A074;
+  flex-shrink: 0;
+}
+.lp-sofia-foot > div:nth-child(2) {
+  flex: 1;
+  min-width: 280px;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+.lp-sofia-foot strong {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.lp-sofia-foot-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: linear-gradient(135deg, #C9A074 0%, #B8895C 100%);
+  color: #1E1B2E;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.lp-sofia-foot-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -10px rgba(201, 160, 116, 0.5);
+  color: #1E1B2E;
+}
+
