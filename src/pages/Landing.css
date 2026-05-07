@@ -4660,24 +4660,69 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, #FAFAFB 0%, #FFFFFF 100%);
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.06) 0%, rgba(201, 160, 116, 0.06) 100%),
+    #FFFFFF;
 }
 .lp-sofia-config-title {
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: var(--text-primary);
 }
 .lp-sofia-config-title svg { color: #7C3AED; }
-.lp-sofia-config-meta {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-style: italic;
+.lp-sofia-config-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px -4px rgba(22, 163, 74, 0.4);
+}
+.lp-sofia-config-badge svg { stroke-width: 2.2; }
+
+.lp-sofia-config-intro {
+  padding: 14px 20px;
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.04) 0%, transparent 100%);
+  border-bottom: 1px dashed rgba(15, 14, 27, 0.08);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.lp-sofia-config-intro strong {
+  color: #7C3AED;
+  font-weight: 700;
+}
+
+.lp-sofia-config-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, transparent 0%, rgba(34, 197, 94, 0.08) 100%);
+  border-top: 1px dashed rgba(15, 14, 27, 0.08);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.lp-sofia-config-foot svg {
+  color: #16A34A;
+  flex-shrink: 0;
+}
+.lp-sofia-config-foot strong {
+  color: #16A34A;
+  font-weight: 700;
 }
 
 .lp-sofia-config-row {
@@ -4799,46 +4844,216 @@
   position: relative;
   background: #FFFFFF;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 24px 22px 22px;
-  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  border-radius: 18px;
+  padding: 26px 24px 22px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 220ms cubic-bezier(.2,.65,.3,1),
+              box-shadow 220ms cubic-bezier(.2,.65,.3,1),
+              border-color 220ms ease;
 }
+
+/* Faixa colorida no topo (revelada no hover, sutil sempre) */
+.lp-sofia-cap::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--cap-grad, linear-gradient(90deg, #94A3B8, #64748B));
+  opacity: 0.6;
+  transition: opacity 220ms ease;
+}
+.lp-sofia-cap:hover::before { opacity: 1; }
+
+/* Glow circular muito sutil no canto superior direito (atmosfera) */
+.lp-sofia-cap::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: var(--cap-glow, radial-gradient(circle, rgba(148, 163, 184, 0.15), transparent 70%));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.lp-sofia-cap:hover::after { opacity: 1; }
+
 .lp-sofia-cap:hover {
-  transform: translateY(-3px);
-  border-color: rgba(124, 58, 237, 0.3);
-  box-shadow: 0 18px 40px -24px rgba(124, 58, 237, 0.25);
+  transform: translateY(-4px);
+  border-color: var(--cap-border, rgba(148, 163, 184, 0.4));
+  box-shadow: 0 22px 44px -22px var(--cap-shadow, rgba(15, 14, 27, 0.22));
 }
+
+/* Watermark — número grande, italic, atrás de tudo */
+.lp-sofia-cap-watermark {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  font-family: var(--font-display);
+  font-size: 4.6rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  color: var(--cap-watermark, rgba(148, 163, 184, 0.08));
+  letter-spacing: -0.04em;
+  pointer-events: none;
+  z-index: 0;
+  transition: color 280ms ease, transform 280ms ease;
+}
+.lp-sofia-cap:hover .lp-sofia-cap-watermark {
+  transform: scale(1.05);
+}
+
+/* Ícone com gradiente colorido e sombra suave */
 .lp-sofia-cap-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  position: relative;
+  z-index: 1;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  background: var(--cap-icon-bg, linear-gradient(135deg, #F1F5F9, #E2E8F0));
+  color: var(--cap-icon-color, #475569);
+  box-shadow:
+    inset 0 0 0 1px var(--cap-icon-ring, rgba(148, 163, 184, 0.25)),
+    0 6px 14px -8px var(--cap-icon-shadow, rgba(15, 14, 27, 0.18));
+  transition: transform 280ms ease;
 }
-.lp-sofia-cap-num {
-  position: absolute;
-  top: 22px;
-  right: 22px;
-  font-family: var(--font-display);
-  font-size: 0.92rem;
+.lp-sofia-cap:hover .lp-sofia-cap-icon {
+  transform: rotate(-4deg) scale(1.04);
+}
+
+/* Tag pequena tipo categoria (Recepção, Triagem, etc.) */
+.lp-sofia-cap-tag {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--cap-tag-bg, rgba(148, 163, 184, 0.12));
+  color: var(--cap-tag-color, #475569);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
   font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
 }
+
 .lp-sofia-cap-title {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-display);
-  font-size: 1.4rem;
-  font-weight: 600;
-  letter-spacing: -0.012em;
-  margin-bottom: 8px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.05;
+  margin-bottom: 10px;
   color: var(--text-primary);
 }
-.lp-sofia-cap p {
+
+.lp-sofia-cap-desc {
+  position: relative;
+  z-index: 1;
   font-size: 0.92rem;
   line-height: 1.55;
   color: var(--text-secondary);
+  flex: 1;
+  margin-bottom: 18px;
+}
+
+/* Stat/destaque na base do card */
+.lp-sofia-cap-stat {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--cap-stat-border, rgba(15, 14, 27, 0.1));
+}
+.lp-sofia-cap-stat-num {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -0.015em;
+  color: var(--cap-icon-color, var(--text-primary));
+}
+.lp-sofia-cap-stat-lbl {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Variantes por tom (data-tone) ─── */
+.lp-sofia-cap[data-tone="green"] {
+  --cap-grad: linear-gradient(90deg, #4ADE80, #16A34A);
+  --cap-icon-bg: linear-gradient(135deg, #DCFCE7, #BBF7D0);
+  --cap-icon-color: #16A34A;
+  --cap-icon-ring: rgba(22, 163, 74, 0.3);
+  --cap-icon-shadow: rgba(22, 163, 74, 0.35);
+  --cap-tag-bg: rgba(22, 163, 74, 0.12);
+  --cap-tag-color: #15803D;
+  --cap-watermark: rgba(22, 163, 74, 0.08);
+  --cap-glow: radial-gradient(circle, rgba(22, 163, 74, 0.22), transparent 70%);
+  --cap-border: rgba(22, 163, 74, 0.4);
+  --cap-shadow: rgba(22, 163, 74, 0.28);
+  --cap-stat-border: rgba(22, 163, 74, 0.2);
+}
+
+.lp-sofia-cap[data-tone="amber"] {
+  --cap-grad: linear-gradient(90deg, #FBBF24, #D97706);
+  --cap-icon-bg: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  --cap-icon-color: #B45309;
+  --cap-icon-ring: rgba(217, 119, 6, 0.3);
+  --cap-icon-shadow: rgba(217, 119, 6, 0.35);
+  --cap-tag-bg: rgba(217, 119, 6, 0.14);
+  --cap-tag-color: #B45309;
+  --cap-watermark: rgba(217, 119, 6, 0.1);
+  --cap-glow: radial-gradient(circle, rgba(217, 119, 6, 0.22), transparent 70%);
+  --cap-border: rgba(217, 119, 6, 0.4);
+  --cap-shadow: rgba(217, 119, 6, 0.28);
+  --cap-stat-border: rgba(217, 119, 6, 0.22);
+}
+
+.lp-sofia-cap[data-tone="violet"] {
+  --cap-grad: linear-gradient(90deg, #A78BFA, #7C3AED);
+  --cap-icon-bg: linear-gradient(135deg, #EDE9FE, #DDD6FE);
+  --cap-icon-color: #6D28D9;
+  --cap-icon-ring: rgba(124, 58, 237, 0.3);
+  --cap-icon-shadow: rgba(124, 58, 237, 0.4);
+  --cap-tag-bg: rgba(124, 58, 237, 0.14);
+  --cap-tag-color: #6D28D9;
+  --cap-watermark: rgba(124, 58, 237, 0.1);
+  --cap-glow: radial-gradient(circle, rgba(124, 58, 237, 0.25), transparent 70%);
+  --cap-border: rgba(124, 58, 237, 0.4);
+  --cap-shadow: rgba(124, 58, 237, 0.32);
+  --cap-stat-border: rgba(124, 58, 237, 0.22);
+}
+
+.lp-sofia-cap[data-tone="blue"] {
+  --cap-grad: linear-gradient(90deg, #60A5FA, #2563EB);
+  --cap-icon-bg: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+  --cap-icon-color: #1D4ED8;
+  --cap-icon-ring: rgba(37, 99, 235, 0.3);
+  --cap-icon-shadow: rgba(37, 99, 235, 0.4);
+  --cap-tag-bg: rgba(37, 99, 235, 0.14);
+  --cap-tag-color: #1D4ED8;
+  --cap-watermark: rgba(37, 99, 235, 0.1);
+  --cap-glow: radial-gradient(circle, rgba(37, 99, 235, 0.22), transparent 70%);
+  --cap-border: rgba(37, 99, 235, 0.4);
+  --cap-shadow: rgba(37, 99, 235, 0.3);
+  --cap-stat-border: rgba(37, 99, 235, 0.22);
 }
 
 /* ─── Footer da seção — venda da IA ─── */

@@ -245,20 +245,27 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* PERSONALIZAÇÃO — Painel de configuração */}
+            {/* PERSONALIZAÇÃO — Configuração feita pela Nexla */}
             <div className="lp-sofia-config">
               <div className="lp-sofia-config-bar">
                 <div className="lp-sofia-config-title">
-                  <Bot size={14} /> Configuração da Sofia
+                  <Sparkles size={14} /> Treinamento da Sofia
                 </div>
-                <div className="lp-sofia-config-meta">Mendes Advocacia</div>
+                <div className="lp-sofia-config-badge">
+                  <ShieldCheck size={11} /> Feito pela Nexla
+                </div>
+              </div>
+
+              <div className="lp-sofia-config-intro">
+                Você não mexe em nada. <strong>Nossa equipe configura</strong> a Sofia
+                com a cara do seu escritório em até 24h.
               </div>
 
               <div className="lp-sofia-config-row">
                 <div className="lp-sofia-config-label">Nome da assistente</div>
                 <div className="lp-sofia-config-value">
                   <strong>Sofia</strong>
-                  <span className="lp-sofia-config-hint">Pode ser outro</span>
+                  <span className="lp-sofia-config-hint">você escolhe outro se quiser</span>
                 </div>
               </div>
 
@@ -311,43 +318,79 @@ export default function Landing() {
                   <li><Check size={11} /> Verifica conflito de interesse</li>
                 </ul>
               </div>
+
+              <div className="lp-sofia-config-foot">
+                <Clock size={13} />
+                <span>Setup completo em <strong>até 24h</strong> · sua equipe não levanta um dedo</span>
+              </div>
             </div>
           </div>
 
-          {/* 4 capacidades — strip */}
+          {/* 4 capacidades — cards premium com gradientes e watermark */}
           <div className="lp-sofia-caps">
-            <div className="lp-sofia-cap">
-              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#16A34A' }}>
-                <MessageSquare size={20} />
+            <article className="lp-sofia-cap" data-tone="green">
+              <div className="lp-sofia-cap-watermark">01</div>
+              <div className="lp-sofia-cap-icon">
+                <MessageSquare size={22} strokeWidth={1.8} />
               </div>
-              <div className="lp-sofia-cap-num">01</div>
+              <div className="lp-sofia-cap-tag">Recepção</div>
               <h3 className="lp-sofia-cap-title">Atende</h3>
-              <p>Recebe o cliente com o nome do escritório, em tom profissional e acolhedor — em qualquer horário.</p>
-            </div>
-            <div className="lp-sofia-cap">
-              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706' }}>
-                <GitBranch size={20} />
+              <p className="lp-sofia-cap-desc">
+                Recebe o cliente com o nome do escritório, em tom profissional e acolhedor — em qualquer horário, qualquer dia.
+              </p>
+              <div className="lp-sofia-cap-stat">
+                <span className="lp-sofia-cap-stat-num">24/7</span>
+                <span className="lp-sofia-cap-stat-lbl">disponibilidade</span>
               </div>
-              <div className="lp-sofia-cap-num">02</div>
+            </article>
+
+            <article className="lp-sofia-cap" data-tone="amber">
+              <div className="lp-sofia-cap-watermark">02</div>
+              <div className="lp-sofia-cap-icon">
+                <GitBranch size={22} strokeWidth={1.8} />
+              </div>
+              <div className="lp-sofia-cap-tag">Triagem</div>
               <h3 className="lp-sofia-cap-title">Classifica</h3>
-              <p>Identifica a área (cível, trabalhista, família…) e roteia automaticamente pro sócio especialista.</p>
-            </div>
-            <div className="lp-sofia-cap">
-              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(124, 58, 237, 0.12)', color: '#7C3AED' }}>
-                <Calendar size={20} />
+              <p className="lp-sofia-cap-desc">
+                Identifica a área do direito (cível, trabalhista, família…) e roteia automaticamente pro sócio especialista da banca.
+              </p>
+              <div className="lp-sofia-cap-stat">
+                <span className="lp-sofia-cap-stat-num">8 áreas</span>
+                <span className="lp-sofia-cap-stat-lbl">do direito</span>
               </div>
-              <div className="lp-sofia-cap-num">03</div>
+            </article>
+
+            <article className="lp-sofia-cap" data-tone="violet">
+              <div className="lp-sofia-cap-watermark">03</div>
+              <div className="lp-sofia-cap-icon">
+                <Calendar size={22} strokeWidth={1.8} />
+              </div>
+              <div className="lp-sofia-cap-tag">Agenda</div>
               <h3 className="lp-sofia-cap-title">Agenda</h3>
-              <p>Marca a reunião direto no Teams, Google Calendar ou agenda interna — sem ping-pong de mensagens.</p>
-            </div>
-            <div className="lp-sofia-cap">
-              <div className="lp-sofia-cap-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#2563EB' }}>
-                <Clock size={20} />
+              <p className="lp-sofia-cap-desc">
+                Marca a reunião direto no Teams, Google Calendar ou agenda interna — sem ping-pong de mensagens.
+              </p>
+              <div className="lp-sofia-cap-stat">
+                <span className="lp-sofia-cap-stat-num">3 destinos</span>
+                <span className="lp-sofia-cap-stat-lbl">de agenda</span>
               </div>
-              <div className="lp-sofia-cap-num">04</div>
+            </article>
+
+            <article className="lp-sofia-cap" data-tone="blue">
+              <div className="lp-sofia-cap-watermark">04</div>
+              <div className="lp-sofia-cap-icon">
+                <Clock size={22} strokeWidth={1.8} />
+              </div>
+              <div className="lp-sofia-cap-tag">Follow-up</div>
               <h3 className="lp-sofia-cap-title">Lembra</h3>
-              <p>Avisa o cliente antes da reunião e o sócio antes da audiência — ninguém perde compromisso.</p>
-            </div>
+              <p className="lp-sofia-cap-desc">
+                Avisa o cliente antes da reunião e o sócio antes da audiência. Ninguém perde compromisso, ninguém erra prazo.
+              </p>
+              <div className="lp-sofia-cap-stat">
+                <span className="lp-sofia-cap-stat-num">2 lados</span>
+                <span className="lp-sofia-cap-stat-lbl">cliente + sócio</span>
+              </div>
+            </article>
           </div>
 
           <div className="lp-sofia-foot">
