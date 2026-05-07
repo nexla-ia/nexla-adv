@@ -2123,7 +2123,7 @@
   letter-spacing: 0.01em;
 }
 
-/* ─── VERSATILITY (Funciona para qualquer operação) ───────────────────────── */
+/* ─── VERSATILITY (Funciona para qualquer escritório) ─────────────────────── */
 .lp-versatility {
   padding: 80px 0 100px;
   background: white;
@@ -2131,57 +2131,210 @@
 .lp-versatility-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
+
 .lp-versatility-card {
-  padding: 28px 26px;
-  border-radius: 20px;
-  border: 1px solid rgba(15, 14, 27, 0.05);
-  transition: all 0.3s ease;
+  position: relative;
+  padding: 30px 28px 28px;
+  border-radius: 22px;
+  border: 1px solid var(--vc-border, rgba(15, 14, 27, 0.06));
+  background:
+    radial-gradient(circle at 100% 0%, var(--vc-glow, transparent) 0%, transparent 55%),
+    linear-gradient(180deg, var(--vc-bg-top, #FEF3C7) 0%, var(--vc-bg-bot, #FDE68A) 100%);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+  transition: transform 280ms cubic-bezier(.2,.65,.3,1),
+              box-shadow 280ms cubic-bezier(.2,.65,.3,1),
+              border-color 200ms ease;
 }
+
+/* Watermark numérico no canto superior direito */
+.lp-versatility-card::before {
+  counter-increment: vc-counter;
+  content: "0" counter(vc-counter);
+  position: absolute;
+  top: 14px;
+  right: 22px;
+  font-family: 'Instrument Serif', 'Bricolage Grotesque', serif;
+  font-size: 4.6rem;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1;
+  color: var(--vc-num, rgba(120, 53, 15, 0.16));
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  z-index: 0;
+  transition: color 280ms ease, transform 280ms ease;
+}
+.lp-versatility-grid { counter-reset: vc-counter; }
+
+/* Pontilhado decorativo no canto inferior esquerdo */
+.lp-versatility-card::after {
+  content: "";
+  position: absolute;
+  bottom: -20px;
+  left: -20px;
+  width: 110px;
+  height: 110px;
+  background-image: radial-gradient(circle, var(--vc-dots, rgba(120, 53, 15, 0.12)) 1px, transparent 1.5px);
+  background-size: 11px 11px;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .lp-versatility-card:hover {
-  transform: translateY(-4px) rotate(-0.5deg);
-  box-shadow: 0 18px 40px -12px rgba(15, 14, 27, 0.14);
+  transform: translateY(-6px);
+  border-color: var(--vc-border-hover, rgba(120, 53, 15, 0.3));
+  box-shadow: 0 26px 50px -22px var(--vc-shadow, rgba(120, 53, 15, 0.32));
 }
-.lp-versatility-card:nth-child(2n):hover { transform: translateY(-4px) rotate(0.5deg); }
+.lp-versatility-card:hover::before { transform: scale(1.06); }
 
-.lp-tone-amber  { background: #FEF3C7; }
-.lp-tone-amber  .lp-versatility-icon  { background: #FCD34D; color: #78350F; }
-.lp-tone-green  { background: #DCFCE7; }
-.lp-tone-green  .lp-versatility-icon  { background: #4ADE80; color: #14532D; }
-.lp-tone-blue   { background: #DBEAFE; }
-.lp-tone-blue   .lp-versatility-icon  { background: #60A5FA; color: #1E3A8A; }
-.lp-tone-pink   { background: #FCE7F3; }
-.lp-tone-pink   .lp-versatility-icon  { background: #F472B6; color: #831843; }
+/* ─── Variantes de tom — paletas ricas e distintas ─── */
+.lp-tone-amber {
+  --vc-bg-top:       #FEF3C7;
+  --vc-bg-bot:       #FCD9A1;
+  --vc-glow:         rgba(255, 255, 255, 0.7);
+  --vc-num:          rgba(120, 53, 15, 0.18);
+  --vc-dots:         rgba(120, 53, 15, 0.16);
+  --vc-border-hover: rgba(180, 83, 9, 0.4);
+  --vc-shadow:       rgba(217, 119, 6, 0.4);
+  --vc-icon-bg:      linear-gradient(135deg, #FBBF24, #D97706);
+  --vc-icon-color:   #FFFFFF;
+  --vc-icon-ring:    rgba(255, 255, 255, 0.4);
+  --vc-icon-shadow:  rgba(217, 119, 6, 0.5);
+  --vc-chip-bg:      rgba(120, 53, 15, 0.1);
+  --vc-chip-color:   #92400E;
+  --vc-text:         #78350F;
+  --vc-text-soft:    rgba(120, 53, 15, 0.72);
+}
+.lp-tone-green {
+  --vc-bg-top:       #D1FAE5;
+  --vc-bg-bot:       #A7F3D0;
+  --vc-glow:         rgba(255, 255, 255, 0.65);
+  --vc-num:          rgba(20, 83, 45, 0.18);
+  --vc-dots:         rgba(20, 83, 45, 0.16);
+  --vc-border-hover: rgba(22, 101, 52, 0.36);
+  --vc-shadow:       rgba(22, 163, 74, 0.4);
+  --vc-icon-bg:      linear-gradient(135deg, #4ADE80, #16A34A);
+  --vc-icon-color:   #FFFFFF;
+  --vc-icon-ring:    rgba(255, 255, 255, 0.4);
+  --vc-icon-shadow:  rgba(22, 163, 74, 0.5);
+  --vc-chip-bg:      rgba(20, 83, 45, 0.1);
+  --vc-chip-color:   #166534;
+  --vc-text:         #14532D;
+  --vc-text-soft:    rgba(20, 83, 45, 0.72);
+}
+.lp-tone-blue {
+  --vc-bg-top:       #DBEAFE;
+  --vc-bg-bot:       #BFDBFE;
+  --vc-glow:         rgba(255, 255, 255, 0.7);
+  --vc-num:          rgba(30, 58, 138, 0.18);
+  --vc-dots:         rgba(30, 58, 138, 0.18);
+  --vc-border-hover: rgba(29, 78, 216, 0.35);
+  --vc-shadow:       rgba(37, 99, 235, 0.4);
+  --vc-icon-bg:      linear-gradient(135deg, #60A5FA, #2563EB);
+  --vc-icon-color:   #FFFFFF;
+  --vc-icon-ring:    rgba(255, 255, 255, 0.4);
+  --vc-icon-shadow:  rgba(37, 99, 235, 0.5);
+  --vc-chip-bg:      rgba(30, 58, 138, 0.1);
+  --vc-chip-color:   #1E40AF;
+  --vc-text:         #1E3A8A;
+  --vc-text-soft:    rgba(30, 58, 138, 0.72);
+}
+.lp-tone-pink {
+  --vc-bg-top:       #FCE7F3;
+  --vc-bg-bot:       #FBCFE8;
+  --vc-glow:         rgba(255, 255, 255, 0.7);
+  --vc-num:          rgba(131, 24, 67, 0.18);
+  --vc-dots:         rgba(131, 24, 67, 0.18);
+  --vc-border-hover: rgba(190, 24, 93, 0.36);
+  --vc-shadow:       rgba(219, 39, 119, 0.4);
+  --vc-icon-bg:      linear-gradient(135deg, #F472B6, #DB2777);
+  --vc-icon-color:   #FFFFFF;
+  --vc-icon-ring:    rgba(255, 255, 255, 0.4);
+  --vc-icon-shadow:  rgba(219, 39, 119, 0.5);
+  --vc-chip-bg:      rgba(131, 24, 67, 0.1);
+  --vc-chip-color:   #9D174D;
+  --vc-text:         #831843;
+  --vc-text-soft:    rgba(131, 24, 67, 0.72);
+}
 
+/* Ícone — agora maior, com gradiente, ring branco e sombra colorida */
 .lp-versatility-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
+  position: relative;
+  z-index: 1;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
-  box-shadow: 0 4px 10px -4px rgba(15, 14, 27, 0.15);
+  background: var(--vc-icon-bg, #FCD34D);
+  color: var(--vc-icon-color, #78350F);
+  box-shadow:
+    inset 0 0 0 2px var(--vc-icon-ring, rgba(255, 255, 255, 0.4)),
+    0 8px 20px -8px var(--vc-icon-shadow, rgba(15, 14, 27, 0.3));
+  margin-bottom: 6px;
+  transition: transform 280ms cubic-bezier(.2,.65,.3,1);
 }
+.lp-versatility-card:hover .lp-versatility-icon {
+  transform: rotate(-5deg) scale(1.06);
+}
+.lp-versatility-icon svg { stroke-width: 2; }
+
 .lp-versatility-title {
+  position: relative;
+  z-index: 1;
   font-family: 'Bricolage Grotesque', sans-serif;
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.025em;
   margin: 0;
-  color: var(--lp-text);
+  color: var(--vc-text, var(--lp-text));
   line-height: 1.15;
 }
 .lp-versatility-desc {
-  font-size: 13.5px;
-  color: rgba(15, 14, 27, 0.72);
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  color: var(--vc-text-soft, rgba(15, 14, 27, 0.72));
   line-height: 1.55;
-  margin: 0;
+  margin: 0 0 4px;
   font-weight: 500;
+  flex: 1;
+}
+
+/* Chip de destaque (gerado via ::after no título? não — vamos por gerador semântico)
+   → usaremos um pseudo-elemento "chip" via data-chip do versatility-card */
+.lp-versatility-card[data-chip]::before { /* mantém number — não usar aqui */ }
+
+.lp-versatility-card[data-chip] .lp-versatility-desc + ::after,
+.lp-versatility-card[data-chip] > .lp-vc-chip {
+  display: inline-flex;
+}
+
+.lp-vc-chip {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--vc-chip-bg, rgba(120, 53, 15, 0.1));
+  color: var(--vc-chip-color, #92400E);
+  font-family: 'Fragment Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: auto;
+  border: 1px solid var(--vc-chip-bg);
 }
 
 /* ─── SECURITY ────────────────────────────────────────────────────────────── */

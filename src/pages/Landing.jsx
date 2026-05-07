@@ -418,27 +418,31 @@ export default function Landing() {
           <div className="lp-versatility-grid">
             <VersatilityCard
               tone="amber"
-              icon={<Users size={20} />}
+              icon={<Users size={22} />}
               title="1 a 30+ advogados"
               description="Do solo ao escritório societário com várias áreas atendendo em paralelo. A plataforma escala com você sem trocar de sistema."
+              chip="Solo · Banca · Custom"
             />
             <VersatilityCard
               tone="green"
-              icon={<Network size={20} />}
+              icon={<Network size={22} />}
               title="Filiais e correspondentes"
               description="Unidades sincronizadas em tempo real. Recepção de qualquer cidade vê a conversa, marca com o sócio certo e o cliente nem percebe."
+              chip="Multi-instância"
             />
             <VersatilityCard
               tone="blue"
-              icon={<Wallet size={20} />}
+              icon={<Wallet size={22} />}
               title="Honorário avulso, fixo ou êxito"
               description="Cadastre serviços com valor fechado, mensalidade consultiva ou percentual de êxito. O agendamento puxa o modelo certo — sem planilha paralela."
+              chip="4 modelos de honorário"
             />
             <VersatilityCard
               tone="pink"
-              icon={<BotIcon size={20} />}
+              icon={<BotIcon size={22} />}
               title="Sofia + atendimento humano"
               description="Sofia atende e qualifica 24/7. Quando o caso pede sócio, ela passa a ficha pronta. Você ativa ou desativa quando quiser."
+              chip="IA + Equipe"
             />
           </div>
         </div>
@@ -1614,12 +1618,13 @@ function FichaMock() {
   )
 }
 
-function VersatilityCard({ tone, icon, title, description }) {
+function VersatilityCard({ tone, icon, title, description, chip }) {
   return (
-    <div className={`lp-versatility-card lp-tone-${tone}`}>
+    <div className={`lp-versatility-card lp-tone-${tone}`} data-chip={chip ? '1' : undefined}>
       <div className="lp-versatility-icon">{icon}</div>
       <h3 className="lp-versatility-title">{title}</h3>
       <p className="lp-versatility-desc">{description}</p>
+      {chip && <span className="lp-vc-chip">{chip}</span>}
     </div>
   )
 }
