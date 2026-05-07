@@ -45,28 +45,30 @@ export default function LoginPage() {
           <Link to="/" className="login-brand">
             <BrandMark size={32} color="#0F0E1B" strokeWidth={1.6} />
             <div className="login-brand-text">
-              <span>MedicinaMKT</span>
-              <small>Lucro e ética andam juntos</small>
+              <span>NexlaAdv</span>
+              <small>Ética e eficiência não brigam</small>
             </div>
           </Link>
 
           <div className="login-eyebrow">
             <span className="login-pulse" />
-            Central de controle inteligente
+            Central de controle do escritório
           </div>
 
           <h1 className="login-headline">
-            Bem-vindo de volta à sua <em>operação digital</em>.
+            Bem-vindo de volta ao <em>seu escritório digital</em>.
           </h1>
 
           <p className="login-sub">
-            Gerencie IA, agenda, atendimento e equipe em um painel unificado feito para clínicas que valorizam tempo, dinheiro e o paciente.
+            Sofia atende, classifica, agenda e lembra. Você acessa aqui o
+            painel que mostra tudo — captação, reuniões, honorários e equipe
+            num lugar só.
           </p>
 
           <div className="login-features">
             <div className="login-feat" style={{ background: '#FEF3C7', borderColor: '#FCD34D' }}>
               <Bot size={14} />
-              <span>IA atendendo 24/7</span>
+              <span>Sofia atendendo 24/7</span>
             </div>
             <div className="login-feat" style={{ background: '#DCFCE7', borderColor: '#86EFAC' }}>
               <Calendar size={14} />
@@ -78,7 +80,7 @@ export default function LoginPage() {
             </div>
             <div className="login-feat" style={{ background: '#FCE7F3', borderColor: '#F9A8D4' }}>
               <Sparkles size={14} />
-              <span>Métricas reais</span>
+              <span>Atribuição completa</span>
             </div>
           </div>
 
@@ -113,7 +115,7 @@ export default function LoginPage() {
 
             <div className="login-field">
               <label className="login-label">E-mail</label>
-              <input className="login-input" type="email" name="email" placeholder={tab === 'adm' ? 'admin@medicinamkt.com' : 'usuario@empresa.com'} value={form.email} onChange={handleChange} autoComplete="email" />
+              <input className="login-input" type="email" name="email" placeholder={tab === 'adm' ? 'admin@nexla.ai' : 'usuario@escritorio.com'} value={form.email} onChange={handleChange} autoComplete="email" />
             </div>
 
             <div className="login-field">
@@ -136,7 +138,7 @@ export default function LoginPage() {
               {loading ? <><Loader2 size={15} className="spin" /> Verificando...</> : tab === 'adm' ? 'Acesso administrativo' : 'Entrar no painel'}
             </button>
 
-            <div className="login-footer">MedicinaMKT v2.0 · Plataforma exclusiva · Acesso restrito</div>
+            <div className="login-footer">NexlaAdv v1.0 · Plataforma exclusiva · Acesso restrito</div>
           </form>
         </div>
       </div>
