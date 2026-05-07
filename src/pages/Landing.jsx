@@ -5,7 +5,7 @@ import {
   Users, Bot, Scale, Headset, Check, ChevronRight, ChevronLeft, Star, Zap, ShieldCheck,
   Phone, Mail, Activity, Clock, TrendingUp, Lock, FileText, Trash2, Server, Quote,
   Building2, Network, Wallet, Bot as BotIcon, Instagram, BookUser, Image as ImageIcon,
-  ScanLine, FileSearch, Camera, Briefcase, MapPin, Gavel, Video, AlertTriangle, Pencil, Menu, X, ArrowRightLeft, Inbox,
+  ScanLine, FileSearch, Camera, Cake, Briefcase, MapPin, Gavel, Video, AlertTriangle, Pencil, Menu, X, ArrowRightLeft, Inbox,
   ShieldAlert, FolderOpen, Target, GitBranch,
 } from 'lucide-react'
 import BrandMark from '../components/BrandMark'
@@ -578,7 +578,7 @@ export default function Landing() {
               <div className="lp-attr-ico" style={{ background: '#D1FAE5', color: '#16A34A' }}>
                 <TrendingUp size={20} />
               </div>
-              <div className="lp-attr-card-title">Atribuição até a atendimento</div>
+              <div className="lp-attr-card-title">Atribuição até o atendimento</div>
               <p>Acompanhe o lead do anúncio ao agendamento confirmado. Saiba qual ad gerou cliente que efetivamente compareceu — e quanto cada real investido virou receita.</p>
               <span className="lp-attr-tag">Roadmap Q3</span>
             </div>
@@ -589,7 +589,7 @@ export default function Landing() {
             <div className="lp-journey-head">
               <div className="lp-journey-eyebrow">A jornada</div>
               <div className="lp-journey-title">Campanha Trabalhista <span>· Out/2026</span></div>
-              <div className="lp-journey-sub">do clique no anúncio até a atendimento realizada</div>
+              <div className="lp-journey-sub">do clique no anúncio até a primeira reunião realizada</div>
               <div className="lp-journey-pill">
                 <TrendingUp size={14} />
                 <span>R$ 9.300 atribuídos</span>
@@ -1750,7 +1750,7 @@ function SceneConversas() {
           <div className="lp-mock-avatar" style={{ background: '#FEF3C7' }}>M</div>
           <div className="lp-mock-msg-content">
             <div className="lp-mock-msg-name">Maria Silva</div>
-            <div className="lp-mock-msg-text">Quero marcar uma atendimento...</div>
+            <div className="lp-mock-msg-text">Quero marcar um atendimento...</div>
           </div>
           <div className="lp-mock-tag">📅</div>
         </div>

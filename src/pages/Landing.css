@@ -444,8 +444,8 @@
 .lp-journey-stop[data-tone="agenda"] .lp-journey-bubble { color: #3B82F6; border-color: #BFDBFE; }
 .lp-journey-stop[data-tone="agenda"] .lp-journey-bubble svg { color: #2563EB; }
 
-.lp-journey-stop[data-tone="consulta"] .lp-journey-bubble { color: #10B981; border-color: #A7F3D0; }
-.lp-journey-stop[data-tone="consulta"] .lp-journey-bubble svg { color: #059669; }
+.lp-journey-stop[data-tone="atendimento"] .lp-journey-bubble { color: #10B981; border-color: #A7F3D0; }
+.lp-journey-stop[data-tone="atendimento"] .lp-journey-bubble svg { color: #059669; }
 
 .lp-journey-stop[data-tone="receita"] .lp-journey-bubble {
   color: #F59E0B;
@@ -495,7 +495,7 @@
 .lp-journey-dot[data-tone="msg"]       { background: #22C55E; }
 .lp-journey-dot[data-tone="ia"]        { background: #C9A074; }
 .lp-journey-dot[data-tone="agenda"]    { background: #3B82F6; }
-.lp-journey-dot[data-tone="consulta"]  { background: #10B981; }
+.lp-journey-dot[data-tone="atendimento"]  { background: #10B981; }
 .lp-journey-dot[data-tone="receita"]   { background: linear-gradient(135deg, #16A34A, #059669); }
 
 /* ───── Responsivo ───── */
@@ -568,7 +568,7 @@
   .lp-journey-list li[data-tone="msg"] .lp-journey-list-icon       { border-color: #BBF7D0; color: #16A34A; }
   .lp-journey-list li[data-tone="ia"] .lp-journey-list-icon        { border-color: rgba(201, 160, 116, 0.4); color: #B8895C; }
   .lp-journey-list li[data-tone="agenda"] .lp-journey-list-icon    { border-color: #BFDBFE; color: #2563EB; }
-  .lp-journey-list li[data-tone="consulta"] .lp-journey-list-icon  { border-color: #A7F3D0; color: #059669; }
+  .lp-journey-list li[data-tone="atendimento"] .lp-journey-list-icon  { border-color: #A7F3D0; color: #059669; }
   .lp-journey-list li[data-tone="receita"] .lp-journey-list-icon   {
     background: linear-gradient(135deg, #16A34A, #059669);
     border-color: transparent;
