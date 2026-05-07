@@ -10,6 +10,10 @@ node_modules/
 .claude/settings.local.json
 .claude/cache/
 .claude/transcripts/
+.claude/skills/
+
+# Skills instaladas localmente
+.agents/
 
 # Build output
 dist/
