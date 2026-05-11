@@ -396,6 +396,7 @@ export default function CompanyConversations() {
     const cutoff = Date.now() - AUTO_CLOSE_HOURS * 3600_000
     const toClose = contacts.filter(c =>
       !closedMap[c.session_id] &&
+      !attendancesMap[c.session_id] &&
       c.lastTs &&
       new Date(c.lastTs).getTime() < cutoff
     )
@@ -438,12 +439,10 @@ export default function CompanyConversations() {
           if (!sid || sid.includes('@g.us')) return
           const ts = getTimestamp(row)
 
-          // Reabre ticket encerrado: remove do closed e limpa attendance
+          // Reabre ticket encerrado: remove do closed (mantém attendance se já assumido)
           setClosedMap(prev => {
             if (!prev[sid]) return prev
             supabase.from('conversations').delete().eq('session_id', sid).eq('instancia', instance)
-            supabase.from('attendances').delete().eq('numero', sid).eq('instancia', instance)
-            setAttendancesMap(at => { const n = { ...at }; delete n[sid]; return n })
             const next = { ...prev }; delete next[sid]; return next
           })
 
