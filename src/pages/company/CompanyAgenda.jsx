@@ -15,6 +15,13 @@ import './Company.css'
 
 const AGENDA_COLORS = ['#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#D97706', '#0891B2', '#DB2777', '#059669']
 const SLOT_OPTIONS = [15, 20, 30, 45, 60, 90]
+const REMINDER_OPTIONS = [
+  { value: null,  label: 'Sem aviso automático' },
+  { value: 2,     label: '2 horas antes' },
+  { value: 24,    label: '24 horas antes' },
+  { value: 48,    label: '2 dias antes' },
+  { value: 168,   label: '7 dias antes' },
+]
 const DAYS_OF_WEEK = [
   { num: 0, label: 'Dom', full: 'Domingo' },
   { num: 1, label: 'Seg', full: 'Segunda' },
@@ -108,6 +115,7 @@ export default function CompanyAgenda() {
   const [confirmDeleteAgenda, setConfirmDeleteAgenda] = useState(null)
   const [confirmDeleteAppt, setConfirmDeleteAppt] = useState(false)
   const [deletingNow, setDeletingNow] = useState(false)
+  const [futureAppointments, setFutureAppointments] = useState([])
 
   // Carrega agendas + agendamentos + contatos
   useEffect(() => {
@@ -145,6 +153,58 @@ export default function CompanyAgenda() {
       .lt('starts_at', to.toISOString())
       .then(({ data }) => { if (data) setAppointments(data) })
   }, [instance, weekStart])
+
+  // Carrega agendamentos futuros pra checagem de lembretes
+  useEffect(() => {
+    if (!instance) return
+    supabase.from('appointments').select('*')
+      .eq('instancia', instance)
+      .gte('starts_at', new Date().toISOString())
+      .in('status', ['agendado', 'confirmado'])
+      .eq('reminder_sent', false)
+      .then(({ data }) => { if (data) setFutureAppointments(data) })
+  }, [instance])
+
+  // Dispara lembretes automáticos para agendamentos futuros
+  useEffect(() => {
+    if (!instance || !agendas.length || !futureAppointments.length) return
+    const now = Date.now()
+    const pending = []
+    agendas.forEach(ag => {
+      if (!ag.reminder_hours) return
+      const windowMs = ag.reminder_hours * 3600_000
+      futureAppointments.forEach(appt => {
+        if (appt.agenda_id !== ag.id) return
+        const startsAt = new Date(appt.starts_at).getTime()
+        const diff = startsAt - now
+        if (diff > 0 && diff <= windowMs) pending.push({ appt, ag })
+      })
+    })
+    if (!pending.length) return
+    const apiInstancia = session?.company?.api_instancia
+    pending.forEach(({ appt, ag }) => {
+      const horaFmt = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      const msg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
+      // Marca como enviado antes de disparar (evita duplicata)
+      supabase.from('appointments').update({ reminder_sent: true }).eq('id', appt.id)
+      // Dispara webhook n8n → WhatsApp
+      if (appt.contact_numero && apiInstancia) {
+        fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: msg,
+            session_id: appt.contact_numero,
+            phone: appt.contact_numero.replace(/\D/g, ''),
+            instancia: instance,
+            api_instancia: apiInstancia,
+            ai_enabled: false,
+            is_reminder: true,
+          }),
+        }).catch(e => console.warn('webhook reminder:', e))
+      }
+    })
+  }, [agendas, futureAppointments, instance])
 
   // Realtime para agendamentos
   useEffect(() => {
@@ -201,6 +261,7 @@ export default function CompanyAgenda() {
       end_time: agendaModal.end_time,
       slot_minutes: agendaModal.slot_minutes,
       professional_id: agendaModal.professional_id || null,
+      reminder_hours: agendaModal.reminder_hours ?? null,
       instancia: instance,
     }
     const { data, error } = agendaModal.id
@@ -777,6 +838,19 @@ export default function CompanyAgenda() {
                   </div>
                 </div>
               )}
+              <div>
+                <label style={labelStyle}>Aviso automático ao cliente</label>
+                <select className="nx-select"
+                  value={agendaModal.reminder_hours ?? ''}
+                  onChange={e => setAgendaModal(p => ({ ...p, reminder_hours: e.target.value === '' ? null : parseInt(e.target.value) }))}>
+                  {REMINDER_OPTIONS.map(o => (
+                    <option key={String(o.value)} value={o.value ?? ''}>{o.label}</option>
+                  ))}
+                </select>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Quando configurado, o sistema envia uma mensagem automática pelo WhatsApp antes do horário agendado.
+                </div>
+              </div>
             </div>
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
               {agendaErr && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{agendaErr}</div>}
