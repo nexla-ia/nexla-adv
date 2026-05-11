@@ -117,6 +117,7 @@ export default function CompanyConversations() {
   const [contacts, setContacts]         = useState([])
   const [closedMap, setClosedMap]       = useState({}) // session_id → reason
   const [attendancesMap, setAttendancesMap] = useState({}) // numero → attendance record
+  const [attendancesLoaded, setAttendancesLoaded] = useState(false)
   const [assuming, setAssuming]         = useState(null)
   const [transferModal, setTransferModal] = useState(null)
   const [transferringTo, setTransferringTo] = useState('')
@@ -304,11 +305,10 @@ export default function CompanyConversations() {
     if (!instance) return
     supabase.from('attendances').select('*').eq('instancia', instance)
       .then(({ data }) => {
-        if (data) {
-          const map = {}
-          data.forEach(r => { map[r.numero] = r })
-          setAttendancesMap(map)
-        }
+        const map = {}
+        if (data) data.forEach(r => { map[r.numero] = r })
+        setAttendancesMap(map)
+        setAttendancesLoaded(true)
       })
   }, [instance])
 
@@ -390,7 +390,7 @@ export default function CompanyConversations() {
 
   // Auto-encerra tickets sem atividade após AUTO_CLOSE_HOURS horas
   useEffect(() => {
-    if (autoCloseDone.current || loadingContacts || !closedLoaded || !instance || !contacts.length) return
+    if (autoCloseDone.current || loadingContacts || !closedLoaded || !attendancesLoaded || !instance || !contacts.length) return
     autoCloseDone.current = true
 
     const cutoff = Date.now() - AUTO_CLOSE_HOURS * 3600_000
@@ -422,7 +422,7 @@ export default function CompanyConversations() {
       toClose.forEach(c => { delete next[c.session_id] })
       return next
     })
-  }, [loadingContacts, closedLoaded, contacts, closedMap, instance])
+  }, [loadingContacts, closedLoaded, attendancesLoaded, contacts, closedMap, instance])
 
   // Realtime: nova mensagem
   useEffect(() => {
