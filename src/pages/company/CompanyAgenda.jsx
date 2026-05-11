@@ -181,7 +181,6 @@ export default function CompanyAgenda() {
       })
     })
     if (!pending.length) return
-    const apiInstancia = session?.company?.api_instancia
     pending.forEach(({ appt, ag }) => {
       const horaFmt = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       const msg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
