@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -118,6 +118,9 @@ export default function CompanyAgenda() {
 
   const [apptModal, setApptModal]     = useState(null)
   const [apptErr, setApptErr]         = useState('')
+  const [phoneSuggestions, setPhoneSuggestions] = useState([])
+  const [showPhoneDrop, setShowPhoneDrop] = useState(false)
+  const phoneDropRef = useRef(null)
   const [savingAppt, setSavingAppt]   = useState(false)
   const [patientHistory, setPatientHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -351,6 +354,42 @@ export default function CompanyAgenda() {
         setLoadingHistory(false)
       })
   }, [apptModal?.contact_numero, instance])
+
+  // Busca sugestões de telefone ao digitar
+  useEffect(() => {
+    const num = apptModal?.contact_numero?.replace(/\D/g, '') || ''
+    if (!num || num.length < 3 || !instance) { setPhoneSuggestions([]); return }
+    supabase.from('mensagens_geral')
+      .select('numero')
+      .eq('instancia', instance)
+      .like('numero', `%${num}%`)
+      .not('numero', 'like', '%@g.us%')
+      .order('id', { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        if (!data) return
+        const seen = new Set()
+        const unique = []
+        data.forEach(r => {
+          const raw = r.numero || ''
+          const digits = toEvolutionPhone(raw)
+          if (!digits || seen.has(digits)) return
+          seen.add(digits)
+          const saved = savedContacts.find(c => c.numero?.replace(/\D/g, '').endsWith(digits.slice(-8)))
+          unique.push({ digits, name: saved?.nome || null })
+        })
+        setPhoneSuggestions(unique)
+        setShowPhoneDrop(unique.length > 0)
+      })
+  }, [apptModal?.contact_numero, instance, savedContacts])
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    if (!showPhoneDrop) return
+    const close = (e) => { if (phoneDropRef.current && !phoneDropRef.current.contains(e.target)) setShowPhoneDrop(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [showPhoneDrop])
 
   function openEditAppt(a) {
     const d = new Date(a.starts_at)
@@ -956,11 +995,67 @@ export default function CompanyAgenda() {
                   {savedContacts.map(c => <option key={c.id} value={c.nome}>{c.numero}</option>)}
                 </datalist>
               </div>
-              <div>
+              <div style={{ position: 'relative' }} ref={phoneDropRef}>
                 <label style={labelStyle}>Telefone</label>
-                <input className="nx-input" placeholder="Ex: 5561991234567"
-                  value={apptModal.contact_numero || ''}
-                  onChange={e => setApptModal(p => ({ ...p, contact_numero: e.target.value }))} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    background: '#F1F5F9', border: '1px solid var(--border)',
+                    borderRight: 'none', borderRadius: '8px 0 0 8px',
+                    padding: '0 10px', height: 38, fontSize: 13, fontWeight: 600,
+                    color: 'var(--text-secondary)', whiteSpace: 'nowrap',
+                  }}>+55</span>
+                  <input
+                    className="nx-input"
+                    style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
+                    placeholder="DDD + número (ex: 6992695898)"
+                    value={apptModal.contact_numero || ''}
+                    onChange={e => {
+                      setApptModal(p => ({ ...p, contact_numero: e.target.value }))
+                      setShowPhoneDrop(true)
+                    }}
+                    onFocus={() => phoneSuggestions.length > 0 && setShowPhoneDrop(true)}
+                  />
+                </div>
+                {showPhoneDrop && phoneSuggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
+                    background: '#fff', border: '1px solid var(--border)',
+                    borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                    maxHeight: 200, overflowY: 'auto', marginTop: 2,
+                  }}>
+                    {phoneSuggestions.map((s, i) => (
+                      <div key={i}
+                        onMouseDown={e => {
+                          e.preventDefault()
+                          setApptModal(p => ({
+                            ...p,
+                            contact_numero: s.digits,
+                            contact_nome: s.name || p.contact_nome,
+                          }))
+                          setShowPhoneDrop(false)
+                        }}
+                        style={{
+                          padding: '9px 14px', cursor: 'pointer', fontSize: 13,
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          borderBottom: i < phoneSuggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                      >
+                        <Phone size={12} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                          +55 {s.digits.slice(2)}
+                        </span>
+                        {s.name && (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>
+                            — {s.name}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div>
