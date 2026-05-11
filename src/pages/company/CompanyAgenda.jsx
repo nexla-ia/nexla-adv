@@ -15,6 +15,15 @@ import './Company.css'
 
 const AGENDA_COLORS = ['#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#D97706', '#0891B2', '#DB2777', '#059669']
 const SLOT_OPTIONS = [15, 20, 30, 45, 60, 90]
+
+// Remove o 9 extra de celulares BR para formato Evolution: 55DDDnumero (12 dígitos)
+function toEvolutionPhone(raw) {
+  let num = (raw || '').replace(/@.*$/, '').replace(/\D/g, '')
+  if (num.startsWith('55') && num.length === 13) {
+    num = num.slice(0, 4) + num.slice(5)
+  }
+  return num
+}
 const REMINDER_OPTIONS = [
   { value: null,  label: 'Sem aviso automático' },
   { value: 2,     label: '2 horas antes' },
@@ -333,7 +342,7 @@ export default function CompanyAgenda() {
     const num = apptModal?.contact_numero?.replace(/\D/g, '')
     if (!num || !instance) { setPatientHistory([]); return }
     setLoadingHistory(true)
-    supabase.from('mensagens_geral').select('id, mensagem, type, "horaLastMessage", created_at')
+    supabase.from('mensagens_geral').select('id, numero, mensagem, type, "horaLastMessage", created_at')
       .eq('instancia', instance)
       .like('numero', `${num}%`)
       .order('id', { ascending: false }).limit(5)
@@ -656,6 +665,10 @@ export default function CompanyAgenda() {
             <div className="nx-card" style={{ padding: 0, overflow: 'hidden' }}>
               {/* Toolbar */}
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <button className="nx-btn-ghost" style={{ padding: '6px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  onClick={() => setTab('agendas')}>
+                  <ChevronLeft size={13} /> Agendas
+                </button>
                 <select className="nx-select" style={{ fontSize: 13 }}
                   value={selectedAgendaId || ''} onChange={e => setSelectedAgendaId(e.target.value)}>
                   {agendas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -1088,6 +1101,25 @@ export default function CompanyAgenda() {
                       <MessageSquare size={11} /> Abrir conversa
                     </button>
                   </div>
+                  {!loadingHistory && patientHistory.length > 0 && (() => {
+                    const sessionId = patientHistory[patientHistory.length - 1]?.numero || ''
+                    const formatted = toEvolutionPhone(sessionId)
+                    const current = apptModal.contact_numero?.replace(/\D/g, '') || ''
+                    if (formatted && formatted !== current) return (
+                      <button
+                        type="button"
+                        onClick={() => setApptModal(p => ({ ...p, contact_numero: formatted }))}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          background: '#EFF6FF', border: '1px solid #BFDBFE',
+                          color: '#2563EB', borderRadius: 6, padding: '4px 10px',
+                          fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 6,
+                        }}>
+                        <Phone size={10} /> Usar número desta conversa · {formatted}
+                      </button>
+                    )
+                    return null
+                  })()}
                   {loadingHistory ? (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '6px 0' }}>Carregando histórico...</div>
                   ) : patientHistory.length === 0 ? (
