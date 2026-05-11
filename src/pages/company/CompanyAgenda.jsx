@@ -340,11 +340,11 @@ export default function CompanyAgenda() {
   // Carrega últimas mensagens do cliente quando o modal abre com número
   useEffect(() => {
     const num = apptModal?.contact_numero?.replace(/\D/g, '')
-    if (!num || !instance) { setPatientHistory([]); return }
+    if (!num || num.length < 4 || !instance) { setPatientHistory([]); return }
     setLoadingHistory(true)
     supabase.from('mensagens_geral').select('id, numero, mensagem, type, "horaLastMessage", created_at')
       .eq('instancia', instance)
-      .like('numero', `${num}%`)
+      .like('numero', `%${num}%`)
       .order('id', { ascending: false }).limit(5)
       .then(({ data }) => {
         if (data) setPatientHistory(data.reverse())
