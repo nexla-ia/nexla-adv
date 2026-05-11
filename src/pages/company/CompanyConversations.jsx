@@ -526,7 +526,7 @@ export default function CompanyConversations() {
     const name = session?.user?.name || 'Atendente'
     const sectorLabel = userSector ? ` (${userSector.name})` : ''
 
-    await supabase.from('attendances').upsert({
+    const attendancePayload = {
       numero: contact.session_id,
       instancia: instance,
       sector_id: userSector?.id || null,
@@ -535,7 +535,15 @@ export default function CompanyConversations() {
       attendant_name: name,
       attendant_email: session?.user?.email,
       assumed_at: new Date().toISOString(),
-    }, { onConflict: 'numero,instancia' })
+    }
+    const { error: attErr } = await supabase.from('attendances').insert(attendancePayload)
+    if (attErr) {
+      // Já existe — atualiza
+      await supabase.from('attendances')
+        .update(attendancePayload)
+        .eq('numero', contact.session_id)
+        .eq('instancia', instance)
+    }
 
     const assumeMsg = `▶ Atendimento assumido por ${name}${sectorLabel}`
     await supabase.rpc('send_mensagem_geral', {
