@@ -477,9 +477,26 @@ export default function CompanyAgenda() {
           p_hora: new Date().toISOString(),
           p_base64: null,
         })
+        // Envia para o WhatsApp do cliente via n8n
+        fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: msg,
+            session_id: sessionId,
+            phone: numero,
+            instancia: instance,
+            api_instancia: apiInstancia,
+            ai_enabled: false,
+            company: session?.company?.name,
+            sender_name: session?.user?.name,
+            sender_email: session?.user?.email,
+            is_agenda_event: true,
+          }),
+        }).catch(e => console.warn('webhook agenda:', e))
       }
 
-      // Cancelamento: envia mensagem WhatsApp via webhook avisando o cliente
+      // Cancelamento: mensagem extra personalizada ao cliente
       if (!isNew && prevStatus !== 'cancelado' && payload.status === 'cancelado') {
         const aviso = `Olá ${payload.contact_nome.split(' ')[0]}, infelizmente seu agendamento de ${dateStr} foi cancelado. Em caso de dúvidas, entre em contato.`
         await supabase.rpc('send_mensagem_geral', {
@@ -499,9 +516,11 @@ export default function CompanyAgenda() {
             phone: numero,
             instancia: instance,
             api_instancia: apiInstancia,
+            ai_enabled: false,
             company: session?.company?.name,
             sender_name: session?.user?.name,
             sender_email: session?.user?.email,
+            is_agenda_event: true,
           }),
         }).catch(e => console.warn('webhook cancelamento:', e))
       }
