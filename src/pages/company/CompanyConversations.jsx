@@ -122,7 +122,7 @@ export default function CompanyConversations() {
   const [transferringTo, setTransferringTo] = useState('')
   const [transferring, setTransferring] = useState(false)
   const [companyUsers, setCompanyUsers] = useState([]) // outros atendentes pra transferir
-  const [tab, setTab]                 = useState('recepcao')
+  const [tab, setTab]                 = useState(() => sessionStorage.getItem('nx_conv_tab') || 'recepcao')
   const [loadingContacts, setLoadingContacts] = useState(false)
   const [search, setSearch]           = useState('')
   const [selected, setSelected]       = useState(null)
@@ -153,6 +153,8 @@ export default function CompanyConversations() {
   const bottomRef    = useRef(null)
   const selectedRef  = useRef(null)
   const autoCloseDone = useRef(false)
+
+  function changeTab(t) { sessionStorage.setItem('nx_conv_tab', t); setTab(t) }
 
   useEffect(() => { selectedRef.current = selected }, [selected])
 
@@ -244,14 +246,14 @@ export default function CompanyConversations() {
     if (existing) {
       setSelected(existing)
       // Se está finalizada, força aba certa para visualizar
-      if (closedMap[existing.session_id]) setTab('finalizados')
-      else if (attendancesMap[existing.session_id]) setTab('meu-setor')
-      else setTab('recepcao')
+      if (closedMap[existing.session_id]) changeTab('finalizados')
+      else if (attendancesMap[existing.session_id]) changeTab('meu-setor')
+      else changeTab('recepcao')
     } else {
       const synthetic = { session_id: sessionId, phone: cleanTarget, lastTs: null }
       setContacts(prev => [synthetic, ...prev])
       setSelected(synthetic)
-      setTab('recepcao')
+      changeTab('recepcao')
     }
     searchParams.delete('contact')
     setSearchParams(searchParams, { replace: true })
@@ -573,7 +575,7 @@ export default function CompanyConversations() {
         attendant_name: name, attendant_email: session?.user?.email,
       }
     }))
-    setTab('meu-setor')
+    changeTab('meu-setor')
     setAssuming(null)
   }
 
@@ -764,7 +766,7 @@ export default function CompanyConversations() {
         }
         await supabase.from('attendances').upsert(newAtt, { onConflict: 'numero,instancia' })
         setAttendancesMap(prev => ({ ...prev, [selected.session_id]: newAtt }))
-        setTab('meu-setor')
+        changeTab('meu-setor')
       }
       const text = msgText.trim()
       const file = attachedFile
@@ -825,7 +827,7 @@ export default function CompanyConversations() {
     await supabase.from('attendances').delete().eq('numero', contact.session_id).eq('instancia', instance)
     setClosedMap(prev => { const n = { ...prev }; delete n[contact.session_id]; return n })
     setAttendancesMap(prev => { const n = { ...prev }; delete n[contact.session_id]; return n })
-    setTab('recepcao')
+    changeTab('recepcao')
     setToast({ message: 'Conversa reaberta', color: '#16A34A' })
     setTimeout(() => setToast(null), 2500)
   }
@@ -848,7 +850,7 @@ export default function CompanyConversations() {
     if (selected?.session_id === closedId) setSelected(null)
     setCloseModal(null)
     setReason('')
-    setTab('finalizados')
+    changeTab('finalizados')
     const label = REASONS.find(r => r.value === reason)?.label || reason
     setToast({ message: `Conversa finalizada — ${label}`, color: REASONS.find(r => r.value === reason)?.color || '#16A34A' })
     setTimeout(() => setToast(null), 3500)
@@ -878,7 +880,7 @@ export default function CompanyConversations() {
           {tabList.map(t => (
             <button
               key={t.id}
-              onClick={() => { setTab(t.id); setSelected(null) }}
+              onClick={() => { changeTab(t.id); setSelected(null) }}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 padding: '10px 4px', border: 'none', background: 'none', cursor: 'pointer',
