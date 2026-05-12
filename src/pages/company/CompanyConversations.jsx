@@ -32,7 +32,16 @@ function findSaved(savedContacts, cleanNum) {
 }
 
 function getMessageContent(row) {
-  return (row.mensagem || '').replace(/^\*[^*]+\*:\n/, '').trim()
+  const type = (row.type || '').toLowerCase()
+  const isAttendant = type === 'atendente' || type === 'humano'
+  let msg = (row.mensagem || '')
+    .replace(/^\*[^*]+\*:\n/, '')   // *nome*:\n (bold)
+    .trim()
+  // Strip "nome: " prefix em mensagens de atendente (ecoadas pelo WhatsApp/n8n)
+  if (isAttendant) {
+    msg = msg.replace(/^[^\n:]{1,40}:\s+/, '')
+  }
+  return msg
 }
 
 function getMessageType(row) { return (row.type || 'human').toLowerCase() }
