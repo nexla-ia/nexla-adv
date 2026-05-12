@@ -280,7 +280,7 @@ export default function CompanyAdmin() {
   const planBgs    = { Starter: '#FFFBEB', Pro: '#EFF6FF', Business: '#F5F3FF' }
   const planColor  = planColors[limits.plan] || '#C9A074'
   const planBg     = planBgs[limits.plan] || '#FFFBEB'
-  const planPrice  = { Starter: 'R$ 247,00/mês', Pro: 'R$ 597,00/mês', Business: 'Sob medida' }
+  const planPrice  = { Starter: 'R$ 199,00/mês', Pro: 'R$ 597,00/mês', Business: 'Sob medida' }
 
   function UsageBar({ label, icon, used, total }) {
     const pct = total === Infinity ? 0 : Math.min(100, Math.round((used / total) * 100))

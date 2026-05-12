@@ -16,7 +16,7 @@ export const UNLIMITED = Infinity
 export const PLAN_DEFAULTS = {
   Starter: {
     label: 'Starter',
-    price: 247,
+    price: 199,
     professionals: 3,
     users: 5,
     agendas: 1,
