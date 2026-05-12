@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical } from 'lucide-react'
+import { MessageSquare, Bot, User, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus } from 'lucide-react'
+import { TagBadge, tagColor } from './CompanyContacts'
 import './Company.css'
 
 const CONV_TABLE = 'mensagens_geral'
@@ -145,6 +146,9 @@ export default function CompanyConversations() {
   const [futureAppts, setFutureAppts]     = useState({}) // numero (só dígitos) → { starts_at, status, agenda_name }
   const [contextMenu, setContextMenu] = useState(null) // { x, y, contact }
   const [chatActionsOpen, setChatActionsOpen] = useState(false)
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+  const [savingTag, setSavingTag] = useState(false)
   const [saveContactModal, setSaveContactModal] = useState(null) // { numero, nome, notes }
   const [savingContact, setSavingContact] = useState(false)
   const mediaRecorderRef = useRef(null)
@@ -1112,6 +1116,81 @@ export default function CompanyConversations() {
                         </button>
                       )}
                     </div>
+
+                    {/* Botão Tag — desktop e mobile */}
+                    {saved && (() => {
+                      const tags = saved.tags || []
+                      async function addTag() {
+                        const t = tagInput.trim().toLowerCase()
+                        if (!t || tags.includes(t)) { setTagInput(''); return }
+                        setSavingTag(true)
+                        const newTags = [...tags, t]
+                        await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', saved.id)
+                        setSavedContacts(prev => ({ ...prev, [cleanNum]: { ...prev[cleanNum], tags: newTags } }))
+                        setSavingTag(false)
+                        setTagInput('')
+                      }
+                      async function removeTag(tag) {
+                        const newTags = tags.filter(x => x !== tag)
+                        await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', saved.id)
+                        setSavedContacts(prev => ({ ...prev, [cleanNum]: { ...prev[cleanNum], tags: newTags } }))
+                      }
+                      return (
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            title="Gerenciar tags"
+                            onClick={() => { setTagPopoverOpen(v => !v); setTagInput('') }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 5,
+                              background: tags.length ? '#F5F3FF' : 'var(--bg-hover)',
+                              border: `1px solid ${tags.length ? '#DDD6FE' : 'var(--border)'}`,
+                              borderRadius: 8, padding: '7px 10px', cursor: 'pointer',
+                              color: tags.length ? '#7C3AED' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
+                            }}>
+                            <Tag size={14} />
+                            <span className="tag-btn-label">{tags.length > 0 ? tags.length : 'Tag'}</span>
+                          </button>
+                          {tagPopoverOpen && (
+                            <div style={{
+                              position: 'absolute', right: 0, top: '110%', background: '#fff',
+                              border: '1px solid var(--border)', borderRadius: 12,
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.13)', zIndex: 300,
+                              minWidth: 240, padding: 14,
+                            }}
+                              onMouseLeave={() => setTagPopoverOpen(false)}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                                Tags de {saved.nome?.split(' ')[0]}
+                              </div>
+                              {tags.length > 0 && (
+                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                                  {tags.map(t => (
+                                    <TagBadge key={t} tag={t} onRemove={() => removeTag(t)} />
+                                  ))}
+                                </div>
+                              )}
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <input
+                                  autoFocus
+                                  className="nx-input"
+                                  style={{ fontSize: 12, padding: '7px 10px', flex: 1 }}
+                                  placeholder="Nova tag..."
+                                  value={tagInput}
+                                  onChange={e => setTagInput(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && addTag()}
+                                />
+                                <button className="nx-btn-primary" style={{ padding: '0 12px', fontSize: 12 }}
+                                  onClick={addTag} disabled={savingTag}>
+                                  <Plus size={13} />
+                                </button>
+                              </div>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
+                                Enter para adicionar · clique no × para remover
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Mobile: ícones compactos + menu ⋮ */}
                     <div className="chat-header-actions-mobile">

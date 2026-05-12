@@ -194,6 +194,7 @@
 /* Desktop: mostra botões com texto, esconde mobile */
 .chat-header-actions-desktop { display: contents; }
 .chat-header-actions-mobile  { display: none; }
+.tag-btn-label { display: inline; }
 
 /* Input bar com safe area para iOS Safari */
 .chat-input-bar {
@@ -447,6 +448,7 @@
   /* Chat header: esconde desktop actions, mostra mobile */
   .chat-header-actions-desktop { display: none !important; }
   .chat-header-actions-mobile  { display: flex; gap: 6px; flex-shrink: 0; }
+  .tag-btn-label { display: none; }
 
   /* Chat header mais compacto */
   .chat-header { padding: 8px 12px; gap: 8px; }
