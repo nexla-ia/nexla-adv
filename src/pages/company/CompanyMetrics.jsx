@@ -461,7 +461,7 @@ function OverviewTab({ msgs, convs, atts, appts, alerts, kanbanCards, range, per
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
+      <div className='metrics-kpi-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<Inbox size={18} color="#2563EB" />} bg="#EFF6FF" value={ticketsNovos} label="Tickets novos" sub={periodLabel(period)} loading={loading} />
         <KpiCard icon={<MessageSquare size={18} color="#7C3AED" />} bg="#F5F3FF" value={ticketsAtivos} label="Tickets ativos" sub="aguardando atendimento" loading={loading} />
         <KpiCard icon={<CheckCircle2 size={18} color="#16A34A" />} bg="#F0FDF4" value={c.length} label="Tickets finalizados" sub={periodLabel(period)} loading={loading} />
@@ -617,7 +617,7 @@ function AtendimentoTab({ msgs, convs, atts, range, period, loading }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 18 }}>
+      <div className='metrics-kpi-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<Bot size={18} color="#2563EB" />} bg="#EFF6FF" value={formatDuration(medIa)} label="Resposta da IA (mediana)" sub={`p90: ${formatDuration(p9Ia)}`} loading={loading} />
         <KpiCard icon={<Headset size={18} color="#16A34A" />} bg="#F0FDF4" value={formatDuration(medHuman)} label="Resposta humana (mediana)" sub={`p90: ${formatDuration(p9Human)}`} loading={loading} />
         <KpiCard icon={<Inbox size={18} color="#D97706" />} bg="#FFFBEB" value={pending.length} label="Pendentes agora" sub={`${pending1h} > 1h · ${pending24h} > 24h`} loading={loading} alert={pending1h > 0} />
@@ -841,7 +841,7 @@ function AgendaTab({ appts, range, period, loading }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14, marginBottom: 18 }}>
+      <div className='metrics-kpi-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<Calendar size={18} color="#2563EB" />} bg="#EFF6FF" value={total} label="Total" sub={periodLabel(period)} loading={loading} />
         <KpiCard icon={<CheckCircle2 size={18} color="#16A34A" />} bg="#F0FDF4" value={`${taxaConfirm}%`} label="Confirmação" sub="confirmado + concluído" loading={loading} />
         <KpiCard icon={<AlertCircle size={18} color="#D97706" />} bg="#FFFBEB" value={`${taxaNoShow}%`} label="No-show" sub="clientes que faltaram" loading={loading} alert={taxaNoShow > 15} />
@@ -974,7 +974,7 @@ function FinanceiroTab({ appts, professionals, procedures, insurancePlans, range
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
+      <div className='metrics-kpi-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<DollarSign size={18} color="#16A34A" />} bg="#F0FDF4" value={fmtMoney(faturado)} label="Faturado" sub={periodLabel(period)} loading={loading} />
         <KpiCard icon={<Clock size={18} color="#D97706" />} bg="#FFFBEB" value={fmtMoney(aReceber)} label="A receber" sub="agendamentos pendentes" loading={loading} alert={aReceber > 0} />
         <KpiCard icon={<TrendingUp size={18} color="#2563EB" />} bg="#EFF6FF" value={fmtMoney(ticketMedio)} label="Ticket médio" sub={`${concluidos} pagamentos`} loading={loading} />
@@ -1196,7 +1196,7 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
   return (
     <div>
       {/* KPIs — 6 cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 18 }}>
+      <div className='metrics-kpi-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<Users size={18} color="#2563EB" />} bg="#EFF6FF" value={totalLeads} label="Total de leads" sub={periodLabel(period)} loading={loading} />
         <KpiCard icon={<MessageSquare size={18} color="#16A34A" />} bg="#F0FDF4" value={comContato} label="Leads contactados" sub={`${totalLeads ? Math.round(comContato / totalLeads * 100) : 0}% do total`} loading={loading} />
         <KpiCard icon={<Calendar size={18} color="#7C3AED" />} bg="#F5F3FF" value={agendaram} label="Viraram agendamento" sub={`${conversao.toFixed(1)}% de conversão`} loading={loading} />
@@ -1431,7 +1431,7 @@ function AtividadesTab({ kanbanCards, kanbanColumns, users, range, period, loadi
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
+      <div className='metrics-kpi-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
         <KpiCard icon={<Kanban size={18} color="#2563EB" />} bg="#EFF6FF" value={cards.length} label="Total de cards" sub="todos os cards" loading={loading} />
         <KpiCard icon={<AlertCircle size={18} color="#DC2626" />} bg="#FEF2F2" value={atrasados} label="Atrasados" sub="data vencida" loading={loading} alert={atrasados > 0} />
         <KpiCard icon={<Flag size={18} color="#D97706" />} bg="#FFFBEB" value={urgentes} label="Urgentes" sub="prioridade urgente" loading={loading} alert={urgentes > 0} />

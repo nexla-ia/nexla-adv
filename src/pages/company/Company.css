@@ -195,6 +195,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* iOS scroll fix */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .chat-empty {
@@ -411,6 +414,17 @@
     inset: 50px 0 0 0;
     z-index: 100;
     background: #F8FAFC;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* iOS: chat-body dentro do fixed panel precisa de height explicita */
+  .contacts-root.has-chat .chat-body {
+    flex: 1;
+    height: 0;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   /* Chat body padding menor */

@@ -98,6 +98,7 @@ export default function CompanyAgenda() {
   const apiInstancia = session?.company?.api_instancia
 
   const [tab, setTab]                 = useState('calendario')
+  const [mobileView, setMobileView]   = useState('lista') // 'lista' | 'calendario'
   const [agendas, setAgendas]         = useState([])
   const [appointments, setAppointments] = useState([])
   const [savedContacts, setSavedContacts] = useState([])
@@ -731,6 +732,19 @@ export default function CompanyAgenda() {
                   value={selectedAgendaId || ''} onChange={e => setSelectedAgendaId(e.target.value)}>
                   {agendas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
+
+                {/* Toggle Lista/Calendário — só mobile */}
+                <div className="agenda-view-toggle" style={{ display: 'flex', background: '#F1F5F9', borderRadius: 8, padding: 2, gap: 2 }}>
+                  <button onClick={() => setMobileView('lista')}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: mobileView === 'lista' ? '#fff' : 'transparent', color: mobileView === 'lista' ? '#2563EB' : 'var(--text-muted)', boxShadow: mobileView === 'lista' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                    Lista
+                  </button>
+                  <button onClick={() => setMobileView('calendario')}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: mobileView === 'calendario' ? '#fff' : 'transparent', color: mobileView === 'calendario' ? '#2563EB' : 'var(--text-muted)', boxShadow: mobileView === 'calendario' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                    Grade
+                  </button>
+                </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
                   <button className="nx-btn-ghost" style={{ padding: '6px 10px' }} onClick={() => setWeekStart(addDays(weekStart, -7))}>
                     <ChevronLeft size={14} />
@@ -747,8 +761,62 @@ export default function CompanyAgenda() {
                 </div>
               </div>
 
-              {/* Grid */}
-              <div className="agenda-calendar-wrap" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              {/* Vista de lista — mobile (escondida quando mobileView=calendario) */}
+              <div className={`agenda-list-view${mobileView === 'calendario' ? ' agenda-list-hidden' : ''}`}>
+                {(() => {
+                  const from = new Date(weekStart); from.setHours(0,0,0,0)
+                  const to = addDays(weekStart, 7); to.setHours(0,0,0,0)
+                  const weekAppts = appointments
+                    .filter(a => a.agenda_id === selectedAgendaId && new Date(a.starts_at) >= from && new Date(a.starts_at) < to)
+                    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+                  const selectedAg = agendas.find(a => a.id === selectedAgendaId)
+                  if (!weekAppts.length) return (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      <Calendar size={28} style={{ opacity: 0.15, display: 'block', margin: '0 auto 8px' }} />
+                      Nenhum agendamento nesta semana
+                    </div>
+                  )
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {weekAppts.map(a => {
+                        const st = STATUS_OPTIONS.find(s => s.value === a.status) || STATUS_OPTIONS[0]
+                        const d = new Date(a.starts_at)
+                        return (
+                          <div key={a.id}
+                            onClick={() => openEditAppt(a)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border)', cursor: 'pointer', background: '#fff' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                            <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 44 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                {d.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                              </div>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+                                {d.getDate()}
+                              </div>
+                            </div>
+                            <div style={{ width: 3, height: 40, borderRadius: 2, background: selectedAg?.color || st.color, flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {a.contact_nome || '—'}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {a.duration_minutes} min
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: st.bg, color: st.color, border: `1px solid ${st.border}`, flexShrink: 0 }}>
+                              {st.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Grid — escondido no mobile quando mobileView=lista */}
+              <div className={`agenda-calendar-wrap${mobileView === 'lista' ? ' agenda-calendar-hidden' : ''}`} style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <div style={{ minWidth: 880 }}>
                   {/* Header dias */}
                   <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(7, 1fr)', borderBottom: '1px solid var(--border)', background: '#F8FAFC' }}>

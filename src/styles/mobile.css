@@ -3,8 +3,10 @@
    Applies on top of component CSS — doesn't touch desktop.
 ───────────────────────────────────────────────────────────────────────── */
 
-/* ── Desktop: esconde cards de admin (só mobile) ───────────────────────── */
+/* ── Desktop: esconde elementos só-mobile ───────────────────────────────── */
 .admin-users-cards { display: none; }
+.agenda-view-toggle { display: none; }
+.agenda-list-view   { display: none; }
 
 /* ── Modais: bottom sheet no mobile ────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -68,11 +70,19 @@
 
   /* ── Agenda ───────────────────────────────────────────────────────────── */
 
+  /* Toggle lista/grade: só aparece no mobile */
+  .agenda-view-toggle { display: flex !important; }
+
   /* Calendar grid scroll */
   .agenda-calendar-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Lista view: visível por padrão no mobile */
+  .agenda-list-view { display: block; }
+  .agenda-list-hidden { display: none !important; }
+  .agenda-calendar-hidden { display: none !important; }
 
   /* Modal agenda: bottom sheet */
   .agenda-modal-bg,
@@ -122,10 +132,8 @@
     grid-template-columns: 1fr !important;
   }
 
-  /* KPI cards: min 2 por linha */
-  [style*="minmax(200px, 1fr)"],
-  [style*="minmax(190px, 1fr)"],
-  [style*="minmax(180px, 1fr)"] {
+  /* KPI cards: 2 por linha no mobile */
+  .metrics-kpi-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
   }
