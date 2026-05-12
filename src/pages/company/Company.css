@@ -187,7 +187,8 @@
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 
 /* Desktop: mostra botões com texto, esconde mobile */
