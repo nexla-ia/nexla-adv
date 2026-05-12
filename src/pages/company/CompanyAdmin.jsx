@@ -62,6 +62,7 @@ export default function CompanyAdmin() {
   const [qrErr, setQrErr]           = useState('')
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [expandedUserId, setExpandedUserId] = useState(null)
 
   async function fetchState() {
     if (!evolutionUrl || !instance || !apiKey) return null
@@ -448,7 +449,8 @@ export default function CompanyAdmin() {
           </button>
         </div>
 
-        <div className="nx-card" style={{ overflowX: 'auto' }}>
+        {/* Desktop: tabela */}
+        <div className="admin-users-table nx-card" style={{ overflowX: 'auto' }}>
           {!users.length ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum usuário.</div>
           ) : (
@@ -471,39 +473,21 @@ export default function CompanyAdmin() {
                         </div>
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.email}</td>
-                      <td>
-                        <span className={`nx-badge ${u.role === 'admin' ? 'nx-badge-cyan' : 'nx-badge-gray'}`}>
-                          {u.role === 'admin' ? 'Admin' : 'Operador'}
-                        </span>
-                      </td>
+                      <td><span className={`nx-badge ${u.role === 'admin' ? 'nx-badge-cyan' : 'nx-badge-gray'}`}>{u.role === 'admin' ? 'Admin' : 'Operador'}</span></td>
                       <td>
                         {userSector ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: '#fff', background: userSector.color }}>
-                            {userSector.name}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>
-                        )}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: '#fff', background: userSector.color }}>{userSector.name}</span>
+                        ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>}
                       </td>
-                      <td>
-                        <span className={`nx-badge ${u.active !== false ? 'nx-badge-green' : 'nx-badge-red'}`}>
-                          {u.active !== false ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
+                      <td><span className={`nx-badge ${u.active !== false ? 'nx-badge-green' : 'nx-badge-red'}`}>{u.active !== false ? 'Ativo' : 'Inativo'}</span></td>
                       <td>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
-                          <button className="table-action" onClick={() => openEditUser(u)}>
-                            <Pencil size={12} /> Editar
-                          </button>
-                          <button className={`table-action ${u.active !== false ? 'danger' : ''}`}
-                            onClick={() => handleToggleUser(u.id, u.active !== false)}>
+                          <button className="table-action" onClick={() => openEditUser(u)}><Pencil size={12} /> Editar</button>
+                          <button className={`table-action ${u.active !== false ? 'danger' : ''}`} onClick={() => handleToggleUser(u.id, u.active !== false)}>
                             {u.active !== false ? <><UserX size={12} /> Desativar</> : <><UserCheck size={12} /> Ativar</>}
                           </button>
                           {u.id !== session?.user?.id && (
-                            <button className="table-action danger"
-                              onClick={() => { setDeleteErr(''); setDeletingUser(u) }}>
-                              <Trash2 size={12} /> Excluir
-                            </button>
+                            <button className="table-action danger" onClick={() => { setDeleteErr(''); setDeletingUser(u) }}><Trash2 size={12} /> Excluir</button>
                           )}
                         </div>
                       </td>
@@ -512,6 +496,76 @@ export default function CompanyAdmin() {
                 })}
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Mobile: cards clicáveis */}
+        <div className="admin-users-cards">
+          {!users.length ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum usuário.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {users.map(u => {
+                const memberSectorId = sectorMembers.find(m => m.user_id === u.id)?.sector_id
+                const userSector = sectors.find(s => s.id === memberSectorId)
+                const isExpanded = expandedUserId === u.id
+                return (
+                  <div key={u.id} className="nx-card" style={{ overflow: 'hidden' }}>
+                    {/* Header do card — sempre visível */}
+                    <button
+                      onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 14px', background: 'none', border: 'none',
+                        cursor: 'pointer', textAlign: 'left',
+                      }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#2563EB', flexShrink: 0 }}>
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
+                        <span className={`nx-badge ${u.role === 'admin' ? 'nx-badge-cyan' : 'nx-badge-gray'}`}>{u.role === 'admin' ? 'Admin' : 'Op.'}</span>
+                        <span className={`nx-badge ${u.active !== false ? 'nx-badge-green' : 'nx-badge-red'}`}>{u.active !== false ? '✓' : '✗'}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><path d="M6 9l6 6 6-6"/></svg>
+                      </div>
+                    </button>
+
+                    {/* Expandido: detalhes + ações */}
+                    {isExpanded && (
+                      <div style={{ padding: '0 14px 14px', borderTop: '1px solid var(--border)' }}>
+                        <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {userSector && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                              <span style={{ color: 'var(--text-muted)', width: 50 }}>Setor</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: '#fff', background: userSector.color }}>{userSector.name}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                          <button className="nx-btn-ghost" style={{ fontSize: 12, padding: '7px 14px', flex: 1 }} onClick={() => { openEditUser(u); setExpandedUserId(null) }}>
+                            <Pencil size={13} /> Editar
+                          </button>
+                          <button className={`nx-btn-ghost ${u.active !== false ? 'danger' : ''}`}
+                            style={{ fontSize: 12, padding: '7px 14px', flex: 1, color: u.active !== false ? '#DC2626' : '#16A34A', borderColor: u.active !== false ? '#FECACA' : '#BBF7D0' }}
+                            onClick={() => handleToggleUser(u.id, u.active !== false)}>
+                            {u.active !== false ? <><UserX size={13} /> Desativar</> : <><UserCheck size={13} /> Ativar</>}
+                          </button>
+                          {u.id !== session?.user?.id && (
+                            <button className="nx-btn-ghost" style={{ fontSize: 12, padding: '7px 14px', color: '#DC2626', borderColor: '#FECACA' }}
+                              onClick={() => { setDeleteErr(''); setDeletingUser(u); setExpandedUserId(null) }}>
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </div>

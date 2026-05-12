@@ -3,6 +3,9 @@
    Applies on top of component CSS — doesn't touch desktop.
 ───────────────────────────────────────────────────────────────────────── */
 
+/* ── Desktop: esconde cards de admin (só mobile) ───────────────────────── */
+.admin-users-cards { display: none; }
+
 /* ── Modais: bottom sheet no mobile ────────────────────────────────────── */
 @media (max-width: 768px) {
   .nx-modal-bg {
@@ -131,6 +134,10 @@
   .metrics-root table {
     min-width: 400px;
   }
+
+  /* ── Admin: tabela escondida, cards visíveis ─────────────────────────── */
+  .admin-users-table { display: none !important; }
+  .admin-users-cards { display: block; }
 
   /* ── ADM: tabelas .an-table e .opx-table ────────────────────────────── */
   .an-table,
