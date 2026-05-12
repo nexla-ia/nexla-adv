@@ -70,19 +70,11 @@
 
   /* ── Agenda ───────────────────────────────────────────────────────────── */
 
-  /* Toggle lista/grade: só aparece no mobile */
-  .agenda-view-toggle { display: flex !important; }
-
-  /* Calendar grid scroll */
-  .agenda-calendar-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Lista view: visível por padrão no mobile */
-  .agenda-list-view { display: block; }
+  /* Agenda mobile: sempre lista, sem toggle */
+  .agenda-view-toggle { display: none !important; }
+  .agenda-calendar-wrap { display: none !important; }
+  .agenda-list-view { display: block !important; }
   .agenda-list-hidden { display: none !important; }
-  .agenda-calendar-hidden { display: none !important; }
 
   /* Modal agenda: bottom sheet */
   .agenda-modal-bg,
@@ -103,9 +95,11 @@
 
     /* ── Métricas ────────────────────────────────────────────────────────── */
 
-  /* Container principal: padding menor */
+  /* Container principal: padding menor + sem overflow lateral */
   .metrics-root {
     padding: 0.75rem !important;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   /* Tabs: scroll horizontal, sem quebra */

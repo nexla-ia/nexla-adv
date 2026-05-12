@@ -365,8 +365,8 @@
   /* Layout */
   .topbar-hamburger { display: flex; align-items: center; justify-content: center; }
 
-  .company-main-wrap { overflow: visible; }
-  .company-main { overflow-y: auto; }
+  .company-main-wrap { overflow-x: hidden; overflow-y: visible; }
+  .company-main { overflow-y: auto; overflow-x: hidden; }
 
   /* Topbar fixo no topo em todas as telas */
   .company-topbar {
