@@ -274,6 +274,26 @@
   padding: 1.75rem 2rem;
 }
 
+.alerts-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.alerts-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.alerts-filter-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .alert-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -343,14 +363,23 @@
   .topbar-hamburger { display: flex; align-items: center; justify-content: center; }
 
   .company-main-wrap { overflow: visible; }
-  .company-main { overflow-y: visible; }
+  .company-main { overflow-y: auto; }
 
+  /* Topbar fixo no topo em todas as telas */
   .company-topbar {
     padding: 0 1rem;
     gap: 8px;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 50;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  }
+
+  /* Compensar topbar fixo */
+  .company-main-wrap {
+    padding-top: 50px;
   }
 
   /* Conversas: empilha lista + chat no mobile */

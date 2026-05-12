@@ -448,11 +448,11 @@ export default function CompanyAdmin() {
           </button>
         </div>
 
-        <div className="nx-card">
+        <div className="nx-card" style={{ overflowX: 'auto' }}>
           {!users.length ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum usuário.</div>
           ) : (
-            <table className="data-table">
+            <table className="data-table" style={{ minWidth: 520 }}>
               <thead>
                 <tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ação</th></tr>
               </thead>

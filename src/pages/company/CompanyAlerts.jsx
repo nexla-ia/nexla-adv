@@ -198,36 +198,36 @@ export default function CompanyAlerts() {
 
   return (
     <div className="alerts-root">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: 4 }}>
-            {aiEnabled ? 'Alertas da IA' : 'Encaminhamentos'}
-            {unreadCount > 0 && (
-              <span style={{
-                marginLeft: 8, background: '#DC2626', color: '#fff',
-                borderRadius: 20, fontSize: 11, fontWeight: 700,
-                padding: '2px 8px', verticalAlign: 'middle',
-              }}>
-                {unreadCount} novo{unreadCount > 1 ? 's' : ''}
-              </span>
-            )}
+      <div className="alerts-page-header">
+        <div className="alerts-title-row">
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {aiEnabled ? 'Alertas da IA' : 'Encaminhamentos'}
+              {unreadCount > 0 && (
+                <span style={{
+                  background: '#DC2626', color: '#fff',
+                  borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  padding: '2px 8px',
+                }}>
+                  {unreadCount} novo{unreadCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              {loading
+                ? 'Carregando...'
+                : aiEnabled
+                  ? 'Avisos enviados pelo agente de IA'
+                  : 'Conversas encaminhadas por outros atendentes'}
+            </div>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            {loading
-              ? 'Carregando...'
-              : aiEnabled
-                ? 'Avisos enviados pelo agente de IA'
-                : 'Conversas encaminhadas por outros atendentes'}
-          </div>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0,
             color: realtimeStatus === 'connected' ? '#16A34A' : realtimeStatus === 'error' ? '#DC2626' : '#9CA3AF',
             background: realtimeStatus === 'connected' ? '#F0FDF4' : realtimeStatus === 'error' ? '#FEF2F2' : '#F9FAFB',
             border: `1px solid ${realtimeStatus === 'connected' ? '#BBF7D0' : realtimeStatus === 'error' ? '#FECACA' : '#E5E7EB'}`,
-            borderRadius: 20, padding: '4px 10px',
+            borderRadius: 20, padding: '4px 10px', height: 'fit-content',
           }}>
             <span style={{
               width: 7, height: 7, borderRadius: '50%',
@@ -236,21 +236,21 @@ export default function CompanyAlerts() {
               display: 'inline-block',
               animation: realtimeStatus === 'connected' ? 'pulse-dot 2s infinite' : 'none',
             }} />
-            {realtimeStatus === 'connected' ? 'Ao vivo' : realtimeStatus === 'error' ? 'Erro de conexão' : 'Conectando...'}
+            {realtimeStatus === 'connected' ? 'Ao vivo' : realtimeStatus === 'error' ? 'Erro' : '...'}
           </div>
+        </div>
 
-          <div style={{ display: 'flex', gap: 6 }}>
-            {['all', 'pending', 'resolved'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={filter === f ? 'nx-btn-primary' : 'nx-btn-ghost'}
-                style={{ fontSize: 12, padding: '7px 14px' }}
-              >
-                {f === 'all' ? `Todos (${visible.length})` : f === 'pending' ? `Pendentes (${pending})` : `Resolvidos (${resolved})`}
-              </button>
-            ))}
-          </div>
+        <div className="alerts-filter-row">
+          {['all', 'pending', 'resolved'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={filter === f ? 'nx-btn-primary' : 'nx-btn-ghost'}
+              style={{ fontSize: 12, padding: '7px 14px' }}
+            >
+              {f === 'all' ? `Todos (${visible.length})` : f === 'pending' ? `Pendentes (${pending})` : `Resolvidos (${resolved})`}
+            </button>
+          ))}
         </div>
       </div>
 
