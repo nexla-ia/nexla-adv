@@ -1140,6 +1140,13 @@ export default function CompanyConversations() {
                       const tags = (saved?.tags) || []
                       async function ensureSavedAndGetId() {
                         if (saved?.id) return saved.id
+                        // Verifica se já existe antes de inserir (evita duplicata)
+                        const { data: existing } = await supabase.from('saved_contacts')
+                          .select('*').eq('numero', cleanNum).eq('instancia', instance).maybeSingle()
+                        if (existing) {
+                          setSavedContacts(prev => ({ ...prev, [cleanNum]: existing }))
+                          return existing.id
+                        }
                         // Auto-salva com o número como nome temporário
                         const { data } = await supabase.from('saved_contacts').insert({
                           numero: cleanNum, instancia: instance,
