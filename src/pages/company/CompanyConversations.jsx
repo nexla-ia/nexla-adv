@@ -4,13 +4,30 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { MessageSquare, Bot, User, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus } from 'lucide-react'
-import { TagBadge, tagColor } from './CompanyContacts'
+import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
 const CONV_TABLE = 'mensagens_geral'
 
 function formatPhone(val) {
   return (val || '').replace(/@.*$/, '')
+}
+
+// Busca contato no mapa tolerando variação do 9 extra BR
+function findSaved(savedContacts, cleanNum) {
+  if (!cleanNum) return null
+  if (findSaved(savedContacts, cleanNum)) return findSaved(savedContacts, cleanNum)
+  // Tenta sem o 9 extra (55 + DDD + 9 + 8 dígitos = 13 → 12)
+  if (cleanNum.startsWith('55') && cleanNum.length === 13) {
+    const sem9 = cleanNum.slice(0, 4) + cleanNum.slice(5)
+    if (savedContacts[sem9]) return savedContacts[sem9]
+  }
+  // Tenta com o 9 extra (12 → 13)
+  if (cleanNum.startsWith('55') && cleanNum.length === 12) {
+    const com9 = cleanNum.slice(0, 4) + '9' + cleanNum.slice(4)
+    if (savedContacts[com9]) return savedContacts[com9]
+  }
+  return null
 }
 
 function getMessageContent(row) {
@@ -279,7 +296,7 @@ export default function CompanyConversations() {
 
   function openSaveContact(contact) {
     const numero = contact.phone.replace(/\D/g, '')
-    const existing = savedContacts[numero]
+    const existing = findSaved(savedContacts, numero)
     setSaveContactModal({
       id: existing?.id || null,
       numero,
@@ -943,7 +960,7 @@ export default function CompanyConversations() {
             const closedReason = closedMap[c.session_id]
             const rs = closedReason ? REASONS.find(r => r.value === closedReason) : null
             const cleanNum = c.phone.replace(/\D/g, '')
-            const saved = savedContacts[cleanNum]
+            const saved = findSaved(savedContacts, cleanNum)
             const nextAppt = futureAppts[cleanNum]
             return (
               <div
@@ -1040,7 +1057,7 @@ export default function CompanyConversations() {
               </button>
               {(() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
-                const saved = savedContacts[cleanNum]
+                const saved = findSaved(savedContacts, cleanNum)
                 return (
                   <>
                     <div className="contact-avatar"
@@ -1078,7 +1095,7 @@ export default function CompanyConversations() {
               })()}
               {!isClosed && (() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
-                const saved = savedContacts[cleanNum]
+                const saved = findSaved(savedContacts, cleanNum)
                 const nome = saved?.nome || ''
                 const hasContact = !!saved
                 const att = attendancesMap[selected.session_id]
@@ -1202,31 +1219,35 @@ export default function CompanyConversations() {
                         onClick={() => navigate(`/painel/agenda?numero=${cleanNum}${nome ? `&nome=${encodeURIComponent(nome)}` : ''}`)}>
                         <Calendar size={16} />
                       </button>
-                      {(canTransfer || canClose) && (
-                        <div style={{ position: 'relative' }}>
-                          <button style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
-                            onClick={() => setChatActionsOpen(v => !v)}>
-                            <MoreVertical size={16} />
-                          </button>
-                          {chatActionsOpen && (
-                            <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 200, minWidth: 160, overflow: 'hidden' }}
-                              onMouseLeave={() => setChatActionsOpen(false)}>
-                              {canTransfer && (
-                                <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#0891B2', textAlign: 'left' }}
-                                  onClick={() => { setTransferModal(selected); setTransferringTo(''); setChatActionsOpen(false) }}>
-                                  <ArrowRightLeft size={14} /> Transferir
-                                </button>
-                              )}
-                              {canClose && (
-                                <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', textAlign: 'left', borderTop: canTransfer ? '1px solid var(--border)' : 'none' }}
-                                  onClick={() => { setCloseModal(selected); setReason(''); setChatActionsOpen(false) }}>
-                                  <CheckCircle2 size={14} /> Finalizar conversa
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div style={{ position: 'relative' }}>
+                        <button style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
+                          onClick={() => setChatActionsOpen(v => !v)}>
+                          <MoreVertical size={16} />
+                        </button>
+                        {chatActionsOpen && (
+                          <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 200, minWidth: 180, overflow: 'hidden' }}
+                            onMouseLeave={() => setChatActionsOpen(false)}>
+                            {hasContact && (
+                              <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#7C3AED', textAlign: 'left' }}
+                                onClick={() => { setTagPopoverOpen(true); setChatActionsOpen(false) }}>
+                                <Tag size={14} /> Gerenciar tags
+                              </button>
+                            )}
+                            {canTransfer && (
+                              <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#0891B2', textAlign: 'left', borderTop: hasContact ? '1px solid var(--border)' : 'none' }}
+                                onClick={() => { setTransferModal(selected); setTransferringTo(''); setChatActionsOpen(false) }}>
+                                <ArrowRightLeft size={14} /> Transferir
+                              </button>
+                            )}
+                            {canClose && (
+                              <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', textAlign: 'left', borderTop: (hasContact || canTransfer) ? '1px solid var(--border)' : 'none' }}
+                                onClick={() => { setCloseModal(selected); setReason(''); setChatActionsOpen(false) }}>
+                                <CheckCircle2 size={14} /> Finalizar conversa
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 )
@@ -1668,7 +1689,7 @@ export default function CompanyConversations() {
         >
           {(() => {
             const cleanNum = contextMenu.contact.phone.replace(/\D/g, '')
-            const saved = savedContacts[cleanNum]
+            const saved = findSaved(savedContacts, cleanNum)
             return (
               <button
                 onClick={() => openSaveContact(contextMenu.contact)}

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
-import { TagBadge, tagColor } from './CompanyContacts'
+import { TagBadge, tagColor } from '../../components/TagBadge'
 import {
   ArrowLeft, Pencil, Camera, Phone, Mail, MapPin, Calendar, ShieldCheck,
   AlertTriangle, Pill, Heart, Cake, MessageSquare, X, Trash2, CreditCard,
