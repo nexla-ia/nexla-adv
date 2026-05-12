@@ -944,7 +944,7 @@ export default function CompanyAgenda() {
                   })}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div className='modal-grid-3' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={labelStyle}>Início</label>
                   <input className="nx-input" type="time" value={agendaModal.start_time?.slice(0, 5) || '08:00'}
@@ -1125,7 +1125,7 @@ export default function CompanyAgenda() {
                   </div>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div className='modal-grid-3' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={labelStyle}>Data</label>
                   <input className="nx-input" type="date" value={apptModal.date}
@@ -1180,7 +1180,7 @@ export default function CompanyAgenda() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className='modal-grid-2' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={labelStyle}>Forma</label>
                   <select className="nx-select" value={apptModal.insurance_plan_id || ''}

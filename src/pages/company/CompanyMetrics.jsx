@@ -1208,7 +1208,7 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
       {/* Funil */}
       <div className="nx-card" style={{ padding: '1.25rem', marginBottom: 14 }}>
         <SectionTitle icon={TrendingUp} text="Funil de conversão" right={periodLabel(period)} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, alignItems: 'stretch', marginTop: 12 }}>
+        <div className='metrics-funnel-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, alignItems: 'stretch', marginTop: 12 }}>
           {[
             { lbl: 'Leads recebidos',     val: totalLeads,    color: '#2563EB', bg: '#EFF6FF' },
             { lbl: 'Contactados',         val: comContato,    color: '#0891B2', bg: '#ECFEFF' },
@@ -1319,7 +1319,7 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
       </div>
 
       {/* Classificação + Sem resposta — 2 colunas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 14 }}>
+      <div className='metrics-half-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle
             icon={Flag}

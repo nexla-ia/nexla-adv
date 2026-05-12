@@ -184,8 +184,8 @@ export default function CompanyContacts() {
       )}
 
       {filtered.length > 0 && (
-        <div className="nx-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table className="data-table" style={{ width: '100%' }}>
+        <div className="nx-card" style={{ padding: 0, overflowX: 'auto' }}>
+          <table className="data-table" style={{ width: '100%', minWidth: 480 }}>
             <thead>
               <tr>
                 <th>Cliente</th>
