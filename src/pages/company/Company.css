@@ -35,6 +35,9 @@
   gap: 10px;
   padding: 0 1.5rem;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .company-topbar-name {
@@ -339,9 +342,15 @@
   /* Layout */
   .topbar-hamburger { display: flex; align-items: center; justify-content: center; }
 
+  .company-main-wrap { overflow: visible; }
+  .company-main { overflow-y: visible; }
+
   .company-topbar {
     padding: 0 1rem;
     gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
   }
 
   /* Conversas: empilha lista + chat no mobile */
