@@ -180,13 +180,19 @@
 }
 
 .chat-header {
-  padding: 13px 20px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: #fff;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
+
+/* Desktop: mostra botões com texto, esconde mobile */
+.chat-header-actions-desktop { display: contents; }
+.chat-header-actions-mobile  { display: none; }
 
 /* Input bar com safe area para iOS Safari */
 .chat-input-bar {
@@ -436,6 +442,13 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
+
+  /* Chat header: esconde desktop actions, mostra mobile */
+  .chat-header-actions-desktop { display: none !important; }
+  .chat-header-actions-mobile  { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* Chat header mais compacto */
+  .chat-header { padding: 8px 12px; gap: 8px; }
 
   /* Chat body padding menor */
   .chat-body { padding: 1rem; }
