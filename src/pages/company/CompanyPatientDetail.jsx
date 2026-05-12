@@ -3,11 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
+import { TagBadge, tagColor } from './CompanyContacts'
 import {
   ArrowLeft, Pencil, Camera, Phone, Mail, MapPin, Calendar, ShieldCheck,
   AlertTriangle, Pill, Heart, Cake, MessageSquare, X, Trash2, CreditCard,
   Activity, Briefcase, Users, Clock, CheckCircle2, XCircle, Clipboard,
-  FileText, Plus, AlertCircle,
+  FileText, Plus, AlertCircle, Tag,
 } from 'lucide-react'
 import './CompanyPatientDetail.css'
 
@@ -160,6 +161,7 @@ export default function CompanyPatientDetail() {
       referral_source: editing.referral_source || null,
       notes: editing.notes?.trim() || null,
       photo: editing.photo || null,
+      tags: editing.tags || [],
     }
     const { error } = await supabase.from('saved_contacts').update(payload).eq('id', id)
     setSaving(false)
@@ -314,6 +316,16 @@ export default function CompanyPatientDetail() {
             <div className="pat-section-card">
               <SectionTitle icon={Clipboard} title="Notas internas" />
               <p className="pat-text">{patient.notes}</p>
+            </div>
+          )}
+
+          {/* Tags */}
+          {(patient.tags || []).length > 0 && (
+            <div className="pat-section-card" style={{ marginBottom: 12 }}>
+              <SectionTitle icon={Tag} title="Tags" />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {(patient.tags || []).map(t => <TagBadge key={t} tag={t} />)}
+              </div>
             </div>
           )}
 
@@ -693,8 +705,13 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
 
           {section === 'notas' && (
             <div className="pat-modal-fields">
+              {/* Tags */}
+              <TagEditor
+                tags={editing.tags || []}
+                onChange={tags => update('tags', tags)}
+              />
               <ModalField label="Notas internas (privadas da equipe)">
-                <textarea className="nx-input" rows={5} placeholder="Anotações que só sua equipe vê..." value={editing.notes || ''} onChange={e => update('notes', e.target.value)} />
+                <textarea className="nx-input" rows={4} placeholder="Anotações que só sua equipe vê..." value={editing.notes || ''} onChange={e => update('notes', e.target.value)} />
               </ModalField>
             </div>
           )}
@@ -709,6 +726,46 @@ function EditModal({ editing, setEditing, insurancePlans, onSave, onClose, savin
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function TagEditor({ tags, onChange }) {
+  const [input, setInput] = useState('')
+
+  function addTag() {
+    const t = input.trim().toLowerCase()
+    if (!t || tags.includes(t)) { setInput(''); return }
+    onChange([...tags, t])
+    setInput('')
+  }
+
+  function removeTag(t) { onChange(tags.filter(x => x !== t)) }
+
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        Tags
+      </label>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: tags.length ? 8 : 0 }}>
+        {tags.map(t => <TagBadge key={t} tag={t} onRemove={() => removeTag(t)} />)}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          className="nx-input"
+          placeholder="Nova tag (Enter para adicionar)"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+          style={{ fontSize: 13 }}
+        />
+        <button type="button" className="nx-btn-ghost" style={{ padding: '0 14px', flexShrink: 0 }} onClick={addTag}>
+          <Plus size={14} />
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
+        Ex: vip, trabalhista, urgente, contrato. Pressione Enter para adicionar.
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   Users, Search, Pencil, Trash2, X, Plus, Phone, Copy, Check, MessageSquare,
-  Mail, ShieldCheck, Sparkles,
+  Mail, ShieldCheck, Sparkles, Tag,
 } from 'lucide-react'
 import './Company.css'
 
@@ -29,6 +29,46 @@ function calcAge(d) {
   return age
 }
 
+// Gera cor determinística para tag
+const TAG_PALETTES = [
+  { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
+  { bg: '#F0FDF4', color: '#15803D', border: '#BBF7D0' },
+  { bg: '#FEF3C7', color: '#B45309', border: '#FDE68A' },
+  { bg: '#FDF2F8', color: '#9D174D', border: '#FBCFE8' },
+  { bg: '#F5F3FF', color: '#6D28D9', border: '#DDD6FE' },
+  { bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
+  { bg: '#ECFEFF', color: '#0E7490', border: '#A5F3FC' },
+  { bg: '#FEF2F2', color: '#B91C1C', border: '#FECACA' },
+]
+export function tagColor(tag) {
+  let h = 0
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) >>> 0
+  return TAG_PALETTES[h % TAG_PALETTES.length]
+}
+
+export function TagBadge({ tag, onRemove, small }) {
+  const { bg, color, border } = tagColor(tag)
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      background: bg, color, border: `1px solid ${border}`,
+      borderRadius: 20, padding: small ? '1px 7px' : '2px 9px',
+      fontSize: small ? 10 : 11, fontWeight: 700, whiteSpace: 'nowrap',
+      lineHeight: '16px',
+    }}>
+      {tag}
+      {onRemove && (
+        <button onClick={onRemove} style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          color, display: 'inline-flex', alignItems: 'center', opacity: 0.7,
+        }}>
+          <X size={10} />
+        </button>
+      )}
+    </span>
+  )
+}
+
 const labelStyle = {
   display: 'block', fontSize: 11, fontWeight: 500,
   color: 'var(--text-muted)', marginBottom: 5,
@@ -42,9 +82,10 @@ export default function CompanyContacts() {
 
   const [patients, setPatients] = useState([])
   const [insurancePlans, setInsurancePlans] = useState([])
-  const [chatPhones, setChatPhones] = useState([]) // números das conversas que não estão salvos
+  const [chatPhones, setChatPhones] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [tagFilter, setTagFilter] = useState(new Set()) // tags selecionadas pra filtrar
   const [newModal, setNewModal] = useState(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -91,31 +132,60 @@ export default function CompanyContacts() {
     return () => supabase.removeChannel(ch)
   }, [instance])
 
-  function openNew() {
-    setNewModal({ nome: '', numero: '' })
-    setErr('')
+  // Todas as tags únicas de todos os contatos
+  const allTags = useMemo(() => {
+    const set = new Set()
+    patients.forEach(p => (p.tags || []).forEach(t => set.add(t)))
+    return [...set].sort()
+  }, [patients])
+
+  function toggleTagFilter(tag) {
+    setTagFilter(prev => {
+      const next = new Set(prev)
+      next.has(tag) ? next.delete(tag) : next.add(tag)
+      return next
+    })
   }
+
+  const filtered = useMemo(() => {
+    return patients.filter(c => {
+      const s = search.toLowerCase()
+      const matchSearch = !search || (
+        c.nome?.toLowerCase().includes(s) ||
+        (c.numero || '').includes(search) ||
+        (c.cpf || '').includes(search.replace(/\D/g, '')) ||
+        (c.email || '').toLowerCase().includes(s) ||
+        (c.tags || []).some(t => t.toLowerCase().includes(s))
+      )
+      const matchTag = tagFilter.size === 0 || (c.tags || []).some(t => tagFilter.has(t))
+      return matchSearch && matchTag
+    })
+  }, [patients, search, tagFilter])
+
+  const phoneSuggestions = useMemo(() => {
+    const q = (newModal?.numero || '').replace(/\D/g, '')
+    if (!q || q.length < 3) return []
+    return chatPhones.filter(p => p.includes(q)).slice(0, 6)
+  }, [newModal?.numero, chatPhones])
+
+  function openNew() { setNewModal({ nome: '', numero: '' }); setErr('') }
 
   async function handleCreate() {
     if (!newModal.nome?.trim()) { setErr('Nome é obrigatório'); return }
     setSaving(true)
     const numero = newModal.numero?.toString().replace(/\D/g, '') || ''
-    const payload = {
-      numero,
-      instancia: instance,
+    const { data, error } = await supabase.from('saved_contacts').insert({
+      numero, instancia: instance,
       nome: newModal.nome.trim(),
       created_by_email: session?.user?.email,
-    }
-    const { data, error } = await supabase.from('saved_contacts').insert(payload).select().single()
+    }).select().single()
     setSaving(false)
     if (error) { setErr('Erro: ' + error.message); return }
     setNewModal(null)
     if (data?.id) navigate(`/painel/contatos/${data.id}`)
   }
 
-  function handleDelete(patient) {
-    setConfirmDelete(patient)
-  }
+  function handleDelete(patient) { setConfirmDelete(patient) }
   async function confirmDeleteAction() {
     if (!confirmDelete) return
     setDeletingNow(true)
@@ -131,32 +201,16 @@ export default function CompanyContacts() {
     })
   }
 
-  const filtered = patients.filter(c => {
-    const s = search.toLowerCase()
-    return (
-      c.nome?.toLowerCase().includes(s) ||
-      (c.numero || '').includes(search) ||
-      (c.cpf || '').includes(search.replace(/\D/g, '')) ||
-      (c.email || '').toLowerCase().includes(s)
-    )
-  })
-
-  // Sugestão de números das conversas conforme o digitado
-  const phoneSuggestions = useMemo(() => {
-    const q = (newModal?.numero || '').replace(/\D/g, '')
-    if (!q || q.length < 3) return []
-    return chatPhones.filter(p => p.includes(q)).slice(0, 6)
-  }, [newModal?.numero, chatPhones])
-
   return (
     <div style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem', gap: 16, flexWrap: 'wrap' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: 4 }}>
             Clientes
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            {loading ? 'Carregando...' : `${patients.length} cliente${patients.length === 1 ? '' : 's'} cadastrado${patients.length === 1 ? '' : 's'}`}
+            {loading ? 'Carregando...' : `${filtered.length} de ${patients.length} cliente${patients.length === 1 ? '' : 's'}`}
           </div>
         </div>
         <button className="nx-btn-primary" onClick={openNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -164,41 +218,87 @@ export default function CompanyContacts() {
         </button>
       </div>
 
-      <div className="nx-card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Search size={15} style={{ color: 'var(--text-muted)' }} />
+      {/* Busca */}
+      <div className="nx-card" style={{ padding: '10px 14px', marginBottom: allTags.length ? 10 : 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         <input
           style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: 'var(--text-primary)' }}
-          placeholder="Buscar por nome, telefone, CPF ou e-mail..."
+          placeholder="Buscar por nome, telefone, CPF, e-mail ou tag..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        {search && (
+          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
+            <X size={14} />
+          </button>
+        )}
       </div>
 
+      {/* Filtro por tags */}
+      {allTags.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <Tag size={11} /> Filtrar:
+          </span>
+          {allTags.map(tag => {
+            const active = tagFilter.has(tag)
+            const { bg, color, border } = tagColor(tag)
+            return (
+              <button key={tag} onClick={() => toggleTagFilter(tag)} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: active ? color : bg,
+                color: active ? '#fff' : color,
+                border: `1px solid ${active ? color : border}`,
+                borderRadius: 20, padding: '3px 10px',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.15s', whiteSpace: 'nowrap',
+                boxShadow: active ? `0 2px 8px ${color}44` : 'none',
+              }}>
+                {tag}
+                {active && <X size={9} />}
+              </button>
+            )
+          })}
+          {tagFilter.size > 0 && (
+            <button onClick={() => setTagFilter(new Set())} style={{
+              background: 'none', border: '1px solid var(--border)', borderRadius: 20,
+              padding: '3px 10px', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer',
+            }}>
+              Limpar filtro
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Empty */}
       {!loading && filtered.length === 0 && (
         <div className="nx-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <Users size={28} style={{ opacity: 0.2 }} />
           <div style={{ fontSize: 14 }}>
-            {search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado. Cadastre o primeiro ou use o botão direito numa conversa para salvar rápido.'}
+            {search || tagFilter.size > 0
+              ? 'Nenhum cliente encontrado com esse filtro.'
+              : 'Nenhum cliente cadastrado. Cadastre o primeiro ou use o botão direito numa conversa para salvar rápido.'}
           </div>
         </div>
       )}
 
+      {/* Tabela */}
       {filtered.length > 0 && (
         <div className="nx-card" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="data-table" style={{ width: '100%', minWidth: 480 }}>
+          <table className="data-table" style={{ width: '100%', minWidth: 520 }}>
             <thead>
               <tr>
                 <th>Cliente</th>
+                <th>Tags</th>
                 <th>Contato</th>
-                <th>Convênio</th>
                 <th>Notas</th>
                 <th style={{ textAlign: 'right' }}>Ação</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(c => {
-                const plan = insurancePlans.find(p => p.id === c.insurance_plan_id)
                 const age = calcAge(c.birth_date)
+                const tags = c.tags || []
                 return (
                   <tr key={c.id}>
                     <td className="td-name" onClick={() => navigate(`/painel/contatos/${c.id}`)} style={{ cursor: 'pointer' }}>
@@ -208,8 +308,7 @@ export default function CompanyContacts() {
                           background: c.photo ? 'transparent' : '#EFF6FF',
                           border: c.photo ? 'none' : '1px solid #BFDBFE',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 700, color: '#2563EB', flexShrink: 0,
-                          overflow: 'hidden',
+                          fontSize: 12, fontWeight: 700, color: '#2563EB', flexShrink: 0, overflow: 'hidden',
                         }}>
                           {c.photo
                             ? <img src={c.photo} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -224,13 +323,20 @@ export default function CompanyContacts() {
                         </div>
                       </div>
                     </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {tags.length === 0
+                          ? <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>
+                          : tags.map(t => <TagBadge key={t} tag={t} small />)
+                        }
+                      </div>
+                    </td>
                     <td style={{ fontSize: 12 }}>
                       {c.numero && (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'monospace' }}>
                           <Phone size={11} style={{ color: '#6B7280' }} />
                           {c.numero}
                           <button onClick={() => copyNumber(c.id, c.numero)}
-                            title="Copiar número"
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: 3,
                               background: copiedId === c.id ? '#F0FDF4' : 'transparent',
@@ -248,30 +354,13 @@ export default function CompanyContacts() {
                         </div>
                       )}
                     </td>
-                    <td style={{ fontSize: 12 }}>
-                      {plan ? (
-                        <div>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
-                            <ShieldCheck size={10} /> {plan.name}
-                          </span>
-                          {c.insurance_card && (
-                            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, fontFamily: 'monospace' }}>
-                              {c.insurance_card}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Particular</span>
-                      )}
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.notes || '—'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: 6 }}>
                         {c.numero && (
-                          <button className="table-action"
-                            style={{ background: '#16A34A', color: '#fff', border: 'none' }}
+                          <button className="table-action" style={{ background: '#16A34A', color: '#fff', border: 'none' }}
                             onClick={() => navigate(`/painel/conversas?contact=${c.numero}`)}>
                             <MessageSquare size={11} /> Conversar
                           </button>
@@ -280,7 +369,7 @@ export default function CompanyContacts() {
                           <Pencil size={11} /> Abrir ficha
                         </button>
                         <button className="table-action danger" onClick={() => handleDelete(c)}>
-                          <Trash2 size={11} /> Excluir
+                          <Trash2 size={11} />
                         </button>
                       </div>
                     </td>
@@ -303,14 +392,9 @@ export default function CompanyContacts() {
         onCancel={() => setConfirmDelete(null)}
       />
 
-      {/* Modal "Novo cliente" — só nome + telefone, depois redireciona pra ficha */}
       {newModal && createPortal(
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
-          backdropFilter: 'blur(4px)', padding: '1.5rem',
-        }}>
-          <div className="nx-card" style={{ width: '100%', maxWidth: 460 }}>
+        <div className="nx-modal-bg" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
+          <div className="nx-modal-card nx-card" style={{ width: '100%', maxWidth: 460 }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>Novo cliente</div>
@@ -320,7 +404,6 @@ export default function CompanyContacts() {
                 <X size={16} />
               </button>
             </div>
-
             <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={labelStyle}>Nome completo</label>
@@ -336,42 +419,22 @@ export default function CompanyContacts() {
                   onBlur={() => setTimeout(() => setPhoneFocus(false), 180)}
                 />
                 {phoneFocus && phoneSuggestions.length > 0 && (
-                  <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5,
-                    background: 'white', border: '1px solid var(--border)',
-                    borderRadius: 10, marginTop: 4, padding: 4,
-                    boxShadow: '0 12px 28px -10px rgba(15,14,27,0.18)',
-                    maxHeight: 220, overflowY: 'auto',
-                  }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5, background: 'white', border: '1px solid var(--border)', borderRadius: 10, marginTop: 4, padding: 4, boxShadow: '0 12px 28px -10px rgba(15,14,27,0.18)', maxHeight: 220, overflowY: 'auto' }}>
                     <div style={{ padding: '6px 10px 4px', fontSize: 10, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5 }}>
                       <Sparkles size={10} /> Já conversou com o escritório
                     </div>
                     {phoneSuggestions.map(p => (
-                      <button key={p}
-                        onClick={() => setNewModal(prev => ({ ...prev, numero: p }))}
-                        style={{
-                          width: '100%', textAlign: 'left',
-                          padding: '7px 10px', borderRadius: 7,
-                          background: 'transparent', border: 'none',
-                          fontFamily: 'monospace', fontSize: 13, color: '#0F0E1B',
-                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                          fontWeight: 500,
-                        }}
+                      <button key={p} onClick={() => setNewModal(prev => ({ ...prev, numero: p }))}
+                        style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: 7, background: 'transparent', border: 'none', fontFamily: 'monospace', fontSize: 13, color: '#0F0E1B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}
                         onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <Phone size={11} style={{ color: '#7C3AED' }} /> {p}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Sparkles size={12} style={{ color: '#7C3AED' }} />
-                Comece a digitar o número — a gente sugere quem já conversou e ainda não foi cadastrado.
-              </div>
             </div>
-
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
               {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{err}</div>}
               <div style={{ display: 'flex', gap: 10 }}>
