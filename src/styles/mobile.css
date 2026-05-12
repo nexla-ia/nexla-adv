@@ -3,6 +3,12 @@
    Applies on top of component CSS — doesn't touch desktop.
 ───────────────────────────────────────────────────────────────────────── */
 
+/* ── Plan card: 1 coluna no mobile ─────────────────────────────────────── */
+.plan-card-grid {
+  grid-template-columns: 1fr !important;
+  gap: 16px !important;
+}
+
 /* ── Desktop: esconde elementos só-mobile ───────────────────────────────── */
 .admin-users-cards { display: none; }
 .agenda-view-toggle { display: none; }

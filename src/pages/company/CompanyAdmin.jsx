@@ -37,6 +37,8 @@ export default function CompanyAdmin() {
   const [users, setUsers]               = useState([])
   const [sectors, setSectors]           = useState([])
   const [sectorMembers, setSectorMembers] = useState([])
+  const [prosCount, setProsCount]       = useState(0)
+  const [agendasCount, setAgendasCount] = useState(0)
   const [saving, setSaving]             = useState(false)
 
   const [sectorModal, setSectorModal]   = useState(false)
@@ -149,6 +151,10 @@ export default function CompanyAdmin() {
     if (!instance) return
     supabase.from('sectors').select('*').eq('instancia', instance).order('created_at')
       .then(({ data }) => { if (data) setSectors(data) })
+    supabase.from('professionals').select('id', { count: 'exact' }).eq('instancia', instance).eq('active', true)
+      .then(({ count }) => { if (count != null) setProsCount(count) })
+    supabase.from('agendas').select('id', { count: 'exact' }).eq('instancia', instance)
+      .then(({ count }) => { if (count != null) setAgendasCount(count) })
   }, [instance])
 
   useEffect(() => {
@@ -270,8 +276,80 @@ export default function CompanyAdmin() {
   const domain = slugify(session?.company?.name || 'empresa') + '.com'
   const activeUsers = users.filter(u => u.active !== false)
 
+  const planColors = { Starter: '#C9A074', Pro: '#2563EB', Business: '#7C3AED' }
+  const planBgs    = { Starter: '#FFFBEB', Pro: '#EFF6FF', Business: '#F5F3FF' }
+  const planColor  = planColors[limits.plan] || '#C9A074'
+  const planBg     = planBgs[limits.plan] || '#FFFBEB'
+  const planPrice  = { Starter: 'R$ 247,00/mês', Pro: 'R$ 597,00/mês', Business: 'Sob medida' }
+
+  function UsageBar({ label, icon, used, total }) {
+    const pct = total === Infinity ? 0 : Math.min(100, Math.round((used / total) * 100))
+    const over = used > total && total !== Infinity
+    const barColor = over ? '#DC2626' : pct >= 80 ? '#D97706' : '#16A34A'
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {icon} {label}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: over ? '#DC2626' : 'var(--text-primary)' }}>
+            {used}/{total === Infinity ? '∞' : total}
+          </span>
+        </div>
+        {total !== Infinity && (
+          <div style={{ height: 6, background: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 10, transition: 'width 0.6s ease' }} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="page-enter">
+      {/* Card Plano e Cobrança */}
+      <div style={{ padding: '1.5rem 1.5rem 0' }}>
+        <div style={{
+          background: planBg, border: `1.5px solid ${planColor}33`,
+          borderRadius: 16, padding: '1.5rem', marginBottom: 20,
+          display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 24, alignItems: 'start',
+        }} className="plan-card-grid">
+          {/* Esquerda: plano */}
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: planColor + '20', border: `1px solid ${planColor}44`, borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: planColor, letterSpacing: '0.1em', marginBottom: 10 }}>
+              ⚡ PLANO ATUAL
+            </div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 42, color: planColor, lineHeight: 1, marginBottom: 6 }}>
+              {limits.plan}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+              {planPrice[limits.plan]}
+              {limits.extra_users > 0 && <span style={{ display: 'block', fontSize: 11, marginTop: 2 }}>+{limits.extra_users} usuário{limits.extra_users > 1 ? 's' : ''} extra</span>}
+            </div>
+            {limits.plan !== 'Business' && (
+              <a
+                href={`https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20fazer%20upgrade%20do%20plano%20${limits.plan}%20da%20NexlaADV.`}
+                target="_blank" rel="noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: planColor, color: '#fff', borderRadius: 8,
+                  padding: '9px 18px', fontSize: 13, fontWeight: 700,
+                  textDecoration: 'none', boxShadow: `0 2px 8px ${planColor}44`,
+                }}>
+                ↗ Fazer upgrade {limits.plan === 'Starter' ? 'pro Pro' : 'pro Business'}
+              </a>
+            )}
+          </div>
+
+          {/* Direita: barras de uso */}
+          <div>
+            <UsageBar label="Advogados" icon="⚖️" used={prosCount} total={limits.professionals} />
+            <UsageBar label="Usuários na equipe" icon="👥" used={activeUsers.length} total={limits.users} />
+            <UsageBar label="Agendas" icon="📅" used={agendasCount} total={limits.agendas} />
+          </div>
+        </div>
+      </div>
+
       {/* Conexão WhatsApp */}
       <div className="page-body">
         <div className="section-header">
