@@ -333,7 +333,7 @@ export default function CompanyMetrics({ companyOverride = null, hideHeader = fa
   const range = useMemo(() => getPeriodRange(period), [period])
 
   return (
-    <div className="page-enter" style={{ padding: hideHeader ? 0 : '1.5rem' }}>
+    <div className="metrics-root page-enter" style={{ padding: hideHeader ? 0 : '1.5rem' }}>
       {/* Header — só fora do modo embed do ADM */}
       {!hideHeader && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
@@ -351,7 +351,7 @@ export default function CompanyMetrics({ companyOverride = null, hideHeader = fa
       )}
 
       {/* Filtros de período */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className="metrics-periods" style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {PERIODS.map(p => (
           <button key={p.key} onClick={() => setPeriod(p.key)}
             style={{
@@ -359,14 +359,14 @@ export default function CompanyMetrics({ companyOverride = null, hideHeader = fa
               border: `1.5px solid ${period === p.key ? '#2563EB' : 'var(--border)'}`,
               background: period === p.key ? '#2563EB' : '#fff',
               color: period === p.key ? '#fff' : 'var(--text-secondary)',
-              cursor: 'pointer', transition: 'all 0.15s',
+              cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0,
               boxShadow: period === p.key ? '0 1px 4px rgba(37,99,235,0.3)' : 'none',
             }}>{p.label}</button>
         ))}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+      <div className="metrics-tabs" style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid var(--border)' }}>
         {TABS.filter(t => aiEnabled || t.key !== 'leads' || contactsTable).map(t => {
           const locked = !advancedAllowed && ADVANCED_TABS.includes(t.key)
           return (
@@ -384,7 +384,7 @@ export default function CompanyMetrics({ companyOverride = null, hideHeader = fa
                 color: tab === t.key ? '#2563EB' : (locked ? '#94A3B8' : 'var(--text-secondary)'),
                 fontSize: 13, fontWeight: tab === t.key ? 700 : 500,
                 display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: -1,
-                opacity: locked ? 0.6 : 1,
+                opacity: locked ? 0.6 : 1, flexShrink: 0, whiteSpace: 'nowrap',
               }}>
               {locked ? <Lock size={12} /> : <t.icon size={14} />} {t.label}
             </button>
@@ -755,7 +755,8 @@ function EquipeTab({ msgs, convs, atts, users, sectors, sectorMembers, range, pe
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle icon={Users} text="Ranking de atendentes" right={periodLabel(period)} />
           {ranking.length === 0 ? <Empty /> : (
-            <table className="data-table" style={{ width: '100%', fontSize: 12 }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
+            <table className="data-table" style={{ width: '100%', fontSize: 12, minWidth: 320 }}>
               <thead>
                 <tr><th>Atendente</th><th style={{ textAlign: 'right' }}>Tickets</th><th style={{ textAlign: 'right' }}>Finalizados</th><th style={{ textAlign: 'right' }}>Msgs</th></tr>
               </thead>
@@ -777,6 +778,7 @@ function EquipeTab({ msgs, convs, atts, users, sectors, sectorMembers, range, pe
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

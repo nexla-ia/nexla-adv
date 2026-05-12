@@ -88,9 +88,65 @@
     flex-wrap: nowrap;
   }
 
-  /* ── Métricas: grids 1fr 1fr → 1fr ──────────────────────────────────── */
+    /* ── Métricas ────────────────────────────────────────────────────────── */
+
+  /* Container principal: padding menor */
+  .metrics-root {
+    padding: 0.75rem !important;
+  }
+
+  /* Tabs: scroll horizontal, sem quebra */
+  .metrics-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    /* Esconde a barra de scroll mas mantém funcional */
+    scrollbar-width: none;
+  }
+  .metrics-tabs::-webkit-scrollbar { display: none; }
+
+  /* Períodos: scroll horizontal */
+  .metrics-periods {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+  .metrics-periods::-webkit-scrollbar { display: none; }
+
+  /* Grids 1fr 1fr → 1fr */
   .metrics-half-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  /* KPI cards: min 2 por linha */
+  [style*="minmax(200px, 1fr)"],
+  [style*="minmax(190px, 1fr)"],
+  [style*="minmax(180px, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Tabelas internas nas métricas */
+  .metrics-root table {
+    min-width: 400px;
+  }
+
+  /* ── ADM: tabelas .an-table e .opx-table ────────────────────────────── */
+  .an-table,
+  .opx-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    min-width: 480px;
+  }
+
+  /* ADM: padding reduzido */
+  .adm-root,
+  .an-root,
+  .opx-root {
+    padding: 0.75rem !important;
   }
 
   /* ── Catálogo: grids internos do modal ───────────────────────────────── */
