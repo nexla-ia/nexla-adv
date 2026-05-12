@@ -6,7 +6,7 @@ import BillingBanner from '../../components/BillingBanner'
 import BlockedScreen from '../../components/BlockedScreen'
 import SupportWidget from '../../components/SupportWidget'
 import { shouldBlockAccess } from '../../lib/billing'
-import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck } from 'lucide-react'
+import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { latestUpdateDate } from '../../data/updates'
@@ -20,6 +20,7 @@ export default function CompanyLayout() {
   const instance = session?.company?.instance
   const [activeCount, setActiveCount] = useState(0)
   const [pendingAlerts, setPendingAlerts] = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Onboarding obrigatório: força usuário novo para o tutorial até concluir
   useEffect(() => {
@@ -112,9 +113,12 @@ export default function CompanyLayout() {
 
   return (
     <div className="company-root">
-      <Sidebar links={links} role="company" />
+      <Sidebar links={links} role="company" open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="company-main-wrap">
         <div className="company-topbar">
+          <button className="topbar-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Menu">
+            <Menu size={20} />
+          </button>
           <div className="company-topbar-name">{session?.company?.name}</div>
           <span className={`nx-badge nx-badge-${session?.company?.plan === 'Business' ? 'violet' : session?.company?.plan === 'Pro' ? 'cyan' : 'gray'}`}>
             {session?.company?.plan}

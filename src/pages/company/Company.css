@@ -319,3 +319,106 @@
   align-items: center;
   gap: 10px;
 }
+
+/* ─── RESPONSIVE ─── */
+
+/* Hamburger — só aparece no mobile */
+.topbar-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.topbar-hamburger:hover { background: var(--bg-hover); }
+
+@media (max-width: 768px) {
+  /* Layout */
+  .topbar-hamburger { display: flex; align-items: center; justify-content: center; }
+
+  .company-topbar {
+    padding: 0 1rem;
+    gap: 8px;
+  }
+
+  /* Conversas: empilha lista + chat no mobile */
+  .contacts-root {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 50px);
+    position: relative;
+  }
+
+  .contacts-list {
+    width: 100%;
+    height: auto;
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Quando contato selecionado: lista vira header compacto, chat expande */
+  .contacts-root.has-chat .contacts-list {
+    max-height: 0;
+    overflow: hidden;
+    border-bottom: none;
+  }
+
+  .contacts-root.has-chat .chat-panel {
+    height: calc(100vh - 50px);
+    position: fixed;
+    inset: 50px 0 0 0;
+    z-index: 100;
+    background: #F8FAFC;
+  }
+
+  /* Chat body padding menor */
+  .chat-body { padding: 1rem; }
+
+  /* Alertas */
+  .alerts-root { padding: 1rem; }
+  .alert-card { flex-direction: column; gap: 10px; }
+  .alert-footer { flex-wrap: wrap; }
+
+  /* Tabelas: scroll horizontal */
+  .data-table-wrap,
+  .nx-card > table,
+  table.data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-topbar-name {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+
+  .chat-body { padding: 0.75rem; }
+  .msg-bubble { max-width: 85%; font-size: 13px; }
+}
+
+/* Botão voltar no chat — só aparece no mobile */
+.chat-back-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.chat-back-btn:hover { background: var(--bg-hover); }
+
+@media (max-width: 768px) {
+  .chat-back-btn { display: flex; align-items: center; }
+}

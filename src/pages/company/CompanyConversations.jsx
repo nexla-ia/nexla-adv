@@ -880,7 +880,7 @@ export default function CompanyConversations() {
   const isClosed = selected ? closed.has(selected.session_id) : false
 
   return (
-    <div className="contacts-root">
+    <div className={`contacts-root${selected ? ' has-chat' : ''}`}>
       <div className="contacts-list">
         {/* Abas */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
@@ -1030,6 +1030,9 @@ export default function CompanyConversations() {
         ) : (
           <>
             <div className="chat-header">
+              <button className="chat-back-btn" onClick={() => setSelected(null)} aria-label="Voltar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
               {(() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
                 const saved = savedContacts[cleanNum]

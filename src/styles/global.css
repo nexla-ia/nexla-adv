@@ -156,3 +156,50 @@ input, textarea, select { font-family: var(--font-body); }
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(0.85); }
 }
+
+/* ─── RESPONSIVE GLOBAL ─── */
+@media (max-width: 768px) {
+  /* Modais: full-screen no mobile */
+  [style*="position: fixed"][style*="align-items: center"],
+  [style*="position: fixed"][style*="alignItems: center"] {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  /* Padding geral de páginas */
+  [style*="padding: 1.5rem"],
+  [style*="padding: 2rem"] {
+    padding: 1rem !important;
+  }
+
+  /* Grids: 1 coluna no mobile */
+  [style*="grid-template-columns: repeat(auto-fill"],
+  [style*="gridTemplateColumns: 'repeat(auto-fill"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* KPI rows: scroll horizontal */
+  .kpi-row,
+  [class*="kpi-row"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+  }
+
+  /* Tabelas */
+  table { min-width: 600px; }
+  .nx-card { border-radius: var(--radius-md); }
+
+  /* Inputs maiores no mobile (evita zoom iOS) */
+  .nx-input, .nx-select {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nx-btn-primary, .nx-btn-ghost {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
