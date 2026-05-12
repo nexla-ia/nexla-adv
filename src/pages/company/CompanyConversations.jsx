@@ -1135,20 +1135,37 @@ export default function CompanyConversations() {
                       )}
                     </div>
 
-                    {/* Botão Tag — desktop e mobile */}
-                    {saved && (() => {
-                      const tags = saved.tags || []
+                    {/* Botão Tag — aparece pra todos os contatos */}
+                    {(() => {
+                      const tags = (saved?.tags) || []
+                      async function ensureSavedAndGetId() {
+                        if (saved?.id) return saved.id
+                        // Auto-salva com o número como nome temporário
+                        const { data } = await supabase.from('saved_contacts').insert({
+                          numero: cleanNum, instancia: instance,
+                          nome: cleanNum,
+                          created_by_email: session?.user?.email,
+                        }).select().single()
+                        if (data) {
+                          setSavedContacts(prev => ({ ...prev, [cleanNum]: data }))
+                          return data.id
+                        }
+                        return null
+                      }
                       async function addTag() {
                         const t = tagInput.trim().toLowerCase()
                         if (!t || tags.includes(t)) { setTagInput(''); return }
                         setSavingTag(true)
+                        const id = await ensureSavedAndGetId()
+                        if (!id) { setSavingTag(false); return }
                         const newTags = [...tags, t]
-                        await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', saved.id)
+                        await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', id)
                         setSavedContacts(prev => ({ ...prev, [cleanNum]: { ...prev[cleanNum], tags: newTags } }))
                         setSavingTag(false)
                         setTagInput('')
                       }
                       async function removeTag(tag) {
+                        if (!saved?.id) return
                         const newTags = tags.filter(x => x !== tag)
                         await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', saved.id)
                         setSavedContacts(prev => ({ ...prev, [cleanNum]: { ...prev[cleanNum], tags: newTags } }))
@@ -1177,7 +1194,7 @@ export default function CompanyConversations() {
                             }}
                               onMouseLeave={() => setTagPopoverOpen(false)}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                                Tags de {saved.nome?.split(' ')[0]}
+                                Tags · {saved?.nome?.split(' ')[0] || cleanNum}
                               </div>
                               {tags.length > 0 && (
                                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -1228,12 +1245,10 @@ export default function CompanyConversations() {
                         {chatActionsOpen && (
                           <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 200, minWidth: 180, overflow: 'hidden' }}
                             onMouseLeave={() => setChatActionsOpen(false)}>
-                            {hasContact && (
-                              <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#7C3AED', textAlign: 'left' }}
-                                onClick={() => { setTagPopoverOpen(true); setChatActionsOpen(false) }}>
-                                <Tag size={14} /> Gerenciar tags
-                              </button>
-                            )}
+                            <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#7C3AED', textAlign: 'left' }}
+                              onClick={() => { setTagPopoverOpen(true); setChatActionsOpen(false) }}>
+                              <Tag size={14} /> Gerenciar tags
+                            </button>
                             {canTransfer && (
                               <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#0891B2', textAlign: 'left', borderTop: hasContact ? '1px solid var(--border)' : 'none' }}
                                 onClick={() => { setTransferModal(selected); setTransferringTo(''); setChatActionsOpen(false) }}>
