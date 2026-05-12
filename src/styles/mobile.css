@@ -1,0 +1,151 @@
+/* ─── NexlaADV Mobile Patches ─────────────────────────────────────────────
+   Breakpoints: 768px (tablet/mobile) | 480px (small phone)
+   Applies on top of component CSS — doesn't touch desktop.
+───────────────────────────────────────────────────────────────────────── */
+
+/* ── Modais: bottom sheet no mobile ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .nx-modal-bg {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .nx-modal-card {
+    max-height: 92vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ── Tabelas: scroll horizontal global ─────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Qualquer tabela dentro de nx-card */
+  .nx-card { overflow: hidden; }
+
+  .nx-card table,
+  table.data-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Thead / tbody mantém display normal */
+  .nx-card table thead,
+  .nx-card table tbody,
+  .nx-card table tr,
+  table.data-table thead,
+  table.data-table tbody,
+  table.data-table tr {
+    display: table-row-group;
+  }
+  .nx-card table thead { display: table-header-group; }
+  .nx-card table tr,
+  table.data-table tr { display: table-row; }
+  .nx-card table th,
+  .nx-card table td,
+  table.data-table th,
+  table.data-table td { display: table-cell; }
+
+  /* ── Métricas ─────────────────────────────────────────────────────────── */
+
+  /* KPI rows scroll horizontal */
+  [class*="kpi-row"],
+  [class*="KpiBig"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Grids 1fr 1fr → 1fr no mobile */
+  .metrics-grid-2,
+  [class*="metrics"] [style*="1fr 1fr"],
+  [class*="an-"] [style*="1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Agenda ───────────────────────────────────────────────────────────── */
+
+  /* Calendar grid scroll */
+  .agenda-calendar-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modal agenda: bottom sheet */
+  .agenda-modal-bg,
+  [class*="modal-bg"] {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  /* ── Catálogo ─────────────────────────────────────────────────────────── */
+
+  /* Tabs do catálogo: scroll */
+  [class*="catalog"] [style*="display: flex"][style*="borderBottom"],
+  [class*="tabs-wrap"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  /* ── Métricas: grids 1fr 1fr → 1fr ──────────────────────────────────── */
+  .metrics-half-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Catálogo: grids internos do modal ───────────────────────────────── */
+  .catalog-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Segurança ────────────────────────────────────────────────────────── */
+  .seg-pillar-grid,
+  .seg-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Tutorial ─────────────────────────────────────────────────────────── */
+  .tut-modules-list {
+    flex-direction: column;
+  }
+
+  /* ── ADM ──────────────────────────────────────────────────────────────── */
+  .adm-root { padding: 1rem !important; }
+  .adm-kpi-row {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+  }
+
+  /* ── Login ────────────────────────────────────────────────────────────── */
+  .login-card {
+    margin: 1rem;
+    width: calc(100% - 2rem) !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ── Small phones (480px) ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Padding reduzido */
+  .history-root,
+  .alerts-root {
+    padding: 0.75rem !important;
+  }
+
+  /* Botões de ação de tabela: ícone apenas */
+  .table-action span { display: none; }
+
+  /* Badges menores */
+  .nx-badge { font-size: 10px; padding: 2px 7px; }
+
+  /* Company topbar mais compacto */
+  .company-topbar { padding: 0 0.75rem; }
+
+  /* Agenda: modal fullscreen */
+  .nx-card[style*="maxWidth"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+}

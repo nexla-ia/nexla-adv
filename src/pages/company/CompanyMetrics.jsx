@@ -659,7 +659,7 @@ function AtendimentoTab({ msgs, convs, atts, range, period, loading }) {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div className='metrics-half-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle icon={ListChecks} text="Motivos de encerramento" right={periodLabel(period)} />
           {reasonsMap.length === 0 ? <Empty /> : (
@@ -751,7 +751,7 @@ function EquipeTab({ msgs, convs, atts, users, sectors, sectorMembers, range, pe
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div className='metrics-half-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle icon={Users} text="Ranking de atendentes" right={periodLabel(period)} />
           {ranking.length === 0 ? <Empty /> : (
@@ -864,7 +864,7 @@ function AgendaTab({ appts, range, period, loading }) {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className='metrics-half-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle icon={Calendar} text="Por agenda" right={periodLabel(period)} />
           {byAgenda.length === 0 ? <Empty /> : (
@@ -979,7 +979,7 @@ function FinanceiroTab({ appts, professionals, procedures, insurancePlans, range
         <KpiCard icon={<XCircle size={18} color="#DC2626" />} bg="#FEF2F2" value={fmtMoney(perdidoFaltas)} label="Perdido em faltas" sub="clientes que faltaram" loading={loading} alert={perdidoFaltas > 0} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div className='metrics-half-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle icon={Scale} text="Faturamento por advogado" right={periodLabel(period)} />
           {byProfessional.length === 0 ? <Empty /> : (
@@ -1436,7 +1436,7 @@ function AtividadesTab({ kanbanCards, kanbanColumns, users, range, period, loadi
         <KpiCard icon={<Users size={18} color="#6B7280" />} bg="#F3F4F6" value={semAtribuir} label="Sem atribuição" sub="aguardando designação" loading={loading} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className='metrics-half-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <div className="nx-card" style={{ padding: '1.25rem' }}>
           <SectionTitle icon={Layers} text="Por coluna" right="todas" />
           {byColumn.length === 0 ? <Empty /> : byColumn.map(col => (

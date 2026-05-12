@@ -555,3 +555,16 @@
   .pat-field.large { grid-column: span 1; }
   .pat-modal-row { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 600px) {
+  .pat-root { padding: 12px; }
+  .pat-kpi-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pat-tabs { overflow-x: auto; flex-wrap: nowrap; gap: 0; -webkit-overflow-scrolling: touch; }
+  .pat-tab { white-space: nowrap; flex-shrink: 0; font-size: 12px; padding: 10px 12px; }
+  .pat-modal { max-height: 95vh; border-radius: 16px 16px 0 0; }
+  .pat-modal-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .pat-modal-tab { white-space: nowrap; flex-shrink: 0; }
+  .pat-header { padding: 16px; gap: 12px; }
+  .pat-name { font-size: 20px; }
+  .pat-kpi { padding: 14px; }
+}

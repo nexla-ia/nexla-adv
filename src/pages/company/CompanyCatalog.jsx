@@ -461,7 +461,7 @@ export default function CompanyCatalog() {
                 })}
               </div>
             </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className='catalog-form-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Horário de início">
                 <input className="nx-input" type="time"
                   value={proModal.start_time?.slice(0, 5) || '08:00'}
@@ -514,7 +514,7 @@ export default function CompanyCatalog() {
               <input className="nx-input" autoFocus placeholder="Ex: Consulta inicial, Audiência trabalhista, Revisão contratual..."
                 value={procModal.name} onChange={e => setProcModal(p => ({ ...p, name: e.target.value }))} />
             </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className='catalog-form-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Tipo">
                 <select className="nx-select" value={procModal.type} onChange={e => setProcModal(p => ({ ...p, type: e.target.value }))}>
                   {PROC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
