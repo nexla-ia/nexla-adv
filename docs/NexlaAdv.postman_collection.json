@@ -1,0 +1,498 @@
+{
+  "info": {
+    "_postman_id": "nexlaadv-api-v1",
+    "name": "NexlaAdv — API REST",
+    "description": "API REST do NexlaAdv (Supabase RPCs) para integração com fluxos n8n + IA Sofia.\n\n**Base URL:** `{{SUPABASE_URL}}/rest/v1/rpc/<nome_da_funcao>`\n\n**Auth:** envie `apikey` e `Authorization: Bearer <ANON_KEY>` em todos os requests. As funções rodam como `SECURITY DEFINER` — autenticação só serve pra rate limiting do Supabase.\n\n**Variáveis (defina em Environment):**\n- `SUPABASE_URL` — `https://<seu-projeto>.supabase.co`\n- `ANON_KEY`     — public anon key do projeto\n- `INSTANCIA`    — identificador do escritório (ex.: `mendesadv`)\n\nTodos os endpoints retornam JSON. Funções de listagem retornam array. Funções de criação/update retornam o registro completo.\n\nVersão: v1 — Maio/2026 · Documento vivo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "SUPABASE_URL", "value": "https://bnyaypxlypmqozilldmx.supabase.co", "type": "string" },
+    { "key": "ANON_KEY",     "value": "<cole_a_anon_key_aqui>",                    "type": "string" },
+    { "key": "INSTANCIA",    "value": "mendesadv",                                 "type": "string" }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key",   "value": "apikey",       "type": "string" },
+      { "key": "value", "value": "{{ANON_KEY}}", "type": "string" },
+      { "key": "in",    "value": "header",       "type": "string" }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": ["pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + pm.variables.get('ANON_KEY') });"]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "login_user — autentica usuário do painel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_email\": \"admin@nexla.ai\",\n  \"p_password\": \"sua_senha\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/login_user", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "login_user"] },
+            "description": "Retorna `{id, name, email, role, active, company_id}` se credenciais válidas e usuário ativo. Array vazio se não. Usado apenas pelo painel — n8n não precisa."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👥 Clientes",
+      "item": [
+        {
+          "name": "api_clientes_list — lista clientes da instância",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_search\": null,\n  \"p_area\": null,\n  \"p_type\": null,\n  \"p_limit\": 100,\n  \"p_offset\": 0\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_clientes_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_clientes_list"] },
+            "description": "Filtros opcionais:\n- `p_search`: busca em nome/numero/cpf/email\n- `p_area`: uuid de practice_areas (filtra por área principal)\n- `p_type`: `'PF'` ou `'PJ'`"
+          }
+        },
+        {
+          "name": "api_cliente_by_phone — busca cliente pelo telefone",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_numero\": \"5511988887777\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_cliente_by_phone", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_cliente_by_phone"] },
+            "description": "Retorna 1 cliente ou array vazio. Use no início de cada fluxo da Sofia para checar se o telefone já é cliente cadastrado."
+          }
+        },
+        {
+          "name": "api_cliente_create — cria novo cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_data\": {\n    \"instancia\": \"{{INSTANCIA}}\",\n    \"nome\": \"Maria Silva Santos\",\n    \"numero\": \"5511988887777\",\n    \"type\": \"PF\",\n    \"source\": \"meta_ads\",\n    \"primary_practice_area_id\": null,\n    \"cpf\": \"12345678900\",\n    \"email\": \"maria@email.com\",\n    \"profession\": \"Professora\",\n    \"notes\": \"Lead da campanha Trabalhista — Out/2026\"\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_cliente_create", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_cliente_create"] },
+            "description": "Cria o cliente e retorna o registro completo. Campos opcionais podem ser omitidos. `type` padrão é `'PF'`."
+          }
+        },
+        {
+          "name": "api_cliente_update — atualiza cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_id\": \"<uuid-do-cliente>\",\n  \"p_data\": {\n    \"primary_practice_area_id\": \"<uuid-da-area>\",\n    \"notes\": \"Atualização: caso classificado como Trabalhista pela Sofia\"\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_cliente_update", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_cliente_update"] },
+            "description": "Atualiza só os campos enviados (COALESCE com valor existente). Útil pra Sofia atualizar área principal depois de classificar a conversa."
+          }
+        },
+        {
+          "name": "api_cliente_delete — remove cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_id\": \"<uuid-do-cliente>\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_cliente_delete", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_cliente_delete"] },
+            "description": "Use com cuidado — DELETE é definitivo. Em geral preferir desativar via update."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⚖️ Áreas de atuação",
+      "item": [
+        {
+          "name": "api_practice_areas_list — lista áreas (cível, trabalhista, ...)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_only_active\": true\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_practice_areas_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_practice_areas_list"] },
+            "description": "Retorna as 9 áreas seed: cível, trabalhista, criminal, família, empresarial, tributário, previdenciário, consumidor, outros. Cada área traz `slug`, `name`, `color`, `ord`. Use no prompt da Sofia para classificar a demanda."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👨‍⚖️ Advogados (Professionals)",
+      "item": [
+        {
+          "name": "api_advogados_list — lista sócios/advogados",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_only_active\": true,\n  \"p_practice_area\": null\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_advogados_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_advogados_list"] },
+            "description": "Filtre por `p_practice_area` (uuid) pra pegar só os sócios que atuam naquela área. A Sofia usa isso pra rotear o cliente ao especialista certo."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Serviços jurídicos & Honorários",
+      "item": [
+        {
+          "name": "api_servicos_list — catálogo de serviços (era procedures)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_only_active\": true,\n  \"p_practice_area\": null\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_servicos_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_servicos_list"] },
+            "description": "Lista serviços jurídicos cadastrados (1ª consulta, parecer, contrato, peticionamento, audiência, etc.). Filtro opcional por área."
+          }
+        },
+        {
+          "name": "api_servico_honorario — calcula honorário sugerido",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_servico_id\": \"<uuid-do-servico>\",\n  \"p_fee_model_id\": null\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_servico_honorario", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_servico_honorario"] },
+            "description": "Retorna JSON com `valor_sugerido`, `fee_model_kind`, `default_percent` (pra êxito) etc. Se `p_fee_model_id` for null, usa o `default_fee_model_id` do serviço."
+          }
+        },
+        {
+          "name": "api_fee_models_list — modelos de honorário do escritório",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_only_active\": true,\n  \"p_kind\": null\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_fee_models_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_fee_models_list"] },
+            "description": "`p_kind` aceita: `'avulso'`, `'fixo_mensal'`, `'exito'`, `'partido'`. Sem filtro retorna todos."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📁 Casos (Cases)",
+      "item": [
+        {
+          "name": "api_cases_list — lista casos da instância",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_status\": null,\n  \"p_practice_area\": null,\n  \"p_lead_user_id\": null,\n  \"p_limit\": 100,\n  \"p_offset\": 0\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_cases_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_cases_list"] },
+            "description": "`p_status` aceita: `'lead_frio'`, `'lead_quente'`, `'em_proposta'`, `'contrato_assinado'`, `'em_andamento'`, `'encerrado'`, `'perdido'`."
+          }
+        },
+        {
+          "name": "api_cases_by_client — todos os casos de um cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_client_id\": \"<uuid-do-cliente>\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_cases_by_client", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_cases_by_client"] },
+            "description": "Retorna a 'pasta do cliente' — agrega múltiplos casos do mesmo CPF/CNPJ."
+          }
+        },
+        {
+          "name": "api_case_create — cria caso novo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_data\": {\n    \"instancia\": \"{{INSTANCIA}}\",\n    \"client_id\": \"<uuid-cliente>\",\n    \"practice_area_id\": \"<uuid-area>\",\n    \"lead_assigned_user_id\": \"<uuid-socio>\",\n    \"status\": \"lead_quente\",\n    \"title\": \"Demissão sem justa causa\",\n    \"description\": \"Cliente descreveu rescisão indevida — coletei fatos básicos.\",\n    \"fee_model_id\": null,\n    \"fee_value\": null,\n    \"case_number\": null\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_case_create", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_case_create"] },
+            "description": "Cria caso vinculado a cliente, área e sócio. Status default = `'lead_frio'`."
+          }
+        },
+        {
+          "name": "api_case_update_status — muda status do caso",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_id\": \"<uuid-do-caso>\",\n  \"p_status\": \"contrato_assinado\",\n  \"p_notes\": \"Cliente confirmou na reunião — contrato emitido\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_case_update_status", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_case_update_status"] },
+            "description": "Quando `p_status` for `'encerrado'` ou `'perdido'`, marca `closed_at = now()` automaticamente."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📅 Agenda",
+      "item": [
+        {
+          "name": "api_agendas_list — agendas da instância",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_agendas_list", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_agendas_list"] }
+          }
+        },
+        {
+          "name": "api_appointments_by_date — compromissos de um dia",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_date\": \"2026-05-08\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_appointments_by_date", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_appointments_by_date"] }
+          }
+        },
+        {
+          "name": "api_appointments_by_phone — histórico de reuniões do cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_phone\": \"5511988887777\",\n  \"p_limit\": 10\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_appointments_by_phone", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_appointments_by_phone"] }
+          }
+        },
+        {
+          "name": "api_appointments_busy_slots — horários ocupados do advogado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_professional_id\": \"<uuid-advogado>\",\n  \"p_from\": \"2026-05-08T08:00:00Z\",\n  \"p_to\": \"2026-05-08T20:00:00Z\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_appointments_busy_slots", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_appointments_busy_slots"] },
+            "description": "A Sofia chama isso pra oferecer apenas horários livres. Retorna `[{starts_at, duration_minutes}]`."
+          }
+        },
+        {
+          "name": "api_appointment_create — marca compromisso (reunião/audiência/prazo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_data\": {\n    \"instancia\": \"{{INSTANCIA}}\",\n    \"agenda_id\": \"<uuid-agenda>\",\n    \"professional_id\": \"<uuid-advogado>\",\n    \"procedure_id\": \"<uuid-servico>\",\n    \"contact_nome\": \"Maria Silva Santos\",\n    \"contact_numero\": \"5511988887777\",\n    \"starts_at\": \"2026-05-08T14:00:00Z\",\n    \"duration_minutes\": 60,\n    \"status\": \"agendado\",\n    \"event_type\": \"primeira_consulta\",\n    \"court\": null,\n    \"process_number\": null,\n    \"case_id\": null,\n    \"price\": 350.00,\n    \"notes\": \"Marcado pela Sofia após triagem trabalhista\"\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_appointment_create", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_appointment_create"] },
+            "description": "`event_type` aceita: `'primeira_consulta'`, `'reuniao'`, `'audiencia'`, `'prazo'`. Em audiência, preencha `court` e `process_number`. Se vincular a um caso, passe `case_id`."
+          }
+        },
+        {
+          "name": "api_appointment_update_status — confirma/cancela compromisso",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_id\": \"<uuid-appointment>\",\n  \"p_status\": \"realizado\",\n  \"p_payment_status\": \"pago\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_appointment_update_status", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_appointment_update_status"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⚖️ Calendário forense",
+      "item": [
+        {
+          "name": "api_forensic_check — verifica se há expediente no dia",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_date\": \"2026-12-23\",\n  \"p_scope\": \"federal\",\n  \"p_uf\": null\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_forensic_check", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_forensic_check"] },
+            "description": "Retorna JSON com `is_business_day`, `entries` (array de feriados naquela data) e `is_weekend`. A Sofia usa antes de propor data de audiência."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💬 Mensagens",
+      "item": [
+        {
+          "name": "api_messages_by_phone — histórico da conversa",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_numero\": \"5511988887777\",\n  \"p_limit\": 20,\n  \"p_only_client\": false\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_messages_by_phone", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_messages_by_phone"] },
+            "description": "Retorna últimas N mensagens (DESC por id). `p_only_client=true` filtra só mensagens enviadas pelo cliente — útil pra contexto da IA sem o histórico das próprias respostas."
+          }
+        },
+        {
+          "name": "api_message_create — registra mensagem em mensagens_geral",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_data\": {\n    \"instancia\": \"{{INSTANCIA}}\",\n    \"numero\": \"5511988887777\",\n    \"mensagem\": \"Texto da mensagem\",\n    \"type\": \"ia\",\n    \"horaLastMessage\": \"08/05/2026 14:32:00\"\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_message_create", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_message_create"] },
+            "description": "`type` aceita: `'cliente'`, `'ia'`, `'atendente'`. Preferir `send_mensagem_geral` se for da IA — esta é a versão mais simples sem `base64`."
+          }
+        },
+        {
+          "name": "send_mensagem_geral — envia mensagem (com base64 opcional)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_numero\": \"5511988887777\",\n  \"p_mensagem\": \"Olá! Sou a Sofia, atendente do escritório.\",\n  \"p_type\": \"ia\",\n  \"p_hora\": \"2026-05-08T14:32:00Z\",\n  \"p_base64\": null\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/send_mensagem_geral", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "send_mensagem_geral"] },
+            "description": "Versão preferida pela IA — suporta `p_base64` pra mídia. Dispara trigger `reopen_session_on_new_message` (reabre tickets fechados)."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔚 Conversas (Sessions)",
+      "item": [
+        {
+          "name": "api_conversation_status — sessão está aberta?",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_session_id\": \"5511988887777\",\n  \"p_instancia\": \"{{INSTANCIA}}\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_conversation_status", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_conversation_status"] },
+            "description": "Retorna `{is_open, last_close}`. Sessão é aberta se não houver linha em `conversations`."
+          }
+        },
+        {
+          "name": "api_conversation_close — encerra ticket",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_session_id\": \"5511988887777\",\n  \"p_instancia\": \"{{INSTANCIA}}\",\n  \"p_reason\": \"resolvido\"\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_conversation_close", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_conversation_close"] },
+            "description": "`p_reason` aceita: `'resolvido'`, `'encerrado_auto'`, `'cliente_desistiu'`, etc. (texto livre)."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔔 Alertas",
+      "item": [
+        {
+          "name": "api_alert_create — cria alerta pra humano assumir",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_data\": {\n    \"instancia\": \"{{INSTANCIA}}\",\n    \"numero\": \"5511988887777\",\n    \"mensagem\": \"Cliente em crise emocional — passa pro Dr. Rafael\",\n    \"resolved\": false\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_alert_create", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_alert_create"] }
+          }
+        },
+        {
+          "name": "api_alerts_pending — alertas em aberto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_alerts_pending", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_alerts_pending"] }
+          }
+        },
+        {
+          "name": "api_alert_resolve — marca alerta como resolvido",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_id\": \"<uuid-do-alert>\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_alert_resolve", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_alert_resolve"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Kanban",
+      "item": [
+        {
+          "name": "api_kanban_columns — colunas do board",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_kanban_columns", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_kanban_columns"] }
+          }
+        },
+        {
+          "name": "api_kanban_cards — cards do board",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"p_instancia\": \"{{INSTANCIA}}\"\n}" },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_kanban_cards", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_kanban_cards"] }
+          }
+        },
+        {
+          "name": "api_kanban_card_create — cria card no board",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_data\": {\n    \"instancia\": \"{{INSTANCIA}}\",\n    \"column_id\": \"<uuid-coluna>\",\n    \"title\": \"Nova consulta — Trabalhista\",\n    \"description\": \"Cliente Maria S. — demissão sem justa causa\",\n    \"priority\": \"normal\",\n    \"due_date\": \"2026-05-15\",\n    \"position\": 0,\n    \"assigned_user_id\": \"<uuid-advogado>\",\n    \"assigned_user_name\": \"Dr. Rafael Mendes\"\n  }\n}"
+            },
+            "url": { "raw": "{{SUPABASE_URL}}/rest/v1/rpc/api_kanban_card_create", "host": ["{{SUPABASE_URL}}"], "path": ["rest", "v1", "rpc", "api_kanban_card_create"] }
+          }
+        }
+      ]
+    }
+  ]
+}
