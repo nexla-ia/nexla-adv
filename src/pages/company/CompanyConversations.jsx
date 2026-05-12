@@ -1055,16 +1055,18 @@ export default function CompanyConversations() {
                           ? <span style={{ fontWeight: 700, fontSize: 14, color: '#2563EB' }}>{saved.nome.charAt(0).toUpperCase()}</span>
                           : <User size={14} style={{ opacity: 0.4 }} />}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                       <div
-                        style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', cursor: saved ? 'pointer' : 'default' }}
+                        style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', cursor: saved ? 'pointer' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         onClick={() => saved && navigate(`/painel/contatos/${saved.id}`)}
                       >
                         {saved ? saved.nome : selected.phone}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {saved && <span style={{ fontFamily: 'monospace' }}>{selected.phone}</span>}
-                        {!loadingMsgs && <span>{messages.length} mensagem(ns)</span>}
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                        <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
+                          {saved ? selected.phone : ''}
+                        </span>
+                        {!loadingMsgs && <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{messages.length} msg</span>}
                       </div>
                     </div>
                   </>
