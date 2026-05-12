@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Eye, EyeOff, Loader2, ArrowLeft, Sparkles, Calendar, Bot, MessageSquare } from 'lucide-react'
+import { Eye, EyeOff, Loader2, ArrowLeft, Sparkles, Calendar, Bot, MessageSquare, Scale } from 'lucide-react'
 import BrandMark from '../components/BrandMark'
 import './LoginPage.css'
 
@@ -34,18 +34,17 @@ export default function LoginPage() {
 
   return (
     <div className="login-root">
-      {/* Botão voltar */}
       <Link to="/" className="login-back">
-        <ArrowLeft size={14} /> Voltar para o site
+        <ArrowLeft size={13} /> Voltar
       </Link>
 
       <div className="login-shell">
-        {/* COLUNA ESQUERDA — branding */}
+        {/* ── Coluna esquerda — branding (oculta no mobile) ── */}
         <div className="login-left">
           <Link to="/" className="login-brand">
-            <BrandMark size={32} color="#0F0E1B" strokeWidth={1.6} />
+            <BrandMark size={34} color="#0F0E1B" strokeWidth={1.6} />
             <div className="login-brand-text">
-              <span>NexlaAdv</span>
+              <span>NexlaADV</span>
               <small>Ética e eficiência não brigam</small>
             </div>
           </Link>
@@ -66,22 +65,16 @@ export default function LoginPage() {
           </p>
 
           <div className="login-features">
-            <div className="login-feat" style={{ background: '#FEF3C7', borderColor: '#FCD34D' }}>
-              <Bot size={14} />
-              <span>Sofia atendendo 24/7</span>
-            </div>
-            <div className="login-feat" style={{ background: '#DCFCE7', borderColor: '#86EFAC' }}>
-              <Calendar size={14} />
-              <span>Agenda integrada</span>
-            </div>
-            <div className="login-feat" style={{ background: '#DBEAFE', borderColor: '#93C5FD' }}>
-              <MessageSquare size={14} />
-              <span>Caixa unificada</span>
-            </div>
-            <div className="login-feat" style={{ background: '#FCE7F3', borderColor: '#F9A8D4' }}>
-              <Sparkles size={14} />
-              <span>Atribuição completa</span>
-            </div>
+            {[
+              { icon: <Bot size={13} />,         bg: '#FEF3C7', border: '#FCD34D', label: 'Sofia 24/7' },
+              { icon: <Calendar size={13} />,     bg: '#DCFCE7', border: '#86EFAC', label: 'Agenda integrada' },
+              { icon: <MessageSquare size={13} />,bg: '#DBEAFE', border: '#93C5FD', label: 'Caixa unificada' },
+              { icon: <Scale size={13} />,        bg: '#FCE7F3', border: '#F9A8D4', label: 'Métricas jurídicas' },
+            ].map(f => (
+              <div key={f.label} className="login-feat" style={{ background: f.bg, borderColor: f.border }}>
+                {f.icon} <span>{f.label}</span>
+              </div>
+            ))}
           </div>
 
           <div className="login-decor login-decor-1" />
@@ -89,19 +82,33 @@ export default function LoginPage() {
           <div className="login-decor login-decor-3" />
         </div>
 
-        {/* COLUNA DIREITA — formulário */}
+        {/* ── Coluna direita — formulário ── */}
         <div className="login-right">
           <form className="login-card" onSubmit={handleSubmit}>
+
+            {/* Logo só no mobile */}
+            <div className="login-mobile-brand">
+              <div className="login-mobile-brand-mark">
+                <BrandMark size={20} color="#0F0E1B" strokeWidth={1.8} />
+              </div>
+              <div>
+                <div className="login-mobile-brand-text">NexlaADV</div>
+                <span className="login-mobile-brand-sub">Ética e eficiência não brigam</span>
+              </div>
+            </div>
+
             <div className="login-card-header">
               <h2 className="login-card-title">Acesso ao painel</h2>
               <p className="login-card-sub">Entre com suas credenciais</p>
             </div>
 
             <div className="login-tabs">
-              <button type="button" className={`login-tab ${tab === 'empresa' ? 'active' : ''}`} onClick={() => { setTab('empresa'); setError('') }}>
-                Acesso Empresa
+              <button type="button" className={`login-tab ${tab === 'empresa' ? 'active' : ''}`}
+                onClick={() => { setTab('empresa'); setError('') }}>
+                Empresa
               </button>
-              <button type="button" className={`login-tab ${tab === 'adm' ? 'active' : ''}`} onClick={() => { setTab('adm'); setError('') }}>
+              <button type="button" className={`login-tab ${tab === 'adm' ? 'active' : ''}`}
+                onClick={() => { setTab('adm'); setError('') }}>
                 ADM Global
               </button>
             </div>
@@ -115,13 +122,30 @@ export default function LoginPage() {
 
             <div className="login-field">
               <label className="login-label">E-mail</label>
-              <input className="login-input" type="email" name="email" placeholder={tab === 'adm' ? 'admin@nexla.ai' : 'usuario@escritorio.com'} value={form.email} onChange={handleChange} autoComplete="email" />
+              <input
+                className="login-input"
+                type="email"
+                name="email"
+                placeholder={tab === 'adm' ? 'admin@nexla.ai' : 'usuario@escritorio.com'}
+                value={form.email}
+                onChange={handleChange}
+                autoComplete="email"
+              />
             </div>
 
             <div className="login-field">
               <label className="login-label">Senha</label>
               <div className="login-input-wrap">
-                <input className="login-input" type={showPass ? 'text' : 'password'} name="password" placeholder="••••••••" value={form.password} onChange={handleChange} style={{ paddingRight: 44 }} autoComplete="current-password" />
+                <input
+                  className="login-input"
+                  type={showPass ? 'text' : 'password'}
+                  name="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  style={{ paddingRight: 44 }}
+                  autoComplete="current-password"
+                />
                 <button type="button" className="login-eye" onClick={() => setShowPass(v => !v)}>
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -135,10 +159,12 @@ export default function LoginPage() {
             {error && <div className="login-error">{error}</div>}
 
             <button type="submit" className="login-submit" disabled={loading}>
-              {loading ? <><Loader2 size={15} className="spin" /> Verificando...</> : tab === 'adm' ? 'Acesso administrativo' : 'Entrar no painel'}
+              {loading
+                ? <><Loader2 size={15} className="spin" /> Verificando...</>
+                : tab === 'adm' ? 'Acesso administrativo' : 'Entrar no painel →'}
             </button>
 
-            <div className="login-footer">NexlaAdv v1.0 · Plataforma exclusiva · Acesso restrito</div>
+            <div className="login-footer">NexlaADV · Plataforma exclusiva · Acesso restrito</div>
           </form>
         </div>
       </div>
