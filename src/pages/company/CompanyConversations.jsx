@@ -16,13 +16,14 @@ function formatPhone(val) {
 // Busca contato no mapa tolerando variação do 9 extra BR
 function findSaved(savedContacts, cleanNum) {
   if (!cleanNum) return null
-  if (findSaved(savedContacts, cleanNum)) return findSaved(savedContacts, cleanNum)
-  // Tenta sem o 9 extra (55 + DDD + 9 + 8 dígitos = 13 → 12)
+  // Lookup direto
+  if (savedContacts[cleanNum]) return savedContacts[cleanNum]
+  // Tenta sem o 9 extra (55DDD9XXXXXXXX → 55DDDXXXXXXXX)
   if (cleanNum.startsWith('55') && cleanNum.length === 13) {
     const sem9 = cleanNum.slice(0, 4) + cleanNum.slice(5)
     if (savedContacts[sem9]) return savedContacts[sem9]
   }
-  // Tenta com o 9 extra (12 → 13)
+  // Tenta com o 9 extra (55DDDXXXXXXXX → 55DDD9XXXXXXXX)
   if (cleanNum.startsWith('55') && cleanNum.length === 12) {
     const com9 = cleanNum.slice(0, 4) + '9' + cleanNum.slice(4)
     if (savedContacts[com9]) return savedContacts[com9]
