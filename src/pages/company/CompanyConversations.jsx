@@ -32,16 +32,7 @@ function findSaved(savedContacts, cleanNum) {
 }
 
 function getMessageContent(row) {
-  const type = (row.type || '').toLowerCase()
-  const isAttendant = type === 'atendente' || type === 'humano'
-  let msg = (row.mensagem || '')
-    .replace(/^\*[^*]+\*:\n/, '')   // *nome*:\n (bold)
-    .trim()
-  // Strip "nome: " prefix em mensagens de atendente (ecoadas pelo WhatsApp/n8n)
-  if (isAttendant) {
-    msg = msg.replace(/^[^\n:]{1,40}:\s+/, '')
-  }
-  return msg
+  return (row.mensagem || '').replace(/^\*[^*]+\*:\n/, '').trim()
 }
 
 function getMessageType(row) { return (row.type || 'human').toLowerCase() }
@@ -817,11 +808,14 @@ export default function CompanyConversations() {
       const filePrefix = file
         ? (file.kind === 'image' ? '🖼️ ' : file.kind === 'pdf' ? '📄 ' : '📎 ') + file.name
         : null
-      const mensagemPayload = audio
+      const attendantName = session?.user?.name || 'Atendente'
+      const rawPayload = audio
         ? (text || '🎤 Áudio')
         : file
           ? (text ? `${filePrefix}\n${text}` : filePrefix)
           : text
+      // Salva com prefixo do atendente no banco (exibido no histórico)
+      const mensagemPayload = `${attendantName}: ${rawPayload}`
       const mediaBase64 = audio?.base64 || file?.base64 || null
       const { error: insErr } = await supabase.rpc('send_mensagem_geral', {
         p_instancia: instance,
@@ -837,7 +831,7 @@ export default function CompanyConversations() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: text,
+          message: rawPayload,
           audio_base64: audio?.base64 || null,
           audio_mime: audio?.mime || null,
           audio_duration: audio?.duration || null,

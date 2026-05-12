@@ -21,11 +21,7 @@ function formatPhone(val) {
 function getSessionId(row) { return row.session_id || row.numero || null }
 function getMessageContent(row) {
   const raw = row.message?.content || row.mensagem || ''
-  const type = (row.message?.type || row.type || '').toLowerCase()
-  const isAttendant = type === 'atendente' || type === 'humano'
-  let msg = raw.replace(/^\*[^*]+\*:\n/, '').trim()
-  if (isAttendant) msg = msg.replace(/^[^\n:]{1,40}:\s+/, '')
-  return msg
+  return raw.replace(/^\*[^*]+\*:\n/, '').trim()
 }
 function getMessageType(row) { return row.message?.type || row.type || 'human' }
 function getTimestamp(row) { return row.data || row['horaLastMessage'] || row.created_at || null }
