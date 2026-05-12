@@ -1382,7 +1382,7 @@ export default function CompanyConversations() {
             </div>
 
             {!isClosed && (
-              <div style={{ padding: '12px 18px', borderTop: '0.5px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 }}>
+              <div className="chat-input-bar" style={{ padding: '12px 18px', borderTop: '0.5px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 }}>
                 {attachedFile && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 10,

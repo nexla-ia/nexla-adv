@@ -188,6 +188,11 @@
   gap: 12px;
 }
 
+/* Input bar com safe area para iOS Safari */
+.chat-input-bar {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
 .chat-body {
   flex: 1;
   overflow-y: auto;
@@ -368,9 +373,11 @@
   .company-main-wrap { overflow-x: hidden; overflow-y: visible; }
   .company-main { overflow-y: auto; overflow-x: hidden; }
 
-  /* Topbar fixo no topo em todas as telas */
+  /* Topbar fixo no topo — com safe-area iOS */
   .company-topbar {
     padding: 0 1rem;
+    padding-top: env(safe-area-inset-top);
+    height: calc(50px + env(safe-area-inset-top));
     gap: 8px;
     position: fixed;
     top: 0;
@@ -380,9 +387,9 @@
     box-shadow: 0 1px 8px rgba(0,0,0,0.06);
   }
 
-  /* Compensar topbar fixo */
+  /* Compensar topbar fixo + safe area */
   .company-main-wrap {
-    padding-top: 50px;
+    padding-top: calc(50px + env(safe-area-inset-top));
   }
 
   /* Conversas: empilha lista + chat no mobile */
@@ -409,9 +416,12 @@
   }
 
   .contacts-root.has-chat .chat-panel {
-    height: calc(100vh - 50px);
     position: fixed;
-    inset: 50px 0 0 0;
+    top: calc(50px + env(safe-area-inset-top));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto;
     z-index: 100;
     background: #F8FAFC;
     display: flex;
