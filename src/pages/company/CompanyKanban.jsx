@@ -131,11 +131,17 @@ export default function CompanyKanban() {
       instancia: instance,
       ...(isNew ? { position: maxPos + 1 } : {}),
     }
-    const { error } = isNew
-      ? await supabase.from('kanban_columns').insert(payload)
-      : await supabase.from('kanban_columns').update(payload).eq('id', columnModal.id)
+    const { data, error } = isNew
+      ? await supabase.from('kanban_columns').insert(payload).select().single()
+      : await supabase.from('kanban_columns').update(payload).eq('id', columnModal.id).select().single()
     setSavingColumn(false)
     if (error) { setColumnErr('Erro: ' + error.message); return }
+    if (data) {
+      setColumns(prev => {
+        const exists = prev.find(c => c.id === data.id)
+        return exists ? prev.map(c => c.id === data.id ? data : c) : [...prev, data]
+      })
+    }
     setColumnModal(null)
   }
   function handleDeleteColumn(col) {
@@ -144,15 +150,20 @@ export default function CompanyKanban() {
   async function confirmDeleteColumn() {
     if (!confirmDeleteCol) return
     setDeletingNow(true)
-    await supabase.from('kanban_columns').delete().eq('id', confirmDeleteCol.id)
+    const id = confirmDeleteCol.id
+    await supabase.from('kanban_columns').delete().eq('id', id)
+    // Atualiza estado local (não espera realtime)
+    setColumns(prev => prev.filter(c => c.id !== id))
+    setCards(prev => prev.filter(c => c.column_id !== id))
     setDeletingNow(false)
     setConfirmDeleteCol(null)
   }
   async function createDefaults() {
     setSavingColumn(true)
-    await supabase.from('kanban_columns').insert(
+    const { data } = await supabase.from('kanban_columns').insert(
       DEFAULT_COLUMNS.map((c, i) => ({ ...c, instancia: instance, position: i + 1 }))
-    )
+    ).select()
+    if (data) setColumns(prev => [...prev, ...data])
     setSavingColumn(false)
   }
 
@@ -187,11 +198,18 @@ export default function CompanyKanban() {
       priority: cardModal.priority || 'normal',
       ...(isNew ? { position: maxPos + 1, created_by_email: session?.user?.email } : {}),
     }
-    const { error } = isNew
-      ? await supabase.from('kanban_cards').insert(payload)
-      : await supabase.from('kanban_cards').update(payload).eq('id', cardModal.id)
+    const { data, error } = isNew
+      ? await supabase.from('kanban_cards').insert(payload).select().single()
+      : await supabase.from('kanban_cards').update(payload).eq('id', cardModal.id).select().single()
     setSavingCard(false)
     if (error) { setCardErr('Erro: ' + error.message); return }
+    // Atualiza estado local (não espera realtime)
+    if (data) {
+      setCards(prev => {
+        const exists = prev.find(c => c.id === data.id)
+        return exists ? prev.map(c => c.id === data.id ? data : c) : [...prev, data]
+      })
+    }
     setCardModal(null)
   }
   function handleDeleteCard() {
@@ -201,7 +219,10 @@ export default function CompanyKanban() {
   async function confirmDeleteCardAction() {
     if (!cardModal?.id) return
     setDeletingNow(true)
-    await supabase.from('kanban_cards').delete().eq('id', cardModal.id)
+    const id = cardModal.id
+    await supabase.from('kanban_cards').delete().eq('id', id)
+    // Atualiza estado local (não espera realtime)
+    setCards(prev => prev.filter(c => c.id !== id))
     setDeletingNow(false)
     setConfirmDeleteCard(false)
     setCardModal(null)
