@@ -217,34 +217,43 @@
 }
 .tag-popover-backdrop { display: none; }
 
-/* Mobile: bottom-sheet com backdrop */
+/* Mobile: modal centralizado com backdrop */
 @media (max-width: 768px) {
   .tag-popover-backdrop {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    z-index: 1500;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 10000;
     animation: fadeIn 0.2s ease;
+    padding: 16px;
   }
   .tag-popover {
     position: fixed;
-    left: 0;
-    right: 0;
-    top: auto;
-    bottom: 0;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 32px);
+    max-width: 360px;
     min-width: 0;
-    max-width: 100%;
-    width: 100%;
-    border-radius: 20px 20px 0 0;
-    z-index: 1501;
-    animation: tag-sheet-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-    padding-bottom: env(safe-area-inset-bottom);
-    max-height: 75vh;
+    border-radius: 16px;
+    z-index: 10001;
+    animation: tag-modal-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+    max-height: 80vh;
     overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   }
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tag-modal-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.94); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
 
 /* Desktop: mostra botões com texto, esconde mobile */
 .chat-header-actions-desktop { display: contents; }
