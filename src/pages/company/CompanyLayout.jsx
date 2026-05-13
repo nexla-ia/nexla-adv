@@ -100,13 +100,13 @@ export default function CompanyLayout() {
     { to: '/painel/novidades', icon: Sparkles,      label: 'Novidades',
       badge: hasNewUpdate ? 'Novo' : null, badgeColor: 'violet' },
     { to: '/painel/seguranca', icon: ShieldCheck,   label: 'Segurança' },
-    { action: () => window.dispatchEvent(new CustomEvent('open-support-widget')),
-      icon: Headset, label: 'Suporte' },
     ...(isAdmin ? [
       { to: '/painel/metricas', icon: BarChart2,    label: 'Métricas' },
       { to: '/painel/catalogo', icon: Scale,  label: 'Catálogo Jurídico' },
       { to: '/painel/admin',    icon: Settings2,    label: 'Administração' },
     ] : []),
+    { action: () => window.dispatchEvent(new CustomEvent('open-support-widget')),
+      icon: Headset, label: 'Suporte' },
   ]
 
   if (blocked) {
