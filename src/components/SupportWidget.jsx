@@ -286,6 +286,8 @@ function TicketChat({ ticket, userId, userName, senderType, onTicketUpdated }) {
   const [imagePrefix, setImagePrefix] = useState('')     // data:image/...;base64,
   const [otherTyping, setOtherTyping] = useState(false)
   const [lightbox, setLightbox] = useState(null) // src da imagem em foco
+  const [chatErr, setChatErr] = useState('')
+  const [confirmClose, setConfirmClose] = useState(false)
   const fileRef = useRef(null)
   const bodyRef = useRef(null)
   const presenceCh = useRef(null)
@@ -363,7 +365,11 @@ function TicketChat({ ticket, userId, userName, senderType, onTicketUpdated }) {
 
   function pickImage(file) {
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { alert('Imagem muito grande. Máx 2MB.'); return }
+    if (file.size > 2 * 1024 * 1024) {
+      setChatErr('Imagem muito grande. Máx 2MB.')
+      setTimeout(() => setChatErr(''), 3500)
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result
@@ -412,15 +418,20 @@ function TicketChat({ ticket, userId, userName, senderType, onTicketUpdated }) {
     }
     const { error } = await supabase.from('support_messages').insert(payload)
     setSending(false)
-    if (error) { alert('Erro: ' + error.message); return }
+    if (error) {
+      setChatErr('Erro ao enviar: ' + error.message)
+      setTimeout(() => setChatErr(''), 3500)
+      return
+    }
     setText('')
     setImagePreview(null)
     setImagePrefix('')
     if (fileRef.current) fileRef.current.value = ''
   }
 
+  function askCloseTicket() { setConfirmClose(true) }
   async function closeTicket() {
-    if (!confirm('Marcar este chamado como resolvido?')) return
+    setConfirmClose(false)
     await supabase.from('support_tickets').update({ status: 'closed' }).eq('id', ticket.id)
     onTicketUpdated?.({ ...ticket, status: 'closed' })
   }
@@ -504,11 +515,35 @@ function TicketChat({ ticket, userId, userName, senderType, onTicketUpdated }) {
           </button>
         </div>
         {senderType === 'company' && ticket.status !== 'closed' && (
-          <button className="sw-close-ticket" onClick={closeTicket}>
+          <button className="sw-close-ticket" onClick={askCloseTicket}>
             <CheckCircle2 size={12} /> Marcar como resolvido
           </button>
         )}
       </div>
+
+      {chatErr && (
+        <div style={{
+          position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+          background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C',
+          padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 50,
+        }}>
+          {chatErr}
+        </div>
+      )}
+
+      {confirmClose && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 20, maxWidth: 320, width: '100%', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Marcar como resolvido?</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>O chamado será encerrado.</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmClose(false)} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+              <button onClick={closeTicket} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#16A34A', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Resolver</button>
+            </div>
+          </div>
+        </div>, document.body
+      )}
 
       {lightbox && createPortal(
         <div className="sw-lightbox" onClick={() => setLightbox(null)}>
