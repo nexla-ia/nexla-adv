@@ -15,6 +15,20 @@ import './Company.css'
 
 const AGENDA_COLORS = ['#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#D97706', '#0891B2', '#DB2777', '#059669']
 const SLOT_OPTIONS = [15, 20, 30, 45, 60, 90]
+const COUNTRY_CODES = [
+  { code: '55',  flag: '🇧🇷', name: 'Brasil' },
+  { code: '1',   flag: '🇺🇸', name: 'EUA' },
+  { code: '351', flag: '🇵🇹', name: 'Portugal' },
+  { code: '34',  flag: '🇪🇸', name: 'Espanha' },
+  { code: '44',  flag: '🇬🇧', name: 'Reino Unido' },
+  { code: '49',  flag: '🇩🇪', name: 'Alemanha' },
+  { code: '33',  flag: '🇫🇷', name: 'França' },
+  { code: '39',  flag: '🇮🇹', name: 'Itália' },
+  { code: '54',  flag: '🇦🇷', name: 'Argentina' },
+  { code: '56',  flag: '🇨🇱', name: 'Chile' },
+  { code: '598', flag: '🇺🇾', name: 'Uruguai' },
+  { code: '595', flag: '🇵🇾', name: 'Paraguai' },
+]
 
 // Remove o 9 extra de celulares BR para formato Evolution: 55DDDnumero (12 dígitos)
 function toEvolutionPhone(raw) {
@@ -122,6 +136,8 @@ export default function CompanyAgenda() {
   const [phoneSuggestions, setPhoneSuggestions] = useState([])
   const [showPhoneDrop, setShowPhoneDrop] = useState(false)
   const phoneDropRef = useRef(null)
+  const [countryCode, setCountryCode] = useState('55')
+  const [showCountryDrop, setShowCountryDrop] = useState(false)
   const [savingAppt, setSavingAppt]   = useState(false)
   const [patientHistory, setPatientHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -473,9 +489,9 @@ export default function CompanyAgenda() {
 
     setSavingAppt(true)
     let numero = apptModal.contact_numero?.replace(/\D/g, '') || null
-    // Adiciona 55 se usuário digitou só DDD+número (sem +55)
-    if (numero && !numero.startsWith('55') && numero.length >= 10 && numero.length <= 11) {
-      numero = '55' + numero
+    // Prepend código do país se não estiver presente
+    if (numero && !numero.startsWith(countryCode)) {
+      numero = countryCode + numero
     }
     const payload = {
       agenda_id: apptModal.agenda_id,
@@ -1082,14 +1098,44 @@ export default function CompanyAgenda() {
               </div>
               <div style={{ position: 'relative' }} ref={phoneDropRef}>
                 <label style={labelStyle}>Telefone</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    background: '#F1F5F9', border: '1px solid var(--border)',
-                    borderRight: 'none', borderRadius: '8px 0 0 8px',
-                    padding: '0 10px', height: 38, fontSize: 13, fontWeight: 600,
-                    color: 'var(--text-secondary)', whiteSpace: 'nowrap',
-                  }}>+55</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, position: 'relative' }}>
+                  <button type="button"
+                    onClick={() => setShowCountryDrop(v => !v)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: '#F1F5F9', border: '1px solid var(--border)',
+                      borderRight: 'none', borderRadius: '8px 0 0 8px',
+                      padding: '0 10px', height: 38, fontSize: 13, fontWeight: 600,
+                      color: 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer',
+                    }}>
+                    {COUNTRY_CODES.find(c => c.code === countryCode)?.flag || '🌐'} +{countryCode}
+                    <ChevronRight size={12} style={{ transform: 'rotate(90deg)' }} />
+                  </button>
+                  {showCountryDrop && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, zIndex: 1000,
+                      background: '#fff', border: '1px solid var(--border)',
+                      borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                      marginTop: 2, minWidth: 200, maxHeight: 240, overflowY: 'auto',
+                    }}>
+                      {COUNTRY_CODES.map(c => (
+                        <button key={c.code} type="button"
+                          onClick={() => { setCountryCode(c.code); setShowCountryDrop(false) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            width: '100%', padding: '8px 12px', border: 'none',
+                            background: c.code === countryCode ? '#EFF6FF' : '#fff',
+                            cursor: 'pointer', fontSize: 13, textAlign: 'left',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                          onMouseLeave={e => e.currentTarget.style.background = c.code === countryCode ? '#EFF6FF' : '#fff'}>
+                          <span>{c.flag}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>+{c.code}</span>
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: 11 }}>{c.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <input
                     className="nx-input"
                     style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
