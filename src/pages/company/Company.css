@@ -195,6 +195,56 @@
   from { opacity: 0; transform: translateY(-6px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+@keyframes tag-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Tag popover ─────────────────────────────────────────────────────── */
+/* Desktop: dropdown sob o botão */
+.tag-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+  z-index: 300;
+  min-width: 280px;
+  max-width: 320px;
+  animation: tag-pop-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.tag-popover-backdrop { display: none; }
+
+/* Mobile: bottom-sheet com backdrop */
+@media (max-width: 768px) {
+  .tag-popover-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 1500;
+    animation: fadeIn 0.2s ease;
+  }
+  .tag-popover {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    z-index: 1501;
+    animation: tag-sheet-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+    padding-bottom: env(safe-area-inset-bottom);
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Desktop: mostra botões com texto, esconde mobile */
 .chat-header-actions-desktop { display: contents; }

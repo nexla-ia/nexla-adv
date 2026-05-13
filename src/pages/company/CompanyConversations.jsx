@@ -1208,15 +1208,11 @@ export default function CompanyConversations() {
                               .filter(t => !tags.includes(t))
                               .filter(t => !q || t.includes(q))
                               .slice(0, 8)
-                            const exactMatch = q && allKnownTags.includes(q)
                             return (
-                              <div style={{
-                                position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#fff',
-                                border: '1px solid var(--border)', borderRadius: 14,
-                                boxShadow: '0 12px 40px rgba(15,23,42,0.15)', zIndex: 300,
-                                minWidth: 280, maxWidth: 320, overflow: 'hidden',
-                                animation: 'tag-pop-in 0.18s cubic-bezier(0.22,1,0.36,1) both',
-                              }}>
+                              <>
+                                {/* Backdrop só no mobile */}
+                                <div className="tag-popover-backdrop" onClick={() => setTagPopoverOpen(false)} />
+                                <div className="tag-popover" style={{ overflow: 'hidden' }}>
                                 {/* Header */}
                                 <div style={{
                                   padding: '12px 14px 8px',
@@ -1319,7 +1315,8 @@ export default function CompanyConversations() {
                                     Ex: <strong style={{ color: 'var(--text-secondary)' }}>vip</strong>, <strong style={{ color: 'var(--text-secondary)' }}>trabalhista</strong>, <strong style={{ color: 'var(--text-secondary)' }}>urgente</strong>.
                                   </div>
                                 )}
-                              </div>
+                                </div>
+                              </>
                             )
                           })()}
                         </div>
