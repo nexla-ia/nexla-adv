@@ -472,7 +472,11 @@ export default function CompanyAgenda() {
     }
 
     setSavingAppt(true)
-    const numero = apptModal.contact_numero?.replace(/\D/g, '') || null
+    let numero = apptModal.contact_numero?.replace(/\D/g, '') || null
+    // Adiciona 55 se usuário digitou só DDD+número (sem +55)
+    if (numero && !numero.startsWith('55') && numero.length >= 10 && numero.length <= 11) {
+      numero = '55' + numero
+    }
     const payload = {
       agenda_id: apptModal.agenda_id,
       instancia: instance,
@@ -1109,9 +1113,10 @@ export default function CompanyAgenda() {
                       <div key={i}
                         onMouseDown={e => {
                           e.preventDefault()
+                          const numberOnly = s.digits.startsWith('55') ? s.digits.slice(2) : s.digits
                           setApptModal(p => ({
                             ...p,
-                            contact_numero: s.digits,
+                            contact_numero: numberOnly,
                             contact_nome: s.name || p.contact_nome,
                           }))
                           setShowPhoneDrop(false)
