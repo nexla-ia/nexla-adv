@@ -1113,7 +1113,7 @@ export default function CompanyAgenda() {
                       >
                         <Phone size={12} style={{ color: '#94A3B8', flexShrink: 0 }} />
                         <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                          +55 {s.digits.slice(2)}
+                          {s.digits.startsWith('55') ? s.digits.slice(2) : s.digits}
                         </span>
                         {s.name && (
                           <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>
