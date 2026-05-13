@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -167,6 +167,13 @@ export default function CompanyConversations() {
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
   const [tagInput, setTagInput] = useState('')
   const [savingTag, setSavingTag] = useState(false)
+
+  // Todas as tags já usadas em qualquer contato (para sugestão)
+  const allKnownTags = useMemo(() => {
+    const set = new Set()
+    Object.values(savedContacts).forEach(c => (c?.tags || []).forEach(t => set.add(t)))
+    return [...set].sort()
+  }, [savedContacts])
   const [saveContactModal, setSaveContactModal] = useState(null) // { numero, nome, notes }
   const [savingContact, setSavingContact] = useState(false)
   const mediaRecorderRef = useRef(null)
@@ -1195,44 +1202,126 @@ export default function CompanyConversations() {
                             <Tag size={14} />
                             <span className="tag-btn-label">{tags.length > 0 ? tags.length : 'Tag'}</span>
                           </button>
-                          {tagPopoverOpen && (
-                            <div style={{
-                              position: 'absolute', right: 0, top: '110%', background: '#fff',
-                              border: '1px solid var(--border)', borderRadius: 12,
-                              boxShadow: '0 8px 32px rgba(0,0,0,0.13)', zIndex: 300,
-                              minWidth: 240, padding: 14,
-                            }}
-                              onMouseLeave={() => setTagPopoverOpen(false)}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                                Tags · {saved?.nome?.split(' ')[0] || cleanNum}
-                              </div>
-                              {tags.length > 0 && (
-                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
-                                  {tags.map(t => (
-                                    <TagBadge key={t} tag={t} onRemove={() => removeTag(t)} />
-                                  ))}
+                          {tagPopoverOpen && (() => {
+                            const q = tagInput.trim().toLowerCase()
+                            const suggestions = allKnownTags
+                              .filter(t => !tags.includes(t))
+                              .filter(t => !q || t.includes(q))
+                              .slice(0, 8)
+                            const exactMatch = q && allKnownTags.includes(q)
+                            return (
+                              <div style={{
+                                position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#fff',
+                                border: '1px solid var(--border)', borderRadius: 14,
+                                boxShadow: '0 12px 40px rgba(15,23,42,0.15)', zIndex: 300,
+                                minWidth: 280, maxWidth: 320, overflow: 'hidden',
+                                animation: 'tag-pop-in 0.18s cubic-bezier(0.22,1,0.36,1) both',
+                              }}>
+                                {/* Header */}
+                                <div style={{
+                                  padding: '12px 14px 8px',
+                                  background: 'linear-gradient(180deg, #FAFAFF 0%, #fff 100%)',
+                                  borderBottom: tags.length > 0 ? '1px solid var(--border)' : 'none',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <Tag size={12} style={{ color: '#7C3AED' }} />
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                        Tags · {saved?.nome?.split(' ')[0] || cleanNum?.slice(-4)}
+                                      </span>
+                                    </div>
+                                    {tags.length > 0 && (
+                                      <span style={{ fontSize: 10, color: 'var(--text-muted)', background: '#F1F5F9', padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
+                                        {tags.length}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                              )}
-                              <div style={{ display: 'flex', gap: 6 }}>
-                                <input
-                                  autoFocus
-                                  className="nx-input"
-                                  style={{ fontSize: 12, padding: '7px 10px', flex: 1 }}
-                                  placeholder="Nova tag..."
-                                  value={tagInput}
-                                  onChange={e => setTagInput(e.target.value)}
-                                  onKeyDown={e => e.key === 'Enter' && addTag()}
-                                />
-                                <button className="nx-btn-primary" style={{ padding: '0 12px', fontSize: 12 }}
-                                  onClick={addTag} disabled={savingTag}>
-                                  <Plus size={13} />
-                                </button>
+
+                                {/* Tags atuais */}
+                                {tags.length > 0 && (
+                                  <div style={{ padding: '10px 14px', display: 'flex', gap: 5, flexWrap: 'wrap', borderBottom: '1px solid var(--border)' }}>
+                                    {tags.map(t => (
+                                      <TagBadge key={t} tag={t} onRemove={() => removeTag(t)} />
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Input */}
+                                <div style={{ padding: '12px 14px' }}>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <input
+                                      autoFocus
+                                      style={{
+                                        flex: 1, fontSize: 13, padding: '8px 12px',
+                                        background: '#F8FAFC', border: '1px solid var(--border)',
+                                        borderRadius: 8, outline: 'none', color: 'var(--text-primary)',
+                                        transition: 'all 0.15s',
+                                      }}
+                                      onFocus={e => { e.target.style.background = '#fff'; e.target.style.borderColor = '#7C3AED'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)' }}
+                                      onBlur={e => { e.target.style.background = '#F8FAFC'; e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                                      placeholder={tags.length ? 'Adicionar outra...' : 'Ex: vip, urgente, trabalhista'}
+                                      value={tagInput}
+                                      onChange={e => setTagInput(e.target.value)}
+                                      onKeyDown={e => e.key === 'Enter' && addTag()}
+                                    />
+                                    <button
+                                      onClick={addTag}
+                                      disabled={savingTag || !tagInput.trim()}
+                                      style={{
+                                        padding: '0 14px',
+                                        background: tagInput.trim() ? '#7C3AED' : '#E2E8F0',
+                                        color: tagInput.trim() ? '#fff' : '#94A3B8',
+                                        border: 'none', borderRadius: 8,
+                                        cursor: tagInput.trim() ? 'pointer' : 'not-allowed',
+                                        fontWeight: 700, fontSize: 13,
+                                        transition: 'all 0.15s',
+                                        boxShadow: tagInput.trim() ? '0 2px 8px rgba(124,58,237,0.25)' : 'none',
+                                      }}>
+                                      <Plus size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Sugestões */}
+                                {suggestions.length > 0 && (
+                                  <div style={{ padding: '0 14px 12px' }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                                      {q ? 'Sugestões' : 'Já usadas'}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                      {suggestions.map(t => {
+                                        const { bg, color, border } = tagColor(t)
+                                        return (
+                                          <button key={t}
+                                            onClick={() => { setTagInput(t); setTimeout(addTag, 0) }}
+                                            style={{
+                                              display: 'inline-flex', alignItems: 'center', gap: 3,
+                                              background: bg, color, border: `1px dashed ${border}`,
+                                              borderRadius: 20, padding: '3px 10px',
+                                              fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                              transition: 'all 0.15s', opacity: 0.85,
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderStyle = 'solid' }}
+                                            onMouseLeave={e => { e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.borderStyle = 'dashed' }}>
+                                            <Plus size={9} /> {t}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Footer dica */}
+                                {!tags.length && !suggestions.length && (
+                                  <div style={{ padding: '0 14px 12px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                                    Tags ajudam a categorizar clientes.
+                                    Ex: <strong style={{ color: 'var(--text-secondary)' }}>vip</strong>, <strong style={{ color: 'var(--text-secondary)' }}>trabalhista</strong>, <strong style={{ color: 'var(--text-secondary)' }}>urgente</strong>.
+                                  </div>
+                                )}
                               </div>
-                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
-                                Enter para adicionar · clique no × para remover
-                              </div>
-                            </div>
-                          )}
+                            )
+                          })()}
                         </div>
                       )
                     })()}
