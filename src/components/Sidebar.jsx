@@ -36,7 +36,15 @@ export default function Sidebar({ links, role, open, onClose }) {
         </div>
 
         <nav className="sidebar-nav">
-          {links.map(link => (
+          {links.map((link, i) => link.action ? (
+            <button key={'action-' + i} className="sidebar-link"
+              onClick={() => { link.action(); handleNav() }}
+              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
+              <link.icon size={16} />
+              {link.label}
+              {link.badge ? <span className={`sidebar-badge nx-badge nx-badge-${link.badgeColor || 'cyan'}`}>{link.badge}</span> : null}
+            </button>
+          ) : (
             <NavLink key={link.to} to={link.to} end={link.end}
               className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
               onClick={handleNav}>

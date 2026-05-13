@@ -1053,18 +1053,15 @@ function InstagramLockedScreen({ company }) {
             </div>
           </div>
         ) : (
-          <button
-            type="button"
+          <a
+            href={`https://wa.me/556999300101?text=${encodeURIComponent(`Olá! Sou do escritório ${company?.name || ''} e gostaria de liberar o Instagram Direct na NexlaADV.`)}`}
+            target="_blank" rel="noreferrer"
             className="ig-locked-cta"
-            onClick={openSupportTicket}
-            disabled={ticketState === 'sending'}
           >
             <MessageCircle size={16} />
-            <span>
-              {ticketState === 'sending' ? 'Abrindo ticket...' : 'Falar com o time pra liberar'}
-            </span>
-            {ticketState !== 'sending' && <span className="ig-locked-cta-arrow">→</span>}
-          </button>
+            <span>Falar com o time pra liberar</span>
+            <span className="ig-locked-cta-arrow">→</span>
+          </a>
         )}
 
         {ticketErr && <div className="ig-locked-error">{ticketErr}</div>}

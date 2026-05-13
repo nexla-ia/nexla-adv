@@ -100,16 +100,15 @@ export default function SupportWidget({ session }) {
     }
   }
 
+  // Permite abrir o widget via evento global (do sidebar)
+  useEffect(() => {
+    const handler = () => openWidget()
+    window.addEventListener('open-support-widget', handler)
+    return () => window.removeEventListener('open-support-widget', handler)
+  }, [])
+
   return (
     <>
-      <button
-        className={`sw-fab ${liftedFab ? 'lifted' : ''}`}
-        onClick={openWidget}
-        aria-label="Abrir suporte"
-        title="Falar com o suporte">
-        <Headset size={22} />
-        {unreadTotal > 0 && <span className="sw-fab-badge">{unreadTotal}</span>}
-      </button>
 
       {open && createPortal(
         <div className="sw-overlay" onClick={() => setOpen(false)}>
