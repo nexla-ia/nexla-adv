@@ -1,15 +1,11 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useLocation } from 'react-router-dom'
 import {
   Headset, X, Send, Plus, ArrowLeft, Image as ImageIcon, Paperclip,
   CheckCircle2, Clock, MessageCircle, Loader2, Download, ZoomIn,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import './SupportWidget.css'
-
-// Rotas que têm composer/input fixo no rodapé — FAB sobe pra não cobrir o botão de enviar
-const SCREENS_WITH_BOTTOM_INPUT = ['/painel/conversas', '/painel/instagram']
 
 const STATUS_LABELS = {
   open:     { label: 'Aguardando',  color: '#D97706', bg: '#FEF3C7' },
@@ -30,16 +26,12 @@ function formatTime(ts) {
 }
 
 export default function SupportWidget({ session }) {
-  const location = useLocation()
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('list') // list | chat | new
   const [tickets, setTickets] = useState([])
   const [activeTicket, setActiveTicket] = useState(null)
   const [unreadTotal, setUnreadTotal] = useState(0)
   const [loading, setLoading] = useState(false)
-
-  // Em telas com composer fixo (Conversas/Instagram), sobe o FAB pra não tampar
-  const liftedFab = SCREENS_WITH_BOTTOM_INPUT.some(p => location.pathname.startsWith(p))
 
   const companyId = session?.company?.id
   const userId = session?.user?.id
