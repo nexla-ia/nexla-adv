@@ -27,7 +27,7 @@ const labelStyle = {
 }
 
 export default function CompanyAdmin() {
-  const { session } = useAuth()
+  const { session, setSession } = useAuth()
   const instance  = session?.company?.instance
   const companyId = session?.company?.id
   const limits    = getEffectiveLimits(session?.company)
@@ -246,6 +246,13 @@ export default function CompanyAdmin() {
     setUsers(prev => prev.map(u => u.id === editUserModal.id
       ? { ...u, name: editUserForm.name, email: editUserForm.email, role: editUserForm.role }
       : u))
+    // Atualiza sessão se o user editado é o próprio logado
+    if (editUserModal.id === session?.user?.id) {
+      setSession(prev => ({
+        ...prev,
+        user: { ...prev.user, name: editUserForm.name, email: editUserForm.email, role: editUserForm.role },
+      }))
+    }
     setEditUserModal(null)
   }
 
