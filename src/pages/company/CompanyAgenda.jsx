@@ -178,6 +178,9 @@ export default function CompanyAgenda() {
       .then(({ data }) => { if (data) setFutureAppointments(data) })
   }, [instance])
 
+  // Set persistente de IDs já processados (sobrevive a re-renders)
+  const reminderSentRef = useRef(new Set())
+
   // Dispara lembretes automáticos para agendamentos futuros
   useEffect(() => {
     if (!instance || !agendas.length || !futureAppointments.length) return
@@ -188,18 +191,28 @@ export default function CompanyAgenda() {
       const windowMs = ag.reminder_hours * 3600_000
       futureAppointments.forEach(appt => {
         if (appt.agenda_id !== ag.id) return
+        if (appt.reminder_sent) return
+        if (reminderSentRef.current.has(appt.id)) return // já processado nessa sessão
         const startsAt = new Date(appt.starts_at).getTime()
         const diff = startsAt - now
         if (diff > 0 && diff <= windowMs) pending.push({ appt, ag })
       })
     })
     if (!pending.length) return
-    pending.forEach(({ appt, ag }) => {
+
+    // Marca ID no Set ANTES de disparar (bloqueia re-runs)
+    pending.forEach(({ appt }) => reminderSentRef.current.add(appt.id))
+
+    pending.forEach(async ({ appt, ag }) => {
       const horaFmt = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       const msg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
-      // Marca como enviado antes de disparar (evita duplicata)
-      supabase.from('appointments').update({ reminder_sent: true }).eq('id', appt.id)
-      // Dispara webhook n8n → WhatsApp
+      // Aguarda update no banco antes de disparar webhook
+      const { error } = await supabase.from('appointments').update({ reminder_sent: true }).eq('id', appt.id)
+      if (error) {
+        reminderSentRef.current.delete(appt.id) // permite retry se falhou
+        console.warn('reminder update falhou:', error.message)
+        return
+      }
       if (appt.contact_numero && apiInstancia) {
         fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
           method: 'POST',
@@ -216,7 +229,7 @@ export default function CompanyAgenda() {
         }).catch(e => console.warn('webhook reminder:', e))
       }
     })
-  }, [agendas, futureAppointments, instance])
+  }, [agendas, futureAppointments, instance, apiInstancia])
 
   // Realtime para agendamentos
   useEffect(() => {
