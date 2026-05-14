@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus } from 'lucide-react'
+import { MessageSquare, Bot, User, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil } from 'lucide-react'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
@@ -153,6 +153,8 @@ export default function CompanyConversations() {
   const [closing, setClosing]         = useState(false)
   const [toast, setToast]             = useState(null)
   const [msgText, setMsgText]         = useState('')
+  const [editingMsg, setEditingMsg]   = useState(null) // { id, originalContent, newText }
+  const [savingEdit, setSavingEdit]   = useState(false)
   const [sending, setSending]         = useState(false)
   const [closedLoaded, setClosedLoaded] = useState(false)
   const [lightbox, setLightbox]       = useState(null)
@@ -770,6 +772,50 @@ export default function CompanyConversations() {
     if (!att) return true
     if (isAdmin) return true
     return att.attendant_email === session?.user?.email
+  }
+
+  async function handleSaveEdit() {
+    if (!editingMsg || savingEdit) return
+    const newText = (editingMsg.newText || '').trim()
+    if (!newText) return
+    setSavingEdit(true)
+
+    // Mantém o prefixo "atendente: " se a mensagem original tinha
+    const attendantName = session?.user?.name || 'Atendente'
+    const finalDb = `${attendantName}: ${newText}`
+
+    // 1) Atualiza no banco
+    const { error } = await supabase.from('mensagens_geral')
+      .update({ mensagem: finalDb })
+      .eq('id', editingMsg.id)
+
+    if (error) {
+      setSavingEdit(false)
+      setToast({ message: 'Erro ao editar: ' + error.message, color: '#DC2626' })
+      setTimeout(() => setToast(null), 3000)
+      return
+    }
+
+    // 2) Atualiza estado local imediatamente
+    setMessages(prev => prev.map(m => m.id === editingMsg.id
+      ? { ...m, content: newText, mensagem: finalDb }
+      : m))
+
+    // 3) Dispara webhook n8n pra editar no WhatsApp
+    fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexlaeditar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome_instancia: apiInstancia || instance,
+        contato: selected.session_id,
+        id_mensagem: editingMsg.id,
+        nova_mensagem: newText,
+        instancia: instance,
+      }),
+    }).catch(e => console.warn('webhook editar:', e))
+
+    setSavingEdit(false)
+    setEditingMsg(null)
   }
 
   async function handleSend() {
@@ -1552,8 +1598,28 @@ export default function CompanyConversations() {
                           : hasOnlyMedia
                             ? { background: 'transparent', padding: 0, boxShadow: 'none', border: 'none' }
                             : {}
+                        const isEditing = editingMsg?.id === msg.id
                         return (
-                          <div className="msg-bubble" style={bubbleStyle}>
+                          <div className="msg-bubble" style={{ ...bubbleStyle, position: 'relative' }}
+                            onMouseEnter={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '1') }}
+                            onMouseLeave={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '0') }}>
+                            {isAtendente && !isEditing && !hasOnlyMedia && (
+                              <button
+                                className="msg-edit-btn"
+                                onClick={() => setEditingMsg({ id: msg.id, newText: displayContent })}
+                                title="Editar mensagem"
+                                style={{
+                                  position: 'absolute', top: -10, right: -10,
+                                  width: 26, height: 26, borderRadius: '50%',
+                                  background: '#fff', border: '1px solid #16A34A',
+                                  color: '#16A34A', cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  opacity: 0, transition: 'opacity 0.15s',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)', zIndex: 2,
+                                }}>
+                                <Pencil size={11} />
+                              </button>
+                            )}
                             {media && (() => {
                               const src = `data:${media.mime};base64,${msg.base64}`
                               if (media.type === 'audio') return (
@@ -1597,7 +1663,36 @@ export default function CompanyConversations() {
                                 borderRadius: 6, padding: '2px 8px', marginBottom: 6,
                               }}>🖼️ Imagem enviada</div>
                             )}
-                            {displayContent && (
+                            {isEditing ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220 }}>
+                                <textarea
+                                  autoFocus
+                                  value={editingMsg.newText}
+                                  onChange={e => setEditingMsg(p => ({ ...p, newText: e.target.value }))}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() }
+                                    if (e.key === 'Escape') setEditingMsg(null)
+                                  }}
+                                  rows={Math.min(4, (editingMsg.newText || '').split('\n').length)}
+                                  style={{
+                                    width: '100%', resize: 'vertical', minHeight: 60,
+                                    background: 'rgba(255,255,255,0.95)', color: '#0F172A',
+                                    border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
+                                    padding: '8px 10px', fontSize: 13, fontFamily: 'inherit', outline: 'none',
+                                  }}
+                                />
+                                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                                  <button onClick={() => setEditingMsg(null)}
+                                    style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.4)', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
+                                    Cancelar
+                                  </button>
+                                  <button onClick={handleSaveEdit} disabled={savingEdit || !editingMsg.newText?.trim()}
+                                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', background: '#fff', color: '#16A34A', cursor: 'pointer', opacity: savingEdit ? 0.6 : 1 }}>
+                                    {savingEdit ? 'Salvando...' : 'Salvar'}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : displayContent && (
                               <span style={{ whiteSpace: 'pre-wrap' }}>{displayContent}</span>
                             )}
                           </div>
