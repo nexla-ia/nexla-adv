@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, Sparkles, MessageCircle, ArrowRight, RefreshCw, Star,
   Building2, Send,
 } from 'lucide-react'
-import './AdmSupport.css'
+import './AdmFeedback.css'
 
 const CATEGORIES = {
   sugestao: { label: 'Sugestão',   icon: Lightbulb,      color: '#D97706', bg: '#FEF3C7' },
@@ -134,44 +134,44 @@ export default function AdmFeedback() {
   }
 
   return (
-    <div className="ads-root">
+    <div className="adm-fb-root">
       {/* HERO igual ao AdmSupport */}
-      <div className="ads-hero">
-        <div className="ads-hero-content">
-          <div className="ads-hero-eyebrow"><MessageSquareHeart size={13} /> Feedback</div>
-          <h1 className="ads-hero-title">Voz dos clientes</h1>
-          <div className="ads-hero-sub">
+      <div className="adm-fb-hero">
+        <div className="adm-fb-hero-content">
+          <div className="adm-fb-hero-eyebrow"><MessageSquareHeart size={13} /> Feedback</div>
+          <h1 className="adm-fb-hero-title">Voz dos clientes</h1>
+          <div className="adm-fb-hero-sub">
             Sugestões, bugs, elogios e dúvidas de todas as empresas. Responda direto daqui — o cliente vê no painel.
           </div>
         </div>
-        <div className="ads-hero-stats">
-          <div className="ads-hero-stat">
-            <div className="ads-hero-stat-num">{counts.novo}</div>
-            <div className="ads-hero-stat-lbl">Novos</div>
+        <div className="adm-fb-hero-stats">
+          <div className="adm-fb-hero-stat">
+            <div className="adm-fb-hero-stat-num">{counts.novo}</div>
+            <div className="adm-fb-hero-stat-lbl">Novos</div>
           </div>
-          <div className="ads-hero-stat">
-            <div className="ads-hero-stat-num">{counts.em_analise + counts.planejado}</div>
-            <div className="ads-hero-stat-lbl">Em análise</div>
+          <div className="adm-fb-hero-stat">
+            <div className="adm-fb-hero-stat-num">{counts.em_analise + counts.planejado}</div>
+            <div className="adm-fb-hero-stat-lbl">Em análise</div>
           </div>
-          <div className="ads-hero-stat">
-            <div className="ads-hero-stat-num">{counts.feito}</div>
-            <div className="ads-hero-stat-lbl">Implementados</div>
+          <div className="adm-fb-hero-stat">
+            <div className="adm-fb-hero-stat-num">{counts.feito}</div>
+            <div className="adm-fb-hero-stat-lbl">Implementados</div>
           </div>
-          <button className="ads-hero-refresh" onClick={load} title="Recarregar" disabled={loading}>
+          <button className="adm-fb-hero-refresh" onClick={load} title="Recarregar" disabled={loading}>
             <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         </div>
       </div>
 
       {/* SHELL */}
-      <div className="ads-shell">
+      <div className="adm-fb-shell">
         {/* LISTA */}
-        <aside className="ads-list">
-          <div className="ads-list-search">
+        <aside className="adm-fb-list">
+          <div className="adm-fb-list-search">
             <Search size={14} />
             <input placeholder="Empresa, mensagem ou usuário..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="ads-list-filters">
+          <div className="adm-fb-list-filters">
             {[
               { v: 'novo', label: 'Novos' },
               { v: 'em_analise', label: 'Em análise' },
@@ -186,7 +186,7 @@ export default function AdmFeedback() {
           </div>
 
           {/* Filtro categoria */}
-          <div className="ads-list-filters" style={{ marginTop: -4 }}>
+          <div className="adm-fb-list-filters" style={{ marginTop: -4 }}>
             <button onClick={() => setCatFilter('all')} className={catFilter === 'all' ? 'active' : ''}>Todas</button>
             {Object.entries(CATEGORIES).map(([k, c]) => {
               const Ic = c.icon
@@ -199,7 +199,7 @@ export default function AdmFeedback() {
             })}
           </div>
 
-          <div className="ads-list-items">
+          <div className="adm-fb-list-items">
             {loading && <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Carregando...</div>}
             {!loading && filtered.length === 0 && (
               <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -214,22 +214,22 @@ export default function AdmFeedback() {
               const isActive = activeId === f.id
               const CIcon = cat.icon
               return (
-                <button key={f.id} onClick={() => setActiveId(f.id)} className={`ads-item ${isActive ? 'active' : ''}`}>
-                  <div className="ads-item-avatar" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                <button key={f.id} onClick={() => setActiveId(f.id)} className={`adm-fb-item ${isActive ? 'active' : ''}`}>
+                  <div className="adm-fb-item-avatar" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
                     {company.charAt(0).toUpperCase()}
                   </div>
-                  <div className="ads-item-body">
-                    <div className="ads-item-top">
-                      <span className="ads-item-company">{company}</span>
-                      <span className="ads-item-time">{timeAgo(f.created_at)}</span>
+                  <div className="adm-fb-item-body">
+                    <div className="adm-fb-item-top">
+                      <span className="adm-fb-item-company">{company}</span>
+                      <span className="adm-fb-item-time">{timeAgo(f.created_at)}</span>
                     </div>
-                    <div className="ads-item-subject" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div className="adm-fb-item-subject" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <CIcon size={11} style={{ color: cat.color, flexShrink: 0 }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {f.message?.slice(0, 60)}{f.message?.length > 60 ? '…' : ''}
                       </span>
                     </div>
-                    <div className="ads-item-bottom">
+                    <div className="adm-fb-item-bottom">
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, color: st.color, background: st.bg }}>
                         {st.label}
                       </span>
@@ -247,15 +247,15 @@ export default function AdmFeedback() {
         </aside>
 
         {/* DETALHE */}
-        <main className="ads-detail">
+        <main className="adm-fb-detail">
           {!active ? (
-            <div className="ads-empty">
+            <div className="adm-fb-empty">
               <MessageSquareHeart size={56} />
               <h3>Selecione um feedback</h3>
               <p>Lista à esquerda mostra todos os feedbacks dos clientes.</p>
             </div>
           ) : (
-            <div className="ads-detail-content">
+            <div className="adm-fb-detail-content">
               {(() => {
                 const cat = CATEGORIES[active.category] || CATEGORIES.outro
                 const company = companyName(active.company_id)
