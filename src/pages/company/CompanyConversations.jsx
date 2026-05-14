@@ -804,14 +804,20 @@ export default function CompanyConversations() {
       : m))
 
     // 3) Dispara webhook n8n pra editar no WhatsApp
-    // id_mensagem = ID do WhatsApp (do banco). db_id = id do row (fallback)
+    // Mesmo formato do envioNexla (regular send) — n8n usa id_mensagem do banco
+    const cleanPhone = (selected.session_id || '').replace(/@.*$/, '').replace(/\D/g, '')
     const webhookBody = {
-      nome_instancia: apiInstancia || instance,
-      contato: selected.session_id,
+      id: editingMsg.id,
       id_mensagem: editingMsg.id_mensagem || null,
-      db_id: editingMsg.id,
-      nova_mensagem: newText,
+      message: newText,
+      session_id: selected.session_id,
+      phone: cleanPhone,
       instancia: instance,
+      api_instancia: apiInstancia,
+      ai_enabled: session?.company?.ai_enabled !== false,
+      company: session?.company?.name,
+      sender_name: session?.user?.name,
+      sender_email: session?.user?.email,
     }
     console.log('[editar] webhook payload:', webhookBody)
     fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexlaeditar', {
