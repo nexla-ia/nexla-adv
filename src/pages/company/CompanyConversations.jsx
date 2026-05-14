@@ -495,6 +495,7 @@ export default function CompanyConversations() {
           if (selectedRef.current?.session_id === sid) {
             setMessages(msgs => [...msgs, {
               id: row.id,
+              id_mensagem: row.id_mensagem || null,
               type: getMessageType(row),
               content: getMessageContent(row),
               base64: row.base64 || null,
@@ -537,6 +538,7 @@ export default function CompanyConversations() {
         if (!error && data) {
           setMessages(data.filter(r => !isToolMessage(r)).map(r => ({
             id: r.id,
+            id_mensagem: r.id_mensagem || null,
             type: getMessageType(r),
             content: getMessageContent(r),
             base64: r.base64 || null,
@@ -802,17 +804,22 @@ export default function CompanyConversations() {
       : m))
 
     // 3) Dispara webhook n8n pra editar no WhatsApp
-    fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexlaeditar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nome_instancia: apiInstancia || instance,
-        contato: selected.session_id,
-        id_mensagem: editingMsg.id,
-        nova_mensagem: newText,
-        instancia: instance,
-      }),
-    }).catch(e => console.warn('webhook editar:', e))
+    // id_mensagem = ID do WhatsApp (vem do banco), NÃO o id interno do row
+    if (editingMsg.id_mensagem) {
+      fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexlaeditar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome_instancia: apiInstancia || instance,
+          contato: selected.session_id,
+          id_mensagem: editingMsg.id_mensagem,
+          nova_mensagem: newText,
+          instancia: instance,
+        }),
+      }).catch(e => console.warn('webhook editar:', e))
+    } else {
+      console.warn('id_mensagem ausente — webhook nao disparado')
+    }
 
     setSavingEdit(false)
     setEditingMsg(null)
@@ -1606,7 +1613,7 @@ export default function CompanyConversations() {
                             {isAtendente && !isEditing && !hasOnlyMedia && (
                               <button
                                 className="msg-edit-btn"
-                                onClick={() => setEditingMsg({ id: msg.id, newText: displayContent })}
+                                onClick={() => setEditingMsg({ id: msg.id, id_mensagem: msg.id_mensagem, newText: displayContent })}
                                 title="Editar mensagem"
                                 style={{
                                   position: 'absolute', top: -10, right: -10,
