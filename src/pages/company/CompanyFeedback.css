@@ -625,3 +625,103 @@
   .fb-detail-foot { padding: 14px 16px 22px; }
   .fb-textarea { font-size: 16px; }
 }
+
+/* ── CHAT (detail) ─────────────────────────────────────────────────────── */
+.fb-chat-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+  max-width: 78%;
+}
+.fb-chat-row.left  { align-self: flex-start; }
+.fb-chat-row.right { align-self: flex-end; align-items: flex-end; }
+.fb-chat-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #6B6A85;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+.fb-chat-bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  box-shadow: 0 1px 3px rgba(15,14,27,0.06);
+}
+.fb-chat-bubble.client {
+  background: #fff;
+  color: #2D2B45;
+  border: 1px solid rgba(15,14,27,0.08);
+  border-bottom-left-radius: 4px;
+}
+.fb-chat-bubble.adm {
+  background: linear-gradient(120deg, #0891B2, #06B6D4);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.fb-chat-time {
+  font-size: 10px;
+  color: #9594B0;
+  margin-top: 4px;
+  padding: 0 4px;
+}
+.fb-detail-body {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 32px;
+  background: linear-gradient(180deg, #FAFAFF 0%, #fff 100%);
+  min-height: 220px;
+}
+.fb-detail-composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 32px;
+  border-top: 1px solid rgba(15,14,27,0.06);
+  background: #fff;
+}
+.fb-detail-composer textarea {
+  flex: 1;
+  border: 1.5px solid rgba(15,14,27,0.1);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  background: #FAFAFC;
+  min-height: 44px;
+  max-height: 120px;
+  transition: all 0.15s;
+}
+.fb-detail-composer textarea:focus {
+  background: #fff;
+  border-color: #DB2777;
+  box-shadow: 0 0 0 4px rgba(219,39,119,0.08);
+}
+.fb-detail-send {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -4px rgba(0,0,0,0.2);
+}
+.fb-detail-send:hover:not(:disabled) { transform: translateY(-1px); }
+.fb-detail-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .fb-detail-body { padding: 18px 16px; }
+  .fb-detail-composer { padding: 10px 16px; }
+  .fb-detail-composer textarea { font-size: 16px; }
+}

@@ -49,7 +49,7 @@ function timeAgo(ts) {
 }
 
 export default function AdmFeedback() {
-  const { db } = useAuth()
+  const { db, session } = useAuth()
   const [list, setList] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [filter, setFilter] = useState('novo')
@@ -58,6 +58,8 @@ export default function AdmFeedback() {
   const [loading, setLoading] = useState(true)
   const [response, setResponse] = useState('')
   const [saving, setSaving] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [loadingMsgs, setLoadingMsgs] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -110,8 +112,50 @@ export default function AdmFeedback() {
   const active = useMemo(() => list.find(f => f.id === activeId), [list, activeId])
 
   useEffect(() => {
-    if (active) setResponse(active.adm_response || '')
+    if (!active) { setMessages([]); return }
+    setLoadingMsgs(true)
+    supabase.from('feedback_messages').select('*')
+      .eq('feedback_id', active.id)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        setMessages(data || [])
+        setLoadingMsgs(false)
+      })
+    setResponse('')
   }, [activeId])
+
+  // Realtime: mensagens
+  useEffect(() => {
+    if (!active) return
+    const ch = supabase.channel(`fb-msgs-${active.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback_messages', filter: `feedback_id=eq.${active.id}` },
+        (p) => setMessages(prev => prev.find(m => m.id === p.new.id) ? prev : [...prev, p.new]))
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [activeId])
+
+  async function sendMessage() {
+    if (!active || !response.trim()) return
+    setSaving(true)
+    const text = response.trim()
+    const { data } = await supabase.from('feedback_messages').insert({
+      feedback_id: active.id,
+      sender_type: 'adm',
+      sender_name: session?.user?.name || 'Suporte',
+      message: text,
+    }).select().single()
+    if (data) setMessages(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data])
+    // Auto-move pra em_analise se era novo
+    if (active.status === 'novo') {
+      await supabase.from('feedbacks').update({ status: 'em_analise', adm_response: text }).eq('id', active.id)
+      setList(prev => prev.map(f => f.id === active.id ? { ...f, status: 'em_analise', adm_response: text } : f))
+    } else if (!active.adm_response) {
+      await supabase.from('feedbacks').update({ adm_response: text }).eq('id', active.id)
+      setList(prev => prev.map(f => f.id === active.id ? { ...f, adm_response: text } : f))
+    }
+    setResponse('')
+    setSaving(false)
+  }
 
   async function saveStatus(status) {
     if (!active) return
@@ -281,72 +325,69 @@ export default function AdmFeedback() {
                       </span>
                     </header>
 
-                    <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-                      {/* Mensagem do cliente */}
-                      <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                          Mensagem do cliente
+                    {/* Status pills */}
+                    <div className="adm-fb-statusbar">
+                      {STATUSES.map(s => {
+                        const Ic = s.icon
+                        const isCurr = active.status === s.value
+                        return (
+                          <button key={s.value}
+                            onClick={() => saveStatus(s.value)}
+                            disabled={saving}
+                            className={`adm-fb-status-pill ${isCurr ? 'active' : ''}`}
+                            style={isCurr ? { background: s.bg, color: s.color, borderColor: s.color } : {}}>
+                            <Ic size={11} /> {s.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* CHAT */}
+                    <div className="adm-fb-chat">
+                      {/* Primeira mensagem do cliente */}
+                      <div className="adm-fb-msg-row left">
+                        <div className="adm-fb-msg-label">
+                          {active.user_name}
                           {active.rating && (
-                            <span style={{ marginLeft: 10, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                            <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 1 }}>
                               {[...Array(5)].map((_, i) => (
-                                <Star key={i} size={11} fill={i < active.rating ? '#FBBF24' : 'transparent'} color={i < active.rating ? '#F59E0B' : '#CBD5E1'} />
+                                <Star key={i} size={9} fill={i < active.rating ? '#FBBF24' : 'transparent'} color={i < active.rating ? '#F59E0B' : '#CBD5E1'} />
                               ))}
                             </span>
                           )}
                         </div>
-                        <div style={{ background: '#FAFAFC', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', fontSize: 14, lineHeight: 1.6, color: '#2D2B45', whiteSpace: 'pre-wrap' }}>
-                          {active.message}
-                        </div>
+                        <div className="adm-fb-bubble client">{active.message}</div>
+                        <div className="adm-fb-msg-time">{new Date(active.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
                       </div>
 
-                      {/* Status */}
-                      <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                          Status
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {STATUSES.map(s => {
-                            const Ic = s.icon
-                            const isCurr = active.status === s.value
-                            return (
-                              <button key={s.value}
-                                onClick={() => saveStatus(s.value)}
-                                disabled={saving}
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                                  padding: '6px 12px', borderRadius: 999,
-                                  border: `1.5px solid ${isCurr ? s.color : 'var(--border)'}`,
-                                  background: isCurr ? s.bg : '#fff',
-                                  color: isCurr ? s.color : 'var(--text-secondary)',
-                                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                                  transition: 'all 0.15s',
-                                }}>
-                                <Ic size={11} /> {s.label}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
+                      {/* Conversa */}
+                      {messages.map(m => {
+                        const isAdm = m.sender_type === 'adm'
+                        return (
+                          <div key={m.id} className={`adm-fb-msg-row ${isAdm ? 'right' : 'left'}`}>
+                            <div className="adm-fb-msg-label">{m.sender_name || (isAdm ? 'Suporte' : 'Cliente')}</div>
+                            <div className={`adm-fb-bubble ${isAdm ? 'adm' : 'client'}`}>{m.message}</div>
+                            <div className="adm-fb-msg-time">{new Date(m.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
+                          </div>
+                        )
+                      })}
+                      {loadingMsgs && <div style={{ textAlign:'center', color:'var(--text-muted)', fontSize:12, padding: 12 }}>Carregando...</div>}
+                    </div>
 
-                      {/* Resposta */}
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                          Resposta do time
-                        </div>
-                        <textarea
-                          value={response}
-                          onChange={e => setResponse(e.target.value)}
-                          placeholder="Conta pro cliente o que vai rolar com esse feedback..."
-                          rows={5}
-                          style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 10, padding: '12px 14px', fontSize: 14, lineHeight: 1.55, fontFamily: 'inherit', outline: 'none', resize: 'vertical', minHeight: 120, background: '#FAFAFC' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-                          <button onClick={saveResponse} disabled={saving}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#7C3AED', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
-                            <Send size={13} /> {saving ? 'Salvando...' : 'Salvar resposta'}
-                          </button>
-                        </div>
-                      </div>
+                    {/* Input */}
+                    <div className="adm-fb-composer">
+                      <textarea
+                        value={response}
+                        onChange={e => setResponse(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+                        placeholder="Responda o cliente..."
+                        rows={2}
+                      />
+                      <button onClick={sendMessage} disabled={saving || !response.trim()}
+                        className="adm-fb-send"
+                        title="Enter pra enviar · Shift+Enter pra quebrar linha">
+                        <Send size={15} />
+                      </button>
                     </div>
                   </>
                 )
