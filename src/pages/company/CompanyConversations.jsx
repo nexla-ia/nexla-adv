@@ -1613,7 +1613,11 @@ export default function CompanyConversations() {
                             {isAtendente && !isEditing && !hasOnlyMedia && (
                               <button
                                 className="msg-edit-btn"
-                                onClick={() => setEditingMsg({ id: msg.id, id_mensagem: msg.id_mensagem, newText: displayContent })}
+                                onClick={() => {
+                                  // Strip prefixo "Nome: " ao iniciar edição (só fica o conteúdo)
+                                  const clean = displayContent.replace(/^[^\n:]{1,40}:\s+/, '')
+                                  setEditingMsg({ id: msg.id, id_mensagem: msg.id_mensagem, newText: clean })
+                                }}
                                 title="Editar mensagem"
                                 style={{
                                   position: 'absolute', top: -10, right: -10,
