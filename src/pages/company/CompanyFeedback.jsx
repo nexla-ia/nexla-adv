@@ -117,36 +117,8 @@ export default function CompanyFeedback() {
       message: msgText,
     }).select().single()
 
-    if (error) {
-      setSubmitting(false)
-      setErrMsg('Não rolou enviar: ' + error.message); return
-    }
-
-    // 2) Cria ticket de suporte (cai na central de chamados do ADM)
-    const subject = `[${catLabel}] ${msgText.slice(0, 60)}${msgText.length > 60 ? '…' : ''}`
-    const fullMessage = rating
-      ? `${msgText}\n\n⭐ Nota: ${rating}/5`
-      : msgText
-    const { data: ticket } = await supabase.from('support_tickets').insert({
-      company_id: companyId,
-      subject,
-      status: 'open',
-      created_by_user_id: userId,
-      created_by_name: userName,
-      last_sender: 'company',
-    }).select().single()
-
-    if (ticket?.id) {
-      await supabase.from('support_messages').insert({
-        ticket_id: ticket.id,
-        sender_type: 'company',
-        sender_user_id: userId,
-        sender_name: userName,
-        message: fullMessage,
-      })
-    }
-
     setSubmitting(false)
+    if (error) { setErrMsg('Não rolou enviar: ' + error.message); return }
     setMessage(''); setRating(0); setHoverRating(0); setCategory('sugestao')
     setSentToast(true); setTimeout(() => setSentToast(false), 3500)
   }

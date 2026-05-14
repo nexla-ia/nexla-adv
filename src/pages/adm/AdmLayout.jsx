@@ -1,7 +1,7 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
-import { LayoutDashboard, Building2, Users, Eye, Activity, Headset, Hourglass, Telescope } from 'lucide-react'
+import { LayoutDashboard, Building2, Users, Eye, Activity, Headset, Hourglass, Telescope, MessageSquareHeart } from 'lucide-react'
 import './Adm.css'
 
 const links = [
@@ -9,6 +9,7 @@ const links = [
   { to: '/adm/empresas',            icon: Building2,       label: 'Empresas'  },
   { to: '/adm/analise',             icon: Telescope,       label: 'Análise 360°' },
   { to: '/adm/suporte',             icon: Headset,         label: 'Suporte'   },
+  { to: '/adm/feedback',            icon: MessageSquareHeart, label: 'Feedback' },
 ]
 
 export default function AdmLayout() {
