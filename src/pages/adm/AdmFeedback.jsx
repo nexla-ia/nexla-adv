@@ -52,7 +52,7 @@ export default function AdmFeedback() {
   const { db, session } = useAuth()
   const [list, setList] = useState([])
   const [activeId, setActiveId] = useState(null)
-  const [filter, setFilter] = useState('novo')
+  const [filter, setFilter] = useState('all')
   const [catFilter, setCatFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -98,11 +98,12 @@ export default function AdmFeedback() {
 
   const counts = useMemo(() => ({
     all: list.length,
-    novo: list.filter(f => f.status === 'novo').length,
-    em_analise: list.filter(f => f.status === 'em_analise').length,
-    planejado: list.filter(f => f.status === 'planejado').length,
-    feito: list.filter(f => f.status === 'feito').length,
-    recusado: list.filter(f => f.status === 'recusado').length,
+    sugestao: list.filter(f => f.category === 'sugestao').length,
+    bug: list.filter(f => f.category === 'bug').length,
+    elogio: list.filter(f => f.category === 'elogio').length,
+    duvida: list.filter(f => f.category === 'duvida').length,
+    outro: list.filter(f => f.category === 'outro').length,
+    semana: list.filter(f => (Date.now() - new Date(f.created_at).getTime()) < 7*24*3600_000).length,
   }), [list])
 
   const active = useMemo(() => list.find(f => f.id === activeId), [list, activeId])
@@ -121,16 +122,20 @@ export default function AdmFeedback() {
         </div>
         <div className="adm-fb-hero-stats">
           <div className="adm-fb-hero-stat">
-            <div className="adm-fb-hero-stat-num">{counts.novo}</div>
-            <div className="adm-fb-hero-stat-lbl">Novos</div>
+            <div className="adm-fb-hero-stat-num">{counts.all}</div>
+            <div className="adm-fb-hero-stat-lbl">Total</div>
           </div>
           <div className="adm-fb-hero-stat">
-            <div className="adm-fb-hero-stat-num">{counts.em_analise + counts.planejado}</div>
-            <div className="adm-fb-hero-stat-lbl">Em análise</div>
+            <div className="adm-fb-hero-stat-num">{counts.semana}</div>
+            <div className="adm-fb-hero-stat-lbl">Esta semana</div>
           </div>
           <div className="adm-fb-hero-stat">
-            <div className="adm-fb-hero-stat-num">{counts.feito}</div>
-            <div className="adm-fb-hero-stat-lbl">Implementados</div>
+            <div className="adm-fb-hero-stat-num">{counts.bug}</div>
+            <div className="adm-fb-hero-stat-lbl">Bugs</div>
+          </div>
+          <div className="adm-fb-hero-stat">
+            <div className="adm-fb-hero-stat-num">{counts.sugestao}</div>
+            <div className="adm-fb-hero-stat-lbl">Sugestões</div>
           </div>
           <button className="adm-fb-hero-refresh" onClick={load} title="Recarregar" disabled={loading}>
             <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
@@ -146,22 +151,8 @@ export default function AdmFeedback() {
             <Search size={14} />
             <input placeholder="Empresa, mensagem ou usuário..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="adm-fb-list-filters">
-            {[
-              { v: 'novo', label: 'Novos' },
-              { v: 'em_analise', label: 'Em análise' },
-              { v: 'planejado', label: 'Roadmap' },
-              { v: 'feito', label: 'Feitos' },
-              { v: 'all', label: 'Todos' },
-            ].map(f => (
-              <button key={f.v} onClick={() => setFilter(f.v)} className={filter === f.v ? 'active' : ''}>
-                {f.label} ({counts[f.v]})
-              </button>
-            ))}
-          </div>
-
           {/* Filtro categoria */}
-          <div className="adm-fb-list-filters" style={{ marginTop: -4 }}>
+          <div className="adm-fb-list-filters">
             <button onClick={() => setCatFilter('all')} className={catFilter === 'all' ? 'active' : ''}>Todas</button>
             {Object.entries(CATEGORIES).map(([k, c]) => {
               const Ic = c.icon
