@@ -804,22 +804,22 @@ export default function CompanyConversations() {
       : m))
 
     // 3) Dispara webhook n8n pra editar no WhatsApp
-    // id_mensagem = ID do WhatsApp (vem do banco), NÃO o id interno do row
-    if (editingMsg.id_mensagem) {
-      fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexlaeditar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome_instancia: apiInstancia || instance,
-          contato: selected.session_id,
-          id_mensagem: editingMsg.id_mensagem,
-          nova_mensagem: newText,
-          instancia: instance,
-        }),
-      }).catch(e => console.warn('webhook editar:', e))
-    } else {
-      console.warn('id_mensagem ausente — webhook nao disparado')
+    // id_mensagem = ID do WhatsApp (do banco). db_id = id do row (fallback)
+    const webhookBody = {
+      nome_instancia: apiInstancia || instance,
+      contato: selected.session_id,
+      id_mensagem: editingMsg.id_mensagem || null,
+      db_id: editingMsg.id,
+      nova_mensagem: newText,
+      instancia: instance,
     }
+    console.log('[editar] webhook payload:', webhookBody)
+    fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexlaeditar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(webhookBody),
+    }).then(r => console.log('[editar] webhook status:', r.status))
+      .catch(e => console.warn('[editar] webhook erro:', e))
 
     setSavingEdit(false)
     setEditingMsg(null)
