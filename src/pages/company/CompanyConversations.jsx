@@ -907,7 +907,36 @@ export default function CompanyConversations() {
           sender_name: session?.user?.name,
           sender_email: session?.user?.email,
         }),
-      }).catch(e => console.warn('webhook envio:', e))
+      })
+      .then(r => r.text())
+      .then(async raw => {
+        // n8n retorna 3 linhas: instancia, mensagem, id_mensagem
+        const lines = (raw || '').split('\n').map(l => l.trim()).filter(Boolean)
+        if (lines.length < 3) { console.warn('[envio] resposta n8n inesperada:', raw); return }
+        const [respInstancia, respMensagem, respIdMensagem] = lines
+        if (!respIdMensagem) return
+        // Acha a linha mais recente em mensagens_geral matching (instancia + numero + mensagem)
+        const { data: rows, error: findErr } = await supabase
+          .from('mensagens_geral')
+          .select('id')
+          .eq('instancia', respInstancia)
+          .eq('numero', selected.session_id)
+          .eq('type', 'atendente')
+          .is('id_mensagem', null)
+          .like('mensagem', `%${respMensagem}`)
+          .order('id', { ascending: false })
+          .limit(1)
+        if (findErr || !rows?.length) {
+          console.warn('[envio] linha nao encontrada pra atualizar id_mensagem:', { respInstancia, respMensagem, findErr })
+          return
+        }
+        const rowId = rows[0].id
+        await supabase.from('mensagens_geral').update({ id_mensagem: respIdMensagem }).eq('id', rowId)
+        // Atualiza estado local pra edição funcionar imediatamente
+        setMessages(prev => prev.map(m => m.id === rowId ? { ...m, id_mensagem: respIdMensagem } : m))
+        console.log('[envio] id_mensagem gravado:', respIdMensagem, 'row:', rowId)
+      })
+      .catch(e => console.warn('webhook envio:', e))
     } finally {
       setSending(false)
     }
