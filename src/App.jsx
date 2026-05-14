@@ -24,6 +24,7 @@ import CompanyCatalog from './pages/company/CompanyCatalog'
 import CompanyTutorial from './pages/company/CompanyTutorial'
 import CompanyInstagram from './pages/company/CompanyInstagram'
 import CompanyNews from './pages/company/CompanyNews'
+import CompanyFeedback from './pages/company/CompanyFeedback'
 import CompanyMetrics from './pages/company/CompanyMetrics'
 import CompanyAdmin from './pages/company/CompanyAdmin'
 import CompanySeguranca from './pages/company/CompanySeguranca'
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="tutorial" element={<CompanyTutorial />} />
             <Route path="instagram" element={<CompanyInstagram />} />
             <Route path="novidades" element={<CompanyNews />} />
+            <Route path="feedback" element={<CompanyFeedback />} />
             <Route path="alertas" element={<CompanyAlerts />} />
             <Route path="metricas" element={<CompanyMetrics />} />
             <Route path="admin" element={<CompanyAdmin />} />
