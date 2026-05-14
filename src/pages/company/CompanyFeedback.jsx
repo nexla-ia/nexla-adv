@@ -101,16 +101,52 @@ export default function CompanyFeedback() {
       setErrMsg('Dá uma nota antes de mandar — ajuda a gente priorizar'); return
     }
     setSubmitting(true)
-    const { error } = await supabase.from('feedbacks').insert({
+    const userId = session?.user?.id || null
+    const userName = session?.user?.name || 'Anônimo'
+    const userEmail = session?.user?.email || ''
+    const msgText = message.trim()
+    const catLabel = CATEGORIES.find(c => c.value === category)?.label || category
+
+    // 1) Salva no histórico de feedbacks (próprio cliente vê)
+    const { data: fb, error } = await supabase.from('feedbacks').insert({
       company_id: companyId,
-      user_id:    session?.user?.id || null,
-      user_name:  session?.user?.name || 'Anônimo',
-      user_email: session?.user?.email || '',
+      user_id: userId,
+      user_name: userName,
+      user_email: userEmail,
       category, rating: rating || null,
-      message: message.trim(),
-    })
+      message: msgText,
+    }).select().single()
+
+    if (error) {
+      setSubmitting(false)
+      setErrMsg('Não rolou enviar: ' + error.message); return
+    }
+
+    // 2) Cria ticket de suporte (cai na central de chamados do ADM)
+    const subject = `[${catLabel}] ${msgText.slice(0, 60)}${msgText.length > 60 ? '…' : ''}`
+    const fullMessage = rating
+      ? `${msgText}\n\n⭐ Nota: ${rating}/5`
+      : msgText
+    const { data: ticket } = await supabase.from('support_tickets').insert({
+      company_id: companyId,
+      subject,
+      status: 'open',
+      created_by_user_id: userId,
+      created_by_name: userName,
+      last_sender: 'company',
+    }).select().single()
+
+    if (ticket?.id) {
+      await supabase.from('support_messages').insert({
+        ticket_id: ticket.id,
+        sender_type: 'company',
+        sender_user_id: userId,
+        sender_name: userName,
+        message: fullMessage,
+      })
+    }
+
     setSubmitting(false)
-    if (error) { setErrMsg('Não rolou enviar: ' + error.message); return }
     setMessage(''); setRating(0); setHoverRating(0); setCategory('sugestao')
     setSentToast(true); setTimeout(() => setSentToast(false), 3500)
   }
