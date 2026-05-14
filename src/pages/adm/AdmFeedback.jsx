@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import {
   MessageSquareHeart, Search, Lightbulb, Bug, Heart, HelpCircle, MoreHorizontal,
   CheckCircle2, Clock, Sparkles, MessageCircle, ArrowRight, RefreshCw, Star,
-  Building2, Send,
+  Building2,
 } from 'lucide-react'
 import './AdmFeedback.css'
 
@@ -56,10 +56,6 @@ export default function AdmFeedback() {
   const [catFilter, setCatFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [response, setResponse] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [loadingMsgs, setLoadingMsgs] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -111,71 +107,6 @@ export default function AdmFeedback() {
 
   const active = useMemo(() => list.find(f => f.id === activeId), [list, activeId])
 
-  useEffect(() => {
-    if (!active) { setMessages([]); return }
-    setLoadingMsgs(true)
-    supabase.from('feedback_messages').select('*')
-      .eq('feedback_id', active.id)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        setMessages(data || [])
-        setLoadingMsgs(false)
-      })
-    setResponse('')
-  }, [activeId])
-
-  // Realtime: mensagens
-  useEffect(() => {
-    if (!active) return
-    const ch = supabase.channel(`fb-msgs-${active.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback_messages', filter: `feedback_id=eq.${active.id}` },
-        (p) => setMessages(prev => prev.find(m => m.id === p.new.id) ? prev : [...prev, p.new]))
-      .subscribe()
-    return () => supabase.removeChannel(ch)
-  }, [activeId])
-
-  async function sendMessage() {
-    if (!active || !response.trim()) return
-    setSaving(true)
-    const text = response.trim()
-    const { data } = await supabase.from('feedback_messages').insert({
-      feedback_id: active.id,
-      sender_type: 'adm',
-      sender_name: session?.user?.name || 'Suporte',
-      message: text,
-    }).select().single()
-    if (data) setMessages(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data])
-    // Auto-move pra em_analise se era novo
-    if (active.status === 'novo') {
-      await supabase.from('feedbacks').update({ status: 'em_analise', adm_response: text }).eq('id', active.id)
-      setList(prev => prev.map(f => f.id === active.id ? { ...f, status: 'em_analise', adm_response: text } : f))
-    } else if (!active.adm_response) {
-      await supabase.from('feedbacks').update({ adm_response: text }).eq('id', active.id)
-      setList(prev => prev.map(f => f.id === active.id ? { ...f, adm_response: text } : f))
-    }
-    setResponse('')
-    setSaving(false)
-  }
-
-  async function saveStatus(status) {
-    if (!active) return
-    setSaving(true)
-    await supabase.from('feedbacks').update({ status }).eq('id', active.id)
-    setList(prev => prev.map(f => f.id === active.id ? { ...f, status } : f))
-    setSaving(false)
-  }
-
-  async function saveResponse() {
-    if (!active) return
-    setSaving(true)
-    const newStatus = active.status === 'novo' ? 'em_analise' : active.status
-    await supabase.from('feedbacks').update({
-      adm_response: response.trim() || null,
-      status: newStatus,
-    }).eq('id', active.id)
-    setList(prev => prev.map(f => f.id === active.id ? { ...f, adm_response: response.trim() || null, status: newStatus } : f))
-    setSaving(false)
-  }
 
   return (
     <div className="adm-fb-root">
@@ -325,69 +256,46 @@ export default function AdmFeedback() {
                       </span>
                     </header>
 
-                    {/* Status pills */}
-                    <div className="adm-fb-statusbar">
-                      {STATUSES.map(s => {
-                        const Ic = s.icon
-                        const isCurr = active.status === s.value
-                        return (
-                          <button key={s.value}
-                            onClick={() => saveStatus(s.value)}
-                            disabled={saving}
-                            className={`adm-fb-status-pill ${isCurr ? 'active' : ''}`}
-                            style={isCurr ? { background: s.bg, color: s.color, borderColor: s.color } : {}}>
-                            <Ic size={11} /> {s.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    {/* CHAT */}
-                    <div className="adm-fb-chat">
-                      {/* Primeira mensagem do cliente */}
-                      <div className="adm-fb-msg-row left">
-                        <div className="adm-fb-msg-label">
-                          {active.user_name}
-                          {active.rating && (
-                            <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} size={9} fill={i < active.rating ? '#FBBF24' : 'transparent'} color={i < active.rating ? '#F59E0B' : '#CBD5E1'} />
-                              ))}
-                            </span>
-                          )}
+                    {/* Leitura: mensagem + rating + categoria/status */}
+                    <div className="adm-fb-readbody">
+                      {active.rating && (
+                        <div className="adm-fb-rating">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={18} fill={i < active.rating ? '#FBBF24' : 'transparent'} color={i < active.rating ? '#F59E0B' : '#CBD5E1'} />
+                          ))}
+                          <span className="adm-fb-rating-num">{active.rating}/5</span>
                         </div>
-                        <div className="adm-fb-bubble client">{active.message}</div>
-                        <div className="adm-fb-msg-time">{new Date(active.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
+                      )}
+
+                      <div className="adm-fb-readmsg">
+                        <div className="adm-fb-readmsg-label">Mensagem</div>
+                        <div className="adm-fb-readmsg-text">{active.message}</div>
                       </div>
 
-                      {/* Conversa */}
-                      {messages.map(m => {
-                        const isAdm = m.sender_type === 'adm'
-                        return (
-                          <div key={m.id} className={`adm-fb-msg-row ${isAdm ? 'right' : 'left'}`}>
-                            <div className="adm-fb-msg-label">{m.sender_name || (isAdm ? 'Suporte' : 'Cliente')}</div>
-                            <div className={`adm-fb-bubble ${isAdm ? 'adm' : 'client'}`}>{m.message}</div>
-                            <div className="adm-fb-msg-time">{new Date(m.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
-                          </div>
-                        )
-                      })}
-                      {loadingMsgs && <div style={{ textAlign:'center', color:'var(--text-muted)', fontSize:12, padding: 12 }}>Carregando...</div>}
-                    </div>
-
-                    {/* Input */}
-                    <div className="adm-fb-composer">
-                      <textarea
-                        value={response}
-                        onChange={e => setResponse(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                        placeholder="Responda o cliente..."
-                        rows={2}
-                      />
-                      <button onClick={sendMessage} disabled={saving || !response.trim()}
-                        className="adm-fb-send"
-                        title="Enter pra enviar · Shift+Enter pra quebrar linha">
-                        <Send size={15} />
-                      </button>
+                      <div className="adm-fb-readmeta">
+                        <div>
+                          <div className="adm-fb-meta-label">Categoria</div>
+                          <span className="adm-fb-meta-pill" style={{ color: cat.color, background: cat.bg }}>
+                            <CIcon size={12} /> {cat.label}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="adm-fb-meta-label">Status</div>
+                          {(() => {
+                            const st = STATUSES.find(s => s.value === active.status) || STATUSES[0]
+                            const Si = st.icon
+                            return (
+                              <span className="adm-fb-meta-pill" style={{ color: st.color, background: st.bg }}>
+                                <Si size={12} /> {st.label}
+                              </span>
+                            )
+                          })()}
+                        </div>
+                        <div>
+                          <div className="adm-fb-meta-label">Enviado em</div>
+                          <div className="adm-fb-meta-value">{new Date(active.created_at).toLocaleString('pt-BR')}</div>
+                        </div>
+                      </div>
                     </div>
                   </>
                 )

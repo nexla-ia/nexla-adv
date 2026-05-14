@@ -300,39 +300,9 @@ function FeedbackForm({ category, setCategory, rating, setRating, hoverRating, s
 }
 
 function FeedbackDetail({ f, onBack }) {
-  const { session } = useAuth()
   const cat = CATEGORIES.find(c => c.value === f.category) || CATEGORIES[CATEGORIES.length - 1]
   const status = STATUS_META[f.status] || STATUS_META.novo
   const SIcon = status.icon; const CIcon = cat.icon
-  const [msgs, setMsgs] = useState([])
-  const [reply, setReply] = useState('')
-  const [sendingReply, setSendingReply] = useState(false)
-
-  useEffect(() => {
-    supabase.from('feedback_messages').select('*')
-      .eq('feedback_id', f.id).order('created_at', { ascending: true })
-      .then(({ data }) => setMsgs(data || []))
-    const ch = supabase.channel(`fb-msgs-c-${f.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback_messages', filter: `feedback_id=eq.${f.id}` },
-        (p) => setMsgs(prev => prev.find(m => m.id === p.new.id) ? prev : [...prev, p.new]))
-      .subscribe()
-    return () => supabase.removeChannel(ch)
-  }, [f.id])
-
-  async function sendReply() {
-    const text = reply.trim()
-    if (!text) return
-    setSendingReply(true)
-    const { data } = await supabase.from('feedback_messages').insert({
-      feedback_id: f.id,
-      sender_type: 'company',
-      sender_name: session?.user?.name || 'Cliente',
-      message: text,
-    }).select().single()
-    if (data) setMsgs(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data])
-    setReply('')
-    setSendingReply(false)
-  }
   return (
     <article className="fb-release">
       <header className="fb-release-head" style={{ background: cat.softBg }}>
@@ -362,38 +332,19 @@ function FeedbackDetail({ f, onBack }) {
         <div className="fb-release-deco" style={{ background: cat.accent }} />
       </header>
       <div className="fb-detail-body">
-        {/* Mensagem original do cliente */}
-        <div className="fb-chat-row left">
-          <div className="fb-chat-label">Você</div>
-          <div className="fb-chat-bubble client">{f.message}</div>
-          <div className="fb-chat-time">{new Date(f.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
-        </div>
-        {/* Histórico de mensagens */}
-        {msgs.map(m => {
-          const isAdm = m.sender_type === 'adm'
-          return (
-            <div key={m.id} className={`fb-chat-row ${isAdm ? 'right' : 'left'}`}>
-              <div className="fb-chat-label">{isAdm ? `${m.sender_name || 'Suporte'} · NexlaADV` : 'Você'}</div>
-              <div className={`fb-chat-bubble ${isAdm ? 'adm' : 'client'}`}>{m.message}</div>
-              <div className="fb-chat-time">{new Date(m.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
+        <div className="fb-detail-intro"><MessagesSquare size={14} style={{ color: cat.accent }} /><span>Sua mensagem</span></div>
+        <div className="fb-detail-text">{f.message}</div>
+        {f.adm_response && (
+          <>
+            <div className="fb-detail-intro" style={{ marginTop: 22 }}>
+              <Sparkles size={14} style={{ color: '#0891B2' }} /><span>Recebido pelo time</span>
             </div>
-          )
-        })}
-        {!msgs.length && !f.adm_response && (
-          <div className="fb-detail-pending"><Clock size={13} /> Aguardando resposta do time</div>
+            <div className="fb-detail-pending"><Clock size={13} /> Obrigado! A gente leu seu feedback.</div>
+          </>
         )}
-      </div>
-      <div className="fb-detail-composer">
-        <textarea
-          value={reply}
-          onChange={e => setReply(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
-          placeholder="Responder..."
-          rows={1}
-        />
-        <button onClick={sendReply} disabled={sendingReply || !reply.trim()} className="fb-detail-send" style={{ background: cat.accent }}>
-          <Send size={14} />
-        </button>
+        {!f.adm_response && (
+          <div className="fb-detail-pending"><Clock size={13} /> A gente lê todos os feedbacks com carinho.</div>
+        )}
       </div>
       <footer className="fb-detail-foot">
         <button onClick={onBack} className="fb-detail-back"><Plus size={13} /> Mandar outro feedback</button>
