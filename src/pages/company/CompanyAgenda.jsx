@@ -885,15 +885,20 @@ export default function CompanyAgenda() {
                         const status = appt ? STATUS_OPTIONS.find(s => s.value === appt.status) : null
                         return (
                           <div key={i}
+                            title={!working ? 'Dia fora do atendimento desta agenda. Edite a agenda em "← Agendas" pra liberar este dia.' : ''}
                             onClick={() => working && (appt ? openEditAppt(appt) : openNewAppt(d, hhmm))}
                             style={{
                               minHeight: 46, borderLeft: '1px solid var(--border)',
-                              background: !working ? '#F9FAFB' : 'transparent',
+                              background: !working
+                                ? 'repeating-linear-gradient(45deg, #F8FAFC, #F8FAFC 6px, #F1F5F9 6px, #F1F5F9 12px)'
+                                : 'transparent',
                               cursor: working ? 'pointer' : 'not-allowed',
                               padding: 3, position: 'relative',
                             }}
                             onMouseEnter={e => { if (working && !appt) e.currentTarget.style.background = '#EFF6FF' }}
-                            onMouseLeave={e => { if (working && !appt) e.currentTarget.style.background = 'transparent' }}
+                            onMouseLeave={e => {
+                              if (working && !appt) e.currentTarget.style.background = 'transparent'
+                            }}
                           >
                             {appt && status && (
                               <div style={{
