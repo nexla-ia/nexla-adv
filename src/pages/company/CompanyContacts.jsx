@@ -135,7 +135,11 @@ export default function CompanyContacts() {
   async function handleCreate() {
     if (!newModal.nome?.trim()) { setErr('Nome é obrigatório'); return }
     setSaving(true)
-    const numero = newModal.numero?.toString().replace(/\D/g, '') || ''
+    let numero = newModal.numero?.toString().replace(/\D/g, '') || ''
+    // Adiciona 55 se digitou só DDD+número (badge +55 ja mostra)
+    if (numero && !numero.startsWith('55') && numero.length >= 10 && numero.length <= 11) {
+      numero = '55' + numero
+    }
     const { data, error } = await supabase.from('saved_contacts').insert({
       numero, instancia: instance,
       nome: newModal.nome.trim(),
@@ -398,14 +402,19 @@ export default function CompanyContacts() {
                       <Sparkles size={10} style={{ color: '#7C3AED' }} /> Já conversaram · não cadastrados
                     </div>
                     {phoneSuggestions.map(p => {
-                      // Remove 55 do display se tiver
-                      const display = p.startsWith('55') && p.length === 13
-                        ? p.slice(2, 4) + ' ' + p.slice(4, 9) + '-' + p.slice(9)
-                        : p.startsWith('55') && p.length === 12
-                          ? p.slice(2, 4) + ' ' + p.slice(4, 8) + '-' + p.slice(8)
-                          : p
+                      // Strip 55 prefix pra exibir e pra salvar (badge +55 já mostra)
+                      const noBR = p.startsWith('55') ? p.slice(2) : p
+                      const display = noBR.length === 11
+                        ? noBR.slice(0, 2) + ' ' + noBR.slice(2, 7) + '-' + noBR.slice(7)
+                        : noBR.length === 10
+                          ? noBR.slice(0, 2) + ' ' + noBR.slice(2, 6) + '-' + noBR.slice(6)
+                          : noBR
                       return (
-                        <button key={p} onClick={() => setNewModal(prev => ({ ...prev, numero: p }))}
+                        <button key={p} onMouseDown={e => {
+                            e.preventDefault()
+                            setNewModal(prev => ({ ...prev, numero: noBR }))
+                            setPhoneFocus(false)
+                          }}
                           style={{ width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 7, background: 'transparent', border: 'none', fontSize: 13, color: '#0F0E1B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}
                           onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
