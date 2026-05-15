@@ -125,8 +125,9 @@ export default function CompanyContacts() {
 
   const phoneSuggestions = useMemo(() => {
     const q = (newModal?.numero || '').replace(/\D/g, '')
-    if (!q || q.length < 3) return []
-    return chatPhones.filter(p => p.includes(q)).slice(0, 6)
+    // Sem input: mostra os 8 mais recentes. Com input: filtra
+    if (!q) return chatPhones.slice(0, 8)
+    return chatPhones.filter(p => p.includes(q)).slice(0, 8)
   }, [newModal?.numero, chatPhones])
 
   function openNew() { setNewModal({ nome: '', numero: '' }); setErr('') }
@@ -373,25 +374,46 @@ export default function CompanyContacts() {
               </div>
               <div style={{ position: 'relative' }}>
                 <label style={labelStyle}>Telefone (WhatsApp)</label>
-                <input className="nx-input" placeholder="Ex: 5561991234567"
-                  value={newModal.numero}
-                  onChange={e => setNewModal(p => ({ ...p, numero: e.target.value }))}
-                  onFocus={() => setPhoneFocus(true)}
-                  onBlur={() => setTimeout(() => setPhoneFocus(false), 180)}
-                />
+                <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    background: '#F1F5F9', border: '1px solid var(--border)',
+                    borderRight: 'none', borderRadius: '8px 0 0 8px',
+                    padding: '0 10px', fontSize: 13, fontWeight: 600,
+                    color: 'var(--text-secondary)',
+                  }}>+55</span>
+                  <input
+                    className="nx-input"
+                    style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
+                    placeholder="DDD + número (ex: 6991234567)"
+                    value={newModal.numero}
+                    onChange={e => setNewModal(p => ({ ...p, numero: e.target.value }))}
+                    onFocus={() => setPhoneFocus(true)}
+                    onBlur={() => setTimeout(() => setPhoneFocus(false), 180)}
+                  />
+                </div>
                 {phoneFocus && phoneSuggestions.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5, background: 'white', border: '1px solid var(--border)', borderRadius: 10, marginTop: 4, padding: 4, boxShadow: '0 12px 28px -10px rgba(15,14,27,0.18)', maxHeight: 220, overflowY: 'auto' }}>
-                    <div style={{ padding: '6px 10px 4px', fontSize: 10, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Sparkles size={10} /> Já conversou com o escritório
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5, background: 'white', border: '1px solid var(--border)', borderRadius: 10, marginTop: 4, padding: 4, boxShadow: '0 12px 28px -10px rgba(15,14,27,0.18)', maxHeight: 260, overflowY: 'auto' }}>
+                    <div style={{ padding: '8px 10px 6px', fontSize: 10, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5, borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
+                      <Sparkles size={10} style={{ color: '#7C3AED' }} /> Já conversaram · não cadastrados
                     </div>
-                    {phoneSuggestions.map(p => (
-                      <button key={p} onClick={() => setNewModal(prev => ({ ...prev, numero: p }))}
-                        style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: 7, background: 'transparent', border: 'none', fontFamily: 'monospace', fontSize: 13, color: '#0F0E1B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <Phone size={11} style={{ color: '#7C3AED' }} /> {p}
-                      </button>
-                    ))}
+                    {phoneSuggestions.map(p => {
+                      // Remove 55 do display se tiver
+                      const display = p.startsWith('55') && p.length === 13
+                        ? p.slice(2, 4) + ' ' + p.slice(4, 9) + '-' + p.slice(9)
+                        : p.startsWith('55') && p.length === 12
+                          ? p.slice(2, 4) + ' ' + p.slice(4, 8) + '-' + p.slice(8)
+                          : p
+                      return (
+                        <button key={p} onClick={() => setNewModal(prev => ({ ...prev, numero: p }))}
+                          style={{ width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 7, background: 'transparent', border: 'none', fontSize: 13, color: '#0F0E1B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <Phone size={12} style={{ color: '#7C3AED', flexShrink: 0 }} />
+                          <span style={{ fontFamily: 'monospace' }}>+55 {display}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
