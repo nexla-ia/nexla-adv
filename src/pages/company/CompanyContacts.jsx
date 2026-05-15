@@ -6,8 +6,23 @@ import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   Users, Search, Pencil, Trash2, X, Plus, Phone, Copy, Check, MessageSquare,
-  Mail, ShieldCheck, Sparkles, Tag,
+  Mail, ShieldCheck, Sparkles, Tag, ChevronDown,
 } from 'lucide-react'
+
+const COUNTRY_CODES = [
+  { code: '55',  flag: '🇧🇷', name: 'Brasil' },
+  { code: '1',   flag: '🇺🇸', name: 'EUA' },
+  { code: '351', flag: '🇵🇹', name: 'Portugal' },
+  { code: '34',  flag: '🇪🇸', name: 'Espanha' },
+  { code: '44',  flag: '🇬🇧', name: 'Reino Unido' },
+  { code: '49',  flag: '🇩🇪', name: 'Alemanha' },
+  { code: '33',  flag: '🇫🇷', name: 'França' },
+  { code: '39',  flag: '🇮🇹', name: 'Itália' },
+  { code: '54',  flag: '🇦🇷', name: 'Argentina' },
+  { code: '56',  flag: '🇨🇱', name: 'Chile' },
+  { code: '598', flag: '🇺🇾', name: 'Uruguai' },
+  { code: '595', flag: '🇵🇾', name: 'Paraguai' },
+]
 import './Company.css'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 
@@ -54,6 +69,8 @@ export default function CompanyContacts() {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deletingNow, setDeletingNow] = useState(false)
   const [phoneFocus, setPhoneFocus] = useState(false)
+  const [countryCode, setCountryCode] = useState('55')
+  const [showCountryDrop, setShowCountryDrop] = useState(false)
 
   useEffect(() => {
     if (!instance) return
@@ -66,11 +83,13 @@ export default function CompanyContacts() {
       if (pat) setPatients(pat)
       if (plans) setInsurancePlans(plans)
       if (msgs) {
-        const savedSet = new Set((pat || []).map(p => p.numero))
+        // Normaliza pra comparar: pega últimos 8 dígitos (ignora 9 extra BR + DDI)
+        const norm = (n) => (n || '').replace(/\D/g, '').slice(-8)
+        const savedKeys = new Set((pat || []).map(p => norm(p.numero)).filter(Boolean))
         const uniques = [...new Set(msgs.map(m =>
           m.numero?.replace(/@.*/, '').replace(/\D/g, '')
         ).filter(Boolean))]
-        const unsaved = uniques.filter(n => !savedSet.has(n) && !uniques.includes(n + '@g.us'))
+        const unsaved = uniques.filter(n => !savedKeys.has(norm(n)))
         setChatPhones(unsaved.slice(0, 200))
       }
       setLoading(false)
@@ -136,9 +155,9 @@ export default function CompanyContacts() {
     if (!newModal.nome?.trim()) { setErr('Nome é obrigatório'); return }
     setSaving(true)
     let numero = newModal.numero?.toString().replace(/\D/g, '') || ''
-    // Adiciona 55 se digitou só DDD+número (badge +55 ja mostra)
-    if (numero && !numero.startsWith('55') && numero.length >= 10 && numero.length <= 11) {
-      numero = '55' + numero
+    // Prepend código país selecionado (badge mostra)
+    if (numero && !numero.startsWith(countryCode)) {
+      numero = countryCode + numero
     }
     const { data, error } = await supabase.from('saved_contacts').insert({
       numero, instancia: instance,
@@ -378,14 +397,44 @@ export default function CompanyContacts() {
               </div>
               <div style={{ position: 'relative' }}>
                 <label style={labelStyle}>Telefone (WhatsApp)</label>
-                <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    background: '#F1F5F9', border: '1px solid var(--border)',
-                    borderRight: 'none', borderRadius: '8px 0 0 8px',
-                    padding: '0 10px', fontSize: 13, fontWeight: 600,
-                    color: 'var(--text-secondary)',
-                  }}>+55</span>
+                <div style={{ display: 'flex', alignItems: 'stretch', position: 'relative' }}>
+                  <button type="button"
+                    onClick={() => setShowCountryDrop(v => !v)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: '#F1F5F9', border: '1px solid var(--border)',
+                      borderRight: 'none', borderRadius: '8px 0 0 8px',
+                      padding: '0 10px', fontSize: 13, fontWeight: 600,
+                      color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>
+                    {COUNTRY_CODES.find(c => c.code === countryCode)?.flag || '🌐'} +{countryCode}
+                    <ChevronDown size={12} />
+                  </button>
+                  {showCountryDrop && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, zIndex: 10,
+                      background: '#fff', border: '1px solid var(--border)',
+                      borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                      marginTop: 4, minWidth: 220, maxHeight: 240, overflowY: 'auto',
+                    }}>
+                      {COUNTRY_CODES.map(c => (
+                        <button key={c.code} type="button"
+                          onClick={() => { setCountryCode(c.code); setShowCountryDrop(false) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            width: '100%', padding: '8px 12px', border: 'none',
+                            background: c.code === countryCode ? '#EFF6FF' : '#fff',
+                            cursor: 'pointer', fontSize: 13, textAlign: 'left',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                          onMouseLeave={e => e.currentTarget.style.background = c.code === countryCode ? '#EFF6FF' : '#fff'}>
+                          <span>{c.flag}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>+{c.code}</span>
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: 11 }}>{c.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <input
                     className="nx-input"
                     style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
