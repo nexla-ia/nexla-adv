@@ -130,13 +130,14 @@
   width: fit-content;
   animation: loginFadeUp 0.6s 0.1s cubic-bezier(0.22,1,0.36,1) both;
 }
-.login-brand-text span {
+.login-brand-text > span {
   font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 800;
   font-size: 20px;
   letter-spacing: -0.03em;
   display: block;
   color: var(--login-ink);
+  white-space: nowrap;
 }
 .login-brand-text small {
   font-family: 'Instrument Serif', serif;

@@ -1387,7 +1387,7 @@ export default function Landing() {
             <div className="lp-footer-brand">
               <Link to="/" className="lp-brand">
                 <div className="lp-brand-mark">
-                  <BrandMark size={32} />
+                  <BrandMark size={44} />
                 </div>
                 <div>
                   <span className="lp-brand-text">Advo<span style={{color:'#2563EB'}}>Sac</span></span>
