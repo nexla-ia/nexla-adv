@@ -25,9 +25,9 @@ export default function Sidebar({ links, role, open, onClose }) {
 
       <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
-          <BrandMark size={36} color="#C9A074" strokeWidth={1.5} />
+          <BrandMark size={36} />
           <div>
-            <div className="sidebar-brand-name">NexlaADV</div>
+            <div className="sidebar-brand-name">AdvoSac</div>
             <div className="sidebar-brand-tag">{role === 'adm' ? 'ADM Global' : 'Painel'}</div>
           </div>
           <button className="sidebar-close-btn" onClick={onClose}>

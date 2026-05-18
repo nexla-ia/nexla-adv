@@ -47,9 +47,9 @@ export default function Landing() {
         <div className="lp-nav-inner">
           <Link to="/" className="lp-brand" onClick={closeMobile}>
             <div className="lp-brand-mark">
-              <BrandMark size={32} color="#0F0E1B" strokeWidth={1.6} />
+              <BrandMark size={32} />
             </div>
-            <span className="lp-brand-text">NexlaAdv</span>
+            <span className="lp-brand-text">Advo<span style={{color:'#2563EB'}}>Sac</span></span>
           </Link>
 
           <div className="lp-nav-links">
@@ -398,7 +398,7 @@ export default function Landing() {
               <Sparkles size={14} />
             </div>
             <div>
-              <strong>Sofia é o coração do NexlaAdv.</strong> Você não compra só uma plataforma —
+              <strong>Sofia é o coração do AdvoSac.</strong> Você não compra só uma plataforma —
               você compra a IA atendente que a Nexla já validou em escritórios reais.
             </div>
             <a href="#planos" className="lp-sofia-foot-cta">
@@ -605,7 +605,7 @@ export default function Landing() {
               </div>
               <div className="lp-team-panel">
                 <div className="lp-team-panel-bar">
-                  <div className="lp-team-panel-title">Inbox NexlaAdv</div>
+                  <div className="lp-team-panel-title">Inbox AdvoSac</div>
                   <div className="lp-team-panel-meta">
                     <span className="lp-team-panel-pulse" />
                     8 conversas ativas
@@ -788,7 +788,7 @@ export default function Landing() {
             title={<>Saiba exatamente de onde<br /><em>cada cliente veio</em></>}
           />
           <p className="lp-attr-intro">
-            Pare de pagar ad sem saber se trouxe cliente. A NexlaAdv
+            Pare de pagar ad sem saber se trouxe cliente. O AdvoSac
             rastreia origem do lead automaticamente — do clique no anúncio
             até a atendimento realizada.
           </p>
@@ -1327,7 +1327,7 @@ export default function Landing() {
 
           {/* CTA único pro comercial */}
           <div className="lp-pricing-cta">
-            <a href="https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20a%20NexlaAdv" target="_blank" rel="noreferrer" className="lp-btn-primary lp-btn-large">
+            <a href="https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20AdvoSac" target="_blank" rel="noreferrer" className="lp-btn-primary lp-btn-large">
               Falar com o comercial agora
               <ArrowRight size={18} />
             </a>
@@ -1387,10 +1387,10 @@ export default function Landing() {
             <div className="lp-footer-brand">
               <Link to="/" className="lp-brand">
                 <div className="lp-brand-mark">
-                  <BrandMark size={32} color="#C9A074" strokeWidth={1.6} />
+                  <BrandMark size={32} />
                 </div>
                 <div>
-                  <span className="lp-brand-text">NexlaAdv</span>
+                  <span className="lp-brand-text">Advo<span style={{color:'#2563EB'}}>Sac</span></span>
                   <span className="lp-brand-tagline">Ética e eficiência não brigam</span>
                 </div>
               </Link>
@@ -1416,11 +1416,11 @@ export default function Landing() {
             <div className="lp-footer-col">
               <h4>Falar com a gente</h4>
               <a href="https://wa.me/5561999999999"><Phone size={12} /> WhatsApp</a>
-              <a href="mailto:contato@nexlaadv.com.br"><Mail size={12} /> contato@nexlaadv.com.br</a>
+              <a href="mailto:contato@advosac.com.br"><Mail size={12} /> contato@advosac.com.br</a>
             </div>
           </div>
           <div className="lp-footer-bottom">
-            <span>© 2026 NexlaAdv · Todos os direitos reservados</span>
+            <span>© 2026 AdvoSac · Todos os direitos reservados</span>
             <span className="lp-footer-made">Ética e eficiência não brigam.</span>
           </div>
         </div>
@@ -1766,7 +1766,7 @@ function PricingTier({ name, tier, tagline, features, featured }) {
         ))}
       </ul>
       <a
-        href="https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20plano%20NexlaAdv"
+        href="https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20plano%20AdvoSac"
         target="_blank"
         rel="noreferrer"
         className={`lp-plan-cta ${featured ? 'featured' : ''}`}>
@@ -1840,7 +1840,7 @@ function DashboardMock() {
           <div className="lp-mock-dots">
             <span /><span /><span />
           </div>
-          <div className="lp-mock-url">app.nexlaadv.com / {view}</div>
+          <div className="lp-mock-url">app.advosac.com / {view}</div>
         </div>
         <div className="lp-mock-body">
           <div className="lp-mock-side">

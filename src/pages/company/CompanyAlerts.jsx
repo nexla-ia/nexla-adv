@@ -94,11 +94,11 @@ export default function CompanyAlerts() {
 
   useEffect(() => {
     if (unreadCount > 0) {
-      document.title = `(${unreadCount}) Alertas — NexlaADV`
+      document.title = `(${unreadCount}) Alertas — AdvoSac`
     } else {
-      document.title = 'NexlaADV'
+      document.title = 'AdvoSac'
     }
-    return () => { document.title = 'NexlaADV' }
+    return () => { document.title = 'AdvoSac' }
   }, [unreadCount])
 
   useEffect(() => {

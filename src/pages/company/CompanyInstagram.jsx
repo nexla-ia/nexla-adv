@@ -904,7 +904,7 @@ function InstagramLockedScreen({ company }) {
     const userName = session?.user?.name || 'Cliente'
     const subject  = 'Liberação do Instagram Direct'
     const message  =
-      `Olá, time da NexlaADV! 👋\n\n` +
+      `Olá, time da AdvoSac! 👋\n\n` +
       `Sou do escritório ${company?.name || ''} e gostaria de liberar o ` +
       `Instagram Direct na plataforma.\n\n` +
       `Podemos avançar com o setup (Meta Business API + n8n)?`
@@ -1054,7 +1054,7 @@ function InstagramLockedScreen({ company }) {
           </div>
         ) : (
           <a
-            href={`https://wa.me/556999300101?text=${encodeURIComponent(`Olá! Sou do escritório ${company?.name || ''} e gostaria de liberar o Instagram Direct na NexlaADV.`)}`}
+            href={`https://wa.me/556999300101?text=${encodeURIComponent(`Olá! Sou do escritório ${company?.name || ''} e gostaria de liberar o Instagram Direct na AdvoSac.`)}`}
             target="_blank" rel="noreferrer"
             className="ig-locked-cta"
           >

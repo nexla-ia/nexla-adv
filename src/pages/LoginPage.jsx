@@ -42,9 +42,9 @@ export default function LoginPage() {
         {/* ── Coluna esquerda — branding (oculta no mobile) ── */}
         <div className="login-left">
           <Link to="/" className="login-brand">
-            <BrandMark size={34} color="#0F0E1B" strokeWidth={1.6} />
+            <BrandMark size={34} />
             <div className="login-brand-text">
-              <span>NexlaADV</span>
+              <span>Advo<span style={{color:'#2563EB'}}>Sac</span></span>
               <small>Ética e eficiência não brigam</small>
             </div>
           </Link>
@@ -89,10 +89,10 @@ export default function LoginPage() {
             {/* Logo só no mobile */}
             <div className="login-mobile-brand">
               <div className="login-mobile-brand-mark">
-                <BrandMark size={20} color="#0F0E1B" strokeWidth={1.8} />
+                <BrandMark size={20} />
               </div>
               <div>
-                <div className="login-mobile-brand-text">NexlaADV</div>
+                <div className="login-mobile-brand-text">Advo<span style={{color:'#2563EB'}}>Sac</span></div>
                 <span className="login-mobile-brand-sub">Ética e eficiência não brigam</span>
               </div>
             </div>
@@ -164,7 +164,7 @@ export default function LoginPage() {
                 : tab === 'adm' ? 'Acesso administrativo' : 'Entrar no painel →'}
             </button>
 
-            <div className="login-footer">NexlaADV · Plataforma exclusiva · Acesso restrito</div>
+            <div className="login-footer">AdvoSac · Plataforma exclusiva · Acesso restrito</div>
           </form>
         </div>
       </div>

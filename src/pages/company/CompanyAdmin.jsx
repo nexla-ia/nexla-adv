@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -335,7 +335,7 @@ export default function CompanyAdmin() {
             </div>
             {limits.plan !== 'Business' && (
               <a
-                href={`https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20fazer%20upgrade%20do%20plano%20${limits.plan}%20da%20NexlaADV.`}
+                href={`https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20fazer%20upgrade%20do%20plano%20${limits.plan}%20da%20AdvoSac.`}
                 target="_blank" rel="noreferrer"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
