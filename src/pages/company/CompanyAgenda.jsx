@@ -478,21 +478,6 @@ export default function CompanyAgenda() {
         }
       }
 
-      // Validação: conflito com outro agendamento do mesmo profissional
-      const conflict = appointments.find(a => {
-        if (a.id === apptModal.id) return false
-        if (a.professional_id !== apptModal.professional_id) return false
-        if (a.status === 'cancelado') return false
-        const aStart = new Date(a.starts_at).getTime()
-        const aEnd = aStart + (a.duration_minutes || 30) * 60000
-        return startsAt.getTime() < aEnd && aStart < endsAt.getTime()
-      })
-      if (conflict) {
-        const cStart = new Date(conflict.starts_at)
-        const cTime = cStart.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        setApptErr(`Conflito de horário: ${conflict.contact_nome} já está marcado às ${cTime} com este profissional.`)
-        return
-      }
     }
 
     setSavingAppt(true)
