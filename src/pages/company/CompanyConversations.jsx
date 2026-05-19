@@ -493,14 +493,21 @@ export default function CompanyConversations() {
 
 
           if (selectedRef.current?.session_id === sid) {
-            setMessages(msgs => [...msgs, {
-              id: row.id,
-              id_mensagem: row.id_mensagem || null,
-              type: getMessageType(row),
-              content: getMessageContent(row),
-              base64: row.base64 || null,
-              ts,
-            }])
+            const type = getMessageType(row)
+            setMessages(msgs => {
+              // Dedup: já existe por id
+              if (msgs.some(m => m.id === row.id)) return msgs
+              // Se é mensagem do atendente, substitui o optimistic pendente
+              if (type === 'atendente') {
+                const optIdx = msgs.findIndex(m => m._optimistic)
+                if (optIdx !== -1) {
+                  const next = [...msgs]
+                  next[optIdx] = { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts }
+                  return next
+                }
+              }
+              return [...msgs, { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts }]
+            })
           }
         }
       )
@@ -882,6 +889,19 @@ export default function CompanyConversations() {
       // Salva com prefixo do atendente no banco (exibido no histórico)
       const mensagemPayload = `${attendantName}: ${rawPayload}`
       const mediaBase64 = audio?.base64 || file?.base64 || null
+
+      // Optimistic update: mostra a mensagem imediatamente sem esperar o Realtime round-trip
+      const optId = `opt-${Date.now()}`
+      setMessages(msgs => [...msgs, {
+        id: optId,
+        id_mensagem: null,
+        type: 'atendente',
+        content: mensagemPayload,
+        base64: mediaBase64,
+        ts: new Date().toISOString(),
+        _optimistic: true,
+      }])
+
       const { error: insErr } = await supabase.rpc('send_mensagem_geral', {
         p_instancia: instance,
         p_numero: selected.session_id,
@@ -938,8 +958,10 @@ export default function CompanyConversations() {
         }
         const rowId = rows[0].id
         await supabase.from('mensagens_geral').update({ id_mensagem: respIdMensagem }).eq('id', rowId)
-        // Atualiza estado local pra edição funcionar imediatamente
-        setMessages(prev => prev.map(m => m.id === rowId ? { ...m, id_mensagem: respIdMensagem } : m))
+        // Atualiza estado local pra edição funcionar imediatamente (inclui optimistic ainda pendente)
+        setMessages(prev => prev.map(m =>
+          (m.id === rowId || m._optimistic) ? { ...m, id: rowId, id_mensagem: respIdMensagem, _optimistic: false } : m
+        ))
         console.log('[envio] id_mensagem gravado:', respIdMensagem, 'row:', rowId)
       })
       .catch(e => console.warn('webhook envio:', e))
