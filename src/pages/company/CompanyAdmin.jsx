@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
 import LimitReachedModal from '../../components/LimitReachedModal'
 import { getEffectiveLimits, reachedLimit, upgradeMessage, formatLimit } from '../../lib/planLimits'
-import { Plus, X, UserMinus, RefreshCw, UserCheck, UserX, Pencil, QrCode, Wifi, WifiOff, LogOut, Trash2, Lock } from 'lucide-react'
+import { Plus, X, UserMinus, RefreshCw, UserCheck, UserX, Pencil, QrCode, Wifi, WifiOff, LogOut, Trash2, Lock, Bell, Check } from 'lucide-react'
 import './Company.css'
 
 const SECTOR_COLORS = ['#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#D97706', '#0891B2']
@@ -45,6 +45,13 @@ export default function CompanyAdmin() {
   const [sectorForm, setSectorForm]     = useState({ name: '', color: SECTOR_COLORS[0] })
   const [sectorErr, setSectorErr]       = useState('')
   const [assignModal, setAssignModal]   = useState(null)
+
+  // Lembretes automáticos
+  const [reminderEnabled,  setReminderEnabled]  = useState(() => session?.company?.reminder_enabled ?? false)
+  const [reminderOffset,   setReminderOffset]   = useState(() => session?.company?.reminder_offset_minutes ?? 1440)
+  const [companyTimezone,  setCompanyTimezone]  = useState(() => session?.company?.timezone ?? 'America/Sao_Paulo')
+  const [savingReminder,   setSavingReminder]   = useState(false)
+  const [reminderSaved,    setReminderSaved]    = useState(false)
 
   const [userModal, setUserModal]       = useState(false)
   const [userForm, setUserForm]         = useState({ name: '', email: '', password: '', role: 'viewer' })
@@ -278,6 +285,28 @@ export default function CompanyAdmin() {
     if (data) setUsers(data)
     setUserModal(false)
     setUserErr('')
+  }
+
+  async function handleSaveReminder() {
+    if (!companyId) return
+    setSavingReminder(true)
+    try {
+      const { error } = await supabase.from('companies').update({
+        reminder_enabled: reminderEnabled,
+        reminder_offset_minutes: Number(reminderOffset),
+        timezone: companyTimezone,
+      }).eq('id', companyId)
+      if (!error) {
+        setSession(prev => ({
+          ...prev,
+          company: { ...prev.company, reminder_enabled: reminderEnabled, reminder_offset_minutes: Number(reminderOffset), timezone: companyTimezone },
+        }))
+        setReminderSaved(true)
+        setTimeout(() => setReminderSaved(false), 2500)
+      }
+    } finally {
+      setSavingReminder(false)
+    }
   }
 
   const domain = slugify(session?.company?.name || 'empresa') + '.com'
@@ -652,6 +681,124 @@ export default function CompanyAdmin() {
               })}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Lembretes automáticos ───────────────────────────────────────── */}
+      <div className="page-body" style={{ marginTop: 0 }}>
+        <div className="section-header">
+          <div className="section-title">Lembretes automáticos</div>
+          <div className="section-subtitle">
+            O AdvoSac envia uma mensagem de lembrete no WhatsApp do cliente antes do compromisso.
+          </div>
+        </div>
+        <div className="nx-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Toggle ligar/desligar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Enviar lembretes</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                Mensagem automática pelo WhatsApp antes de cada agendamento
+              </div>
+            </div>
+            <button
+              onClick={() => setReminderEnabled(v => !v)}
+              style={{
+                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: reminderEnabled ? '#2563EB' : '#CBD5E1',
+                position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+              }}>
+              <span style={{
+                position: 'absolute', top: 3, left: reminderEnabled ? 23 : 3,
+                width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
+
+          {reminderEnabled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+
+              {/* Antecedência */}
+              <div>
+                <label style={labelStyle}>Antecedência do lembrete</label>
+                <select
+                  className="nx-select"
+                  value={reminderOffset}
+                  onChange={e => setReminderOffset(e.target.value)}>
+                  <option value={30}>30 minutos antes</option>
+                  <option value={60}>1 hora antes</option>
+                  <option value={120}>2 horas antes</option>
+                  <option value={1440}>24 horas antes (1 dia)</option>
+                  <option value={2880}>48 horas antes (2 dias)</option>
+                  <option value={10080}>7 dias antes</option>
+                </select>
+              </div>
+
+              {/* Fuso horário */}
+              <div>
+                <label style={labelStyle}>Fuso horário do escritório</label>
+                <select
+                  className="nx-select"
+                  value={companyTimezone}
+                  onChange={e => setCompanyTimezone(e.target.value)}>
+                  <optgroup label="Brasil">
+                    <option value="America/Sao_Paulo">Brasília / São Paulo / Rio (GMT-3)</option>
+                    <option value="America/Bahia">Bahia (GMT-3)</option>
+                    <option value="America/Fortaleza">Fortaleza / CE / PI / RN / PB / AL / SE (GMT-3)</option>
+                    <option value="America/Recife">Recife / PE (GMT-3)</option>
+                    <option value="America/Belem">Belém / PA / MA (GMT-3)</option>
+                    <option value="America/Manaus">Manaus / AM / MT / MS (GMT-4)</option>
+                    <option value="America/Cuiaba">Cuiabá (GMT-4)</option>
+                    <option value="America/Porto_Velho">Porto Velho / RO (GMT-4)</option>
+                    <option value="America/Boa_Vista">Boa Vista / RR (GMT-4)</option>
+                    <option value="America/Rio_Branco">Rio Branco / AC (GMT-5)</option>
+                    <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
+                  </optgroup>
+                  <optgroup label="Internacional">
+                    <option value="UTC">UTC (GMT+0)</option>
+                    <option value="Europe/Lisbon">Lisboa / Portugal (GMT+1)</option>
+                    <option value="America/New_York">Nova York / EUA Leste (GMT-5)</option>
+                    <option value="America/Chicago">Chicago / EUA Central (GMT-6)</option>
+                    <option value="America/Los_Angeles">Los Angeles / EUA Oeste (GMT-8)</option>
+                  </optgroup>
+                </select>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Define o horário exibido na mensagem de lembrete enviada ao cliente.
+                </div>
+              </div>
+
+              {/* Prévia da mensagem */}
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#16A34A', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Prévia da mensagem
+                </div>
+                <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                  {`Olá, João! 📅 Lembrando do seu compromisso marcado para *${
+                    new Date(Date.now() + Number(reminderOffset) * 60000).toLocaleDateString('pt-BR')
+                  }* às *${
+                    new Date(Date.now() + Number(reminderOffset) * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                  }*.\nQualquer dúvida, é só chamar. Até lá!`}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Salvar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
+            <button
+              className="nx-btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 140, justifyContent: 'center' }}
+              onClick={handleSaveReminder}
+              disabled={savingReminder}>
+              {reminderSaved
+                ? <><Check size={14} /> Salvo!</>
+                : savingReminder
+                  ? 'Salvando...'
+                  : <><Bell size={14} /> Salvar configuração</>}
+            </button>
+          </div>
         </div>
       </div>
 
