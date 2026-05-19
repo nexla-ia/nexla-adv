@@ -163,6 +163,7 @@ export default function CompanyConversations() {
   const [recordTime, setRecordTime]   = useState(0)
   const [attachedFile, setAttachedFile] = useState(null) // { base64, mime, name, size, kind: 'image'|'pdf'|'file' }
   const [savedContacts, setSavedContacts] = useState({}) // numero (só dígitos) → { id, nome, notes }
+  const [clientesMap, setClientesMap]     = useState({}) // session_id → nome (fallback da tabela clientes)
   const [futureAppts, setFutureAppts]     = useState({}) // numero (só dígitos) → { starts_at, status, agenda_name }
   const [contextMenu, setContextMenu] = useState(null) // { x, y, contact }
   const [chatActionsOpen, setChatActionsOpen] = useState(false)
@@ -269,6 +270,18 @@ export default function CompanyConversations() {
     return () => supabase.removeChannel(ch)
   }, [instance])
 
+  // Carrega nomes da tabela clientes (populada pelo n8n) como fallback de nome
+  useEffect(() => {
+    if (!instance) return
+    supabase.from('clientes').select('session_id, nome').eq('instancia', instance).not('nome', 'is', null)
+      .then(({ data }) => {
+        if (!data?.length) return
+        const map = {}
+        data.forEach(c => { if (c.session_id && c.nome) map[c.session_id] = c.nome })
+        setClientesMap(map)
+      })
+  }, [instance])
+
   // Abre conversa via ?contact=xxxx (vindo da página Contatos)
   useEffect(() => {
     const target = searchParams.get('contact')
@@ -310,7 +323,7 @@ export default function CompanyConversations() {
     setSaveContactModal({
       id: existing?.id || null,
       numero,
-      nome: existing?.nome || '',
+      nome: existing?.nome || clientesMap[contact.session_id] || '',
       notes: existing?.notes || '',
     })
     setContextMenu(null)
@@ -1081,6 +1094,8 @@ export default function CompanyConversations() {
             const rs = closedReason ? REASONS.find(r => r.value === closedReason) : null
             const cleanNum = c.phone.replace(/\D/g, '')
             const saved = findSaved(savedContacts, cleanNum)
+            const clienteNome = !saved ? (clientesMap[c.session_id] || null) : null
+            const displayName = saved?.nome || clienteNome || null
             const nextAppt = futureAppts[cleanNum]
             return (
               <div
@@ -1095,16 +1110,16 @@ export default function CompanyConversations() {
                 <div className="contact-avatar" style={saved?.photo ? { background: 'transparent', overflow: 'hidden' } : {}}>
                   {saved?.photo
                     ? <img src={saved.photo} alt={saved.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : saved?.nome
-                      ? <span style={{ fontWeight: 700, fontSize: 12, color: '#2563EB' }}>{saved.nome.charAt(0).toUpperCase()}</span>
+                    : displayName
+                      ? <span style={{ fontWeight: 700, fontSize: 12, color: '#2563EB' }}>{displayName.charAt(0).toUpperCase()}</span>
                       : <User size={14} style={{ opacity: 0.4 }} />}
                 </div>
                 <div className="contact-info" style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                    <div className="contact-name" style={saved ? { fontWeight: 600 } : {}}>
-                      {saved ? saved.nome : c.phone}
+                    <div className="contact-name" style={displayName ? { fontWeight: 600 } : {}}>
+                      {displayName || c.phone}
                     </div>
-                    {saved && (
+                    {displayName && (
                       <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phone}</span>
                     )}
                     {nextAppt && (
@@ -1178,6 +1193,7 @@ export default function CompanyConversations() {
               {(() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
                 const saved = findSaved(savedContacts, cleanNum)
+                const headerName = saved?.nome || clientesMap[selected.session_id] || null
                 return (
                   <>
                     <div className="contact-avatar"
@@ -1192,8 +1208,8 @@ export default function CompanyConversations() {
                     >
                       {saved?.photo
                         ? <img src={saved.photo} alt={saved.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : saved?.nome
-                          ? <span style={{ fontWeight: 700, fontSize: 14, color: '#2563EB' }}>{saved.nome.charAt(0).toUpperCase()}</span>
+                        : headerName
+                          ? <span style={{ fontWeight: 700, fontSize: 14, color: '#2563EB' }}>{headerName.charAt(0).toUpperCase()}</span>
                           : <User size={14} style={{ opacity: 0.4 }} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -1201,11 +1217,11 @@ export default function CompanyConversations() {
                         style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', cursor: saved ? 'pointer' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         onClick={() => saved && navigate(`/painel/contatos/${saved.id}`)}
                       >
-                        {saved ? saved.nome : selected.phone}
+                        {headerName || selected.phone}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
                         <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                          {saved ? selected.phone : ''}
+                          {headerName ? selected.phone : ''}
                         </span>
                         {!loadingMsgs && <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{messages.length} msg</span>}
                       </div>
@@ -1216,7 +1232,7 @@ export default function CompanyConversations() {
               {!isClosed && (() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
                 const saved = findSaved(savedContacts, cleanNum)
-                const nome = saved?.nome || ''
+                const nome = saved?.nome || clientesMap[selected.session_id] || ''
                 const hasContact = !!saved
                 const att = attendancesMap[selected.session_id]
                 const isOwner = att && att.attendant_email === session?.user?.email
