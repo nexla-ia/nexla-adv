@@ -112,13 +112,28 @@ END;
 $$;
 
 -- ─── 4. pg_cron: agenda a cada 5 minutos ─────────────────────────────────
--- Remove job anterior se existir (idempotente)
-SELECT cron.unschedule(jobid)
-FROM cron.job
-WHERE jobname = 'appointment-reminders';
+-- REQUISITO: habilitar extensão pg_cron em
+--   Supabase Dashboard → Database → Extensions → pg_cron → Enable
+--
+-- Este bloco é seguro: não falha se pg_cron não estiver instalado.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'
+  ) THEN
+    -- Remove job anterior se existir
+    PERFORM cron.unschedule(jobid)
+    FROM cron.job
+    WHERE jobname = 'appointment-reminders';
 
-SELECT cron.schedule(
-  'appointment-reminders',
-  '*/5 * * * *',
-  'SELECT public.process_appointment_reminders()'
-);
+    PERFORM cron.schedule(
+      'appointment-reminders',
+      '*/5 * * * *',
+      'SELECT public.process_appointment_reminders()'
+    );
+
+    RAISE NOTICE 'pg_cron: job appointment-reminders agendado com sucesso.';
+  ELSE
+    RAISE NOTICE 'pg_cron NÃO instalado — ative em Dashboard → Database → Extensions → pg_cron e re-execute este bloco.';
+  END IF;
+END $$;
