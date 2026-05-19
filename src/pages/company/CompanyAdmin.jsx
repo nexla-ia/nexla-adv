@@ -717,6 +717,39 @@ export default function CompanyAdmin() {
             </button>
           </div>
 
+          {/* Fuso horário — sempre visível */}
+          <div style={{ paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+            <label style={labelStyle}>Fuso horário do escritório</label>
+            <select
+              className="nx-select"
+              value={companyTimezone}
+              onChange={e => setCompanyTimezone(e.target.value)}>
+              <optgroup label="Brasil">
+                <option value="America/Sao_Paulo">Brasília / São Paulo / Rio (GMT-3)</option>
+                <option value="America/Bahia">Bahia (GMT-3)</option>
+                <option value="America/Fortaleza">Fortaleza / CE / PI / RN / PB / AL / SE (GMT-3)</option>
+                <option value="America/Recife">Recife / PE (GMT-3)</option>
+                <option value="America/Belem">Belém / PA / MA (GMT-3)</option>
+                <option value="America/Manaus">Manaus / AM / MT / MS (GMT-4)</option>
+                <option value="America/Cuiaba">Cuiabá (GMT-4)</option>
+                <option value="America/Porto_Velho">Porto Velho / RO (GMT-4)</option>
+                <option value="America/Boa_Vista">Boa Vista / RR (GMT-4)</option>
+                <option value="America/Rio_Branco">Rio Branco / AC (GMT-5)</option>
+                <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
+              </optgroup>
+              <optgroup label="Internacional">
+                <option value="UTC">UTC (GMT+0)</option>
+                <option value="Europe/Lisbon">Lisboa / Portugal (GMT+1)</option>
+                <option value="America/New_York">Nova York / EUA Leste (GMT-5)</option>
+                <option value="America/Chicago">Chicago / EUA Central (GMT-6)</option>
+                <option value="America/Los_Angeles">Los Angeles / EUA Oeste (GMT-8)</option>
+              </optgroup>
+            </select>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+              Usado nos lembretes e em horários exibidos ao cliente.
+            </div>
+          </div>
+
           {reminderEnabled && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
 
@@ -734,39 +767,6 @@ export default function CompanyAdmin() {
                   <option value={2880}>48 horas antes (2 dias)</option>
                   <option value={10080}>7 dias antes</option>
                 </select>
-              </div>
-
-              {/* Fuso horário */}
-              <div>
-                <label style={labelStyle}>Fuso horário do escritório</label>
-                <select
-                  className="nx-select"
-                  value={companyTimezone}
-                  onChange={e => setCompanyTimezone(e.target.value)}>
-                  <optgroup label="Brasil">
-                    <option value="America/Sao_Paulo">Brasília / São Paulo / Rio (GMT-3)</option>
-                    <option value="America/Bahia">Bahia (GMT-3)</option>
-                    <option value="America/Fortaleza">Fortaleza / CE / PI / RN / PB / AL / SE (GMT-3)</option>
-                    <option value="America/Recife">Recife / PE (GMT-3)</option>
-                    <option value="America/Belem">Belém / PA / MA (GMT-3)</option>
-                    <option value="America/Manaus">Manaus / AM / MT / MS (GMT-4)</option>
-                    <option value="America/Cuiaba">Cuiabá (GMT-4)</option>
-                    <option value="America/Porto_Velho">Porto Velho / RO (GMT-4)</option>
-                    <option value="America/Boa_Vista">Boa Vista / RR (GMT-4)</option>
-                    <option value="America/Rio_Branco">Rio Branco / AC (GMT-5)</option>
-                    <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
-                  </optgroup>
-                  <optgroup label="Internacional">
-                    <option value="UTC">UTC (GMT+0)</option>
-                    <option value="Europe/Lisbon">Lisboa / Portugal (GMT+1)</option>
-                    <option value="America/New_York">Nova York / EUA Leste (GMT-5)</option>
-                    <option value="America/Chicago">Chicago / EUA Central (GMT-6)</option>
-                    <option value="America/Los_Angeles">Los Angeles / EUA Oeste (GMT-8)</option>
-                  </optgroup>
-                </select>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                  Define o horário exibido na mensagem de lembrete enviada ao cliente.
-                </div>
               </div>
 
               {/* Prévia da mensagem */}
