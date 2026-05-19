@@ -1666,7 +1666,7 @@ export default function CompanyConversations() {
                           <div className="msg-bubble" style={{ ...bubbleStyle, position: 'relative' }}
                             onMouseEnter={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '1') }}
                             onMouseLeave={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '0') }}>
-                            {isAtendente && !isEditing && !hasOnlyMedia && (
+                            {isAtendente && !isEditing && !hasOnlyMedia && !msg._optimistic && (
                               <button
                                 className="msg-edit-btn"
                                 onClick={() => {

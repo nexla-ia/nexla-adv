@@ -154,20 +154,22 @@ export default function CompanyContacts() {
   async function handleCreate() {
     if (!newModal.nome?.trim()) { setErr('Nome é obrigatório'); return }
     setSaving(true)
-    let numero = newModal.numero?.toString().replace(/\D/g, '') || ''
-    // Prepend código país selecionado (badge mostra)
-    if (numero && !numero.startsWith(countryCode)) {
-      numero = countryCode + numero
+    try {
+      let numero = newModal.numero?.toString().replace(/\D/g, '') || ''
+      if (numero && !numero.startsWith(countryCode)) numero = countryCode + numero
+      const { data, error } = await supabase.from('saved_contacts').insert({
+        numero, instancia: instance,
+        nome: newModal.nome.trim(),
+        created_by_email: session?.user?.email,
+      }).select().single()
+      if (error) { setErr('Erro: ' + error.message); return }
+      setNewModal(null)
+      if (data?.id) navigate(`/painel/contatos/${data.id}`)
+    } catch (e) {
+      setErr('Erro inesperado. Tente novamente.')
+    } finally {
+      setSaving(false)
     }
-    const { data, error } = await supabase.from('saved_contacts').insert({
-      numero, instancia: instance,
-      nome: newModal.nome.trim(),
-      created_by_email: session?.user?.email,
-    }).select().single()
-    setSaving(false)
-    if (error) { setErr('Erro: ' + error.message); return }
-    setNewModal(null)
-    if (data?.id) navigate(`/painel/contatos/${data.id}`)
   }
 
   function handleDelete(patient) { setConfirmDelete(patient) }

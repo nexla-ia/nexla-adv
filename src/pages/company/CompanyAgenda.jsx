@@ -200,6 +200,7 @@ export default function CompanyAgenda() {
   // Dispara lembretes automáticos para agendamentos futuros
   useEffect(() => {
     if (!instance || !agendas.length || !futureAppointments.length) return
+    let active = true
     const now = Date.now()
     const pending = []
     agendas.forEach(ag => {
@@ -214,12 +215,13 @@ export default function CompanyAgenda() {
         if (diff > 0 && diff <= windowMs) pending.push({ appt, ag })
       })
     })
-    if (!pending.length) return
+    if (!pending.length) return () => { active = false }
 
     // Marca ID no Set ANTES de disparar (bloqueia re-runs)
     pending.forEach(({ appt }) => reminderSentRef.current.add(appt.id))
 
     pending.forEach(async ({ appt, ag }) => {
+      if (!active) return
       const horaFmt = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       const msg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
       // Aguarda update no banco antes de disparar webhook
@@ -245,6 +247,7 @@ export default function CompanyAgenda() {
         }).catch(e => console.warn('webhook reminder:', e))
       }
     })
+    return () => { active = false }
   }, [agendas, futureAppointments, instance, apiInstancia])
 
   // Realtime para agendamentos
@@ -294,6 +297,7 @@ export default function CompanyAgenda() {
       setAgendaErr('Horário final deve ser depois do inicial'); return
     }
     setSavingAgenda(true)
+    try {
     const payload = {
       name: agendaModal.name.trim(),
       color: agendaModal.color,
@@ -308,7 +312,6 @@ export default function CompanyAgenda() {
     const { data, error } = agendaModal.id
       ? await supabase.from('agendas').update(payload).eq('id', agendaModal.id).select().single()
       : await supabase.from('agendas').insert(payload).select().single()
-    setSavingAgenda(false)
     if (error) { setAgendaErr('Erro: ' + error.message); return }
     setAgendas(prev => {
       const exists = prev.find(a => a.id === data.id)
@@ -317,6 +320,11 @@ export default function CompanyAgenda() {
     })
     if (!selectedAgendaId) setSelectedAgendaId(data.id)
     setAgendaModal(null)
+    } catch (e) {
+      setAgendaErr('Erro inesperado. Tente novamente.')
+    } finally {
+      setSavingAgenda(false)
+    }
   }
 
   function handleDeleteAgenda(agenda) {
@@ -521,11 +529,18 @@ export default function CompanyAgenda() {
 
     const isNew = !apptModal.id
     const prevStatus = apptModal._prevStatus
-    const { error } = isNew
-      ? await supabase.from('appointments').insert(payload)
-      : await supabase.from('appointments').update(payload).eq('id', apptModal.id)
+    let apptResult
+    try {
+      apptResult = isNew
+        ? await supabase.from('appointments').insert(payload)
+        : await supabase.from('appointments').update(payload).eq('id', apptModal.id)
+    } catch (e) {
+      setApptErr('Erro inesperado. Tente novamente.')
+      setSavingAppt(false)
+      return
+    }
     setSavingAppt(false)
-    if (error) { setApptErr('Erro: ' + error.message); return }
+    if (apptResult.error) { setApptErr('Erro: ' + apptResult.error.message); return }
 
     // Registra evento na conversa do cliente (se tem número)
     if (numero) {
