@@ -619,7 +619,26 @@ export default function CompanyAgenda() {
     setDeletingNow(true)
     const appt = apptModal
 
-    // Envia aviso de cancelamento pro cliente antes de apagar
+    // 1) DELETA primeiro (acao critica) com timeout de 10s
+    try {
+      const deletePromise = supabase.from('appointments').delete().eq('id', appt.id)
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+      await Promise.race([deletePromise, timeoutPromise])
+    } catch (e) {
+      console.error('delete appointment:', e)
+      setDeletingNow(false)
+      setConfirmDeleteAppt(false)
+      alert('Não foi possível excluir agora. Tente de novo em alguns segundos.')
+      return
+    }
+
+    // 2) Atualiza UI imediatamente
+    setAppointments(prev => prev.filter(a => a.id !== appt.id))
+    setDeletingNow(false)
+    setConfirmDeleteAppt(false)
+    setApptModal(null)
+
+    // 3) Envia aviso ao cliente em BACKGROUND (nao bloqueia UI)
     const numero = (appt.contact_numero || '').replace(/\D/g, '')
     if (numero) {
       const sessionId = `${numero}@s.whatsapp.net`
@@ -627,17 +646,17 @@ export default function CompanyAgenda() {
       const firstName = (appt.contact_nome || '').split(' ')[0] || 'cliente'
       const aviso = `Olá ${firstName}, infelizmente seu agendamento de ${dateStr} foi cancelado. Em caso de dúvidas, entre em contato.`
 
-      // Registra no historico de conversa
-      await supabase.rpc('send_mensagem_geral', {
+      // Registra no historico (fire and forget)
+      supabase.rpc('send_mensagem_geral', {
         p_instancia: instance,
         p_numero: sessionId,
         p_mensagem: aviso,
         p_type: 'atendente',
         p_hora: new Date().toISOString(),
         p_base64: null,
-      }).catch(() => {})
+      }).then(() => {}, () => {})
 
-      // Envia pelo WhatsApp via n8n
+      // Envia pelo WhatsApp (fire and forget)
       fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -655,13 +674,6 @@ export default function CompanyAgenda() {
         }),
       }).catch(e => console.warn('webhook exclusao:', e))
     }
-
-    await supabase.from('appointments').delete().eq('id', appt.id)
-    // Atualiza UI imediatamente (sem esperar realtime/F5)
-    setAppointments(prev => prev.filter(a => a.id !== appt.id))
-    setDeletingNow(false)
-    setConfirmDeleteAppt(false)
-    setApptModal(null)
   }
 
   const selectedAgenda = agendas.find(a => a.id === selectedAgendaId)
