@@ -2252,17 +2252,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       })()}
                     </div>
                     {msg.ts && (
-                      <div className="msg-time" style={{ textAlign: isLeft ? 'left' : 'right', display: 'flex', alignItems: 'center', gap: 4, justifyContent: isLeft ? 'flex-start' : 'flex-end' }}>
-                        <span>{formatMsgTime(msg.ts)}</span>
-                        {(isAtendente || isMineInGroup) && (
-                          <span title={msg.visualizada ? 'Visualizada' : 'Enviada'}
-                            style={{ display: 'inline-flex', alignItems: 'center', color: msg.visualizada ? '#3B82F6' : '#94A3B8' }}>
-                            <svg width="14" height="10" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M1 6.5L5 10.5L11 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M6 6.5L10 10.5L16 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </span>
-                        )}
+                      <div className="msg-time" style={{ textAlign: isLeft ? 'left' : 'right' }}>
+                        {formatMsgTime(msg.ts)}
                       </div>
                     )}
                   </div>
