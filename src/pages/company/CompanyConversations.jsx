@@ -244,6 +244,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [selected, setSelected]       = useState(null)
   const [messages, setMessages]       = useState([])
   const [loadingMsgs, setLoadingMsgs] = useState(false)
+  const [hasMoreMsgs, setHasMoreMsgs] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const MSG_PAGE_SIZE = 35
   const [closeModal, setCloseModal]   = useState(null)
   const [reason, setReason]           = useState('')
   const [closing, setClosing]         = useState(false)
@@ -752,25 +755,54 @@ export default function CompanyConversations({ mode = 'individual' }) {
     return () => supabase.removeChannel(ch)
   }, [instance])
 
-  // Carrega mensagens da conversa selecionada
+  // Helper: monta filtro base de mensagens da conversa selecionada
+  function buildMessagesQuery() {
+    let q = supabase.from(CONV_TABLE).select('*').eq('instancia', instance)
+    if (selected.isGroup) {
+      q = q.or(`idgrupo.eq.${selected.session_id},numero.eq.${selected.session_id}`)
+    } else {
+      q = q.eq('numero', selected.session_id).is('idgrupo', null)
+    }
+    return q
+  }
+
+  // Carrega mais mensagens antigas (paginacao)
+  async function loadMoreMessages() {
+    if (!selected || !instance || loadingMore || !messages.length) return
+    setLoadingMore(true)
+    const oldestId = messages[0]?.id
+    const { data, error } = await buildMessagesQuery()
+      .lt('id', oldestId)
+      .order('id', { ascending: false })
+      .limit(MSG_PAGE_SIZE)
+    if (!error && data) {
+      const ordered = [...data].reverse()
+      const novas = ordered.filter(r => !isToolMessage(r)).map(r => ({
+        id: r.id,
+        id_mensagem: r.id_mensagem || null,
+        type: getMessageType(r),
+        content: getMessageContent(r),
+        base64: r.base64 || null,
+        ts: getTimestamp(r),
+        nome: r.nome || null,
+        mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
+        visualizada: r.visualizada === true,
+      }))
+      setMessages(prev => [...novas, ...prev])
+      setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
+    }
+    setLoadingMore(false)
+  }
+
+  // Carrega mensagens da conversa selecionada (paginacao: 35 iniciais)
   useEffect(() => {
     if (!selected || !instance) return
     setLoadingMsgs(true)
     setMessages([])
-    // Pega as últimas 200 mensagens (mais recentes primeiro no DB, inverte pra ordem cronológica)
-    // Grupo: filtra por idgrupo + instancia. Individual: filtra por numero + instancia + sem idgrupo.
-    let q = supabase.from(CONV_TABLE).select('*')
-      .eq('instancia', instance)
-    if (selected.isGroup) {
-      // Grupo: msgs com idgrupo igual OU msgs enviadas por nos (numero = idgrupo, idgrupo null)
-      q = q.or(`idgrupo.eq.${selected.session_id},numero.eq.${selected.session_id}`)
-    } else {
-      // Individual: numero exato + idgrupo null (nao confundir com participacao em grupo)
-      q = q.eq('numero', selected.session_id).is('idgrupo', null)
-    }
-    q
+    setHasMoreMsgs(false)
+    buildMessagesQuery()
       .order('id', { ascending: false })
-      .limit(1000)
+      .limit(MSG_PAGE_SIZE)
       .then(({ data, error }) => {
         if (!error && data) {
           const ordered = [...data].reverse()  // volta pra ordem antigas→novas
@@ -782,10 +814,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
             base64: r.base64 || null,
             ts: getTimestamp(r),
             nome: r.nome || null,
-            // fromMe = padrão Evolution/Baileys; mine/minha? = nossa coluna
             mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
             visualizada: r.visualizada === true,
           })))
+          setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
 
           // Dispara webhook de presença: avisa o n8n que o atendente abriu a conversa
           // remoteJid = numero do contato ou idgrupo do grupo
@@ -1992,6 +2024,24 @@ export default function CompanyConversations({ mode = 'individual' }) {
               )}
               {!loadingMsgs && messages.length === 0 && (
                 <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', marginTop: '2rem' }}>Sem mensagens.</div>
+              )}
+              {!loadingMsgs && hasMoreMsgs && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 12px' }}>
+                  <button
+                    onClick={loadMoreMessages}
+                    disabled={loadingMore}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#fff', border: '1px solid var(--border)',
+                      borderRadius: 20, padding: '6px 16px',
+                      fontSize: 12, fontWeight: 600, color: '#2563EB',
+                      cursor: loadingMore ? 'wait' : 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      opacity: loadingMore ? 0.7 : 1,
+                    }}>
+                    {loadingMore ? 'Carregando...' : '↑ Carregar mais mensagens'}
+                  </button>
+                </div>
               )}
               {messages.map((msg, mi) => {
                 // Divisor de data: mostra antes do 1o msg do dia
