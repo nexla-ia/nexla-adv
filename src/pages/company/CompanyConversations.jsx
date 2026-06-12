@@ -299,6 +299,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const recordStartRef   = useRef(0)
   const fileInputRef     = useRef(null)
   const bottomRef    = useRef(null)
+  const chatBodyRef  = useRef(null)
+  const isPrependingRef = useRef(false)
   const selectedRef  = useRef(null)
   const autoCloseDone = useRef(false)
 
@@ -766,11 +768,16 @@ export default function CompanyConversations({ mode = 'individual' }) {
     return q
   }
 
-  // Carrega mais mensagens antigas (paginacao)
+  // Carrega mais mensagens antigas (paginacao) preservando a posicao do scroll
   async function loadMoreMessages() {
     if (!selected || !instance || loadingMore || !messages.length) return
     setLoadingMore(true)
     const oldestId = messages[0]?.id
+    // Guarda altura ANTES de prepender pra calcular o delta depois
+    const body = chatBodyRef.current
+    const prevScrollHeight = body?.scrollHeight || 0
+    const prevScrollTop = body?.scrollTop || 0
+
     const { data, error } = await buildMessagesQuery()
       .lt('id', oldestId)
       .order('id', { ascending: false })
@@ -788,8 +795,16 @@ export default function CompanyConversations({ mode = 'individual' }) {
         mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
         visualizada: r.visualizada === true,
       }))
+      isPrependingRef.current = true   // sinaliza pra useEffect nao rolar pro fundo
       setMessages(prev => [...novas, ...prev])
       setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
+      // Restaura posicao do scroll: novo scrollTop = (nova altura - antiga) + antigo scrollTop
+      requestAnimationFrame(() => {
+        if (body) {
+          const newScrollHeight = body.scrollHeight
+          body.scrollTop = (newScrollHeight - prevScrollHeight) + prevScrollTop
+        }
+      })
     }
     setLoadingMore(false)
   }
@@ -841,6 +856,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
   }, [selected, instance])
 
   useEffect(() => {
+    // Nao rola pro fundo quando estamos prependo msgs antigas (paginacao)
+    if (isPrependingRef.current) { isPrependingRef.current = false; return }
     if (!loadingMsgs) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loadingMsgs])
 
@@ -2016,7 +2033,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
               </div>
             )}
 
-            <div className="chat-body">
+            <div className="chat-body" ref={chatBodyRef}>
               {loadingMsgs && (
                 <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', marginTop: '2rem' }}>
                   Carregando mensagens...
