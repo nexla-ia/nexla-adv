@@ -246,6 +246,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [hasMoreMsgs, setHasMoreMsgs] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [showScrollDown, setShowScrollDown] = useState(false)
   const MSG_PAGE_SIZE = 35
   const [closeModal, setCloseModal]   = useState(null)
   const [reason, setReason]           = useState('')
@@ -860,6 +861,24 @@ export default function CompanyConversations({ mode = 'individual' }) {
     if (isPrependingRef.current) { isPrependingRef.current = false; return }
     if (!loadingMsgs) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loadingMsgs])
+
+  // Detecta se o usuario rolou pra cima — mostra botao "ir pro fundo"
+  useEffect(() => {
+    const body = chatBodyRef.current
+    if (!body) return
+    function onScroll() {
+      const distanceFromBottom = body.scrollHeight - body.scrollTop - body.clientHeight
+      setShowScrollDown(distanceFromBottom > 200)  // 200px de tolerancia
+    }
+    body.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => body.removeEventListener('scroll', onScroll)
+  }, [selected, messages.length])
+
+  function scrollToBottom() {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setShowScrollDown(false)
+  }
 
   // ESC: fecha modais abertos primeiro, depois sai da conversa
   useEffect(() => {
@@ -2250,6 +2269,25 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 )
               })}
               <div ref={bottomRef} />
+              {showScrollDown && (
+                <button
+                  onClick={scrollToBottom}
+                  title="Ir para o fim"
+                  style={{
+                    position: 'sticky', bottom: 12, left: '100%',
+                    marginLeft: -52, marginTop: -56, marginBottom: 8,
+                    width: 40, height: 40, borderRadius: '50%',
+                    background: '#fff', border: '1px solid var(--border)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                    color: '#2563EB', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10,
+                  }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+              )}
             </div>
 
             {!isClosed && (
