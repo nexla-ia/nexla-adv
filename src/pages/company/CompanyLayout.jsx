@@ -6,7 +6,7 @@ import BillingBanner from '../../components/BillingBanner'
 import BlockedScreen from '../../components/BlockedScreen'
 import SupportWidget from '../../components/SupportWidget'
 import { shouldBlockAccess } from '../../lib/billing'
-import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu, Headset, MessageSquareHeart } from 'lucide-react'
+import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu, Headset, MessageSquareHeart, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { latestUpdateDate } from '../../data/updates'
@@ -19,6 +19,7 @@ export default function CompanyLayout() {
   const blocked = shouldBlockAccess(session?.company)
   const instance = session?.company?.instance
   const [activeCount, setActiveCount] = useState(0)
+  const [groupCount, setGroupCount] = useState(0)
   const [pendingAlerts, setPendingAlerts] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -42,23 +43,49 @@ export default function CompanyLayout() {
     if (!instance) return
 
     async function refresh() {
+      // Limita pra ultimos 2000 registros (suficiente pra contar contatos ativos)
       const [{ data: msgs }, { data: closed }] = await Promise.all([
-        supabase.from('mensagens_geral').select('numero').eq('instancia', instance),
+        supabase.from('mensagens_geral')
+          .select('numero, idgrupo')
+          .eq('instancia', instance)
+          .order('id', { ascending: false })
+          .limit(2000),
         supabase.from('conversations').select('session_id').eq('instancia', instance),
       ])
       const closedSet = new Set((closed || []).map(r => r.session_id))
-      const unique = new Set((msgs || []).map(r => r.numero))
-      setActiveCount([...unique].filter(s => !closedSet.has(s)).length)
+      const individuais = new Set()
+      const grupos = new Set()
+      for (const r of (msgs || [])) {
+        const isGroup = !!r.idgrupo || (r.numero || '').includes('@g.us')
+        if (isGroup) {
+          const gid = r.idgrupo || r.numero
+          if (gid) grupos.add(gid)
+        } else if (r.numero) {
+          individuais.add(r.numero)
+        }
+      }
+      setActiveCount([...individuais].filter(s => !closedSet.has(s)).length)
+      setGroupCount(grupos.size)
     }
     refresh()
 
+    // Debounce: agrega chamadas em janelas de 5s pra nao bombardear o banco
+    let timer = null
+    const debouncedRefresh = () => {
+      if (timer) return
+      timer = setTimeout(() => { timer = null; refresh() }, 5000)
+    }
+
     const ch = supabase.channel('layout-conversations')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_geral', filter: `instancia=eq.${instance}` },
-        () => refresh())
+        debouncedRefresh)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `instancia=eq.${instance}` },
-        () => refresh())
+        debouncedRefresh)
       .subscribe()
-    return () => supabase.removeChannel(ch)
+    return () => {
+      if (timer) clearTimeout(timer)
+      supabase.removeChannel(ch)
+    }
   }, [instance])
 
   // Conta alertas pendentes reais (sem IA: conta só encaminhamentos para o usuário)
@@ -89,6 +116,8 @@ export default function CompanyLayout() {
   const links = [
     { to: '/painel/conversas', icon: MessageSquare, label: 'Conversas',
       badge: activeCount > 0 ? activeCount : null, badgeColor: 'cyan' },
+    { to: '/painel/grupos', icon: Users, label: 'Grupos',
+      badge: groupCount > 0 ? groupCount : null, badgeColor: 'violet' },
     ...(aiEnabled ? [{ to: '/painel/historico', icon: History, label: 'Conversas IA' }] : []),
     { to: '/painel/instagram', icon: Instagram,     label: 'Instagram' },
     { to: '/painel/contatos',  icon: Contact2,      label: 'Clientes' },

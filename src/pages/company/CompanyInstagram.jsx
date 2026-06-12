@@ -189,10 +189,12 @@ function InstagramInbox() {
   useEffect(() => {
     if (!instance) return
     setLoadingContacts(true)
-    supabase.from(CONV_TABLE).select('*')
+    supabase.from(CONV_TABLE)
+      .select('id, numero, mensagem, type, created_at, horaLastMessage, aplicativo')
       .eq('instancia', instance)
       .eq('aplicativo', 'instagram')
       .order('id', { ascending: false })
+      .limit(2000)
       .then(({ data, error }) => {
         if (!error && data) {
           const seen = new Set()
@@ -285,10 +287,12 @@ function InstagramInbox() {
       .eq('instancia', instance)
       .eq('numero', selected.session_id)
       .eq('aplicativo', 'instagram')
-      .order('id', { ascending: true })
+      .order('id', { ascending: false })
+      .limit(500)
       .then(({ data, error }) => {
         if (!error && data) {
-          setMessages(data.filter(r => !isToolMessage(r)).map(r => ({
+          const ordered = [...data].reverse()
+          setMessages(ordered.filter(r => !isToolMessage(r)).map(r => ({
             id: r.id,
             type: getMessageType(r),
             content: getMessageContent(r),

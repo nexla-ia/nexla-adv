@@ -51,6 +51,85 @@ function getTimestamp(row) { return parseTimestamp(row.horaLastMessage) || row.c
 
 const INJECTED_PROMPT_RE = /responda em portugu[eê]s|de forma objetiva|solicite\s|n[aã]o informar|indicar que|apresentaremos|breve explica[çc][aã]o|orienta[çc][õo]es gerais|avalia[çc][aã]o pr[eé]-operat/i
 
+// Renderiza texto com markdown estilo WhatsApp:
+// *bold*, _italic_, ~strike~, `code`, ```block```, URLs clicáveis
+function renderRichText(text) {
+  if (!text) return null
+  const segments = []
+  // 1) Primeiro extrai code blocks (``` ```) e inline code (` `)
+  //    pra que o conteúdo interno não seja afetado por outros markdowns.
+  // Regex que captura: ```...``` | `...` | http(s)://... | www.... | *...* | _..._ | ~...~
+  const regex = /```([\s\S]+?)```|`([^`\n]+?)`|(https?:\/\/[^\s]+)|(www\.[^\s]+)|\*([^*\n]+?)\*|_([^_\n]+?)_|~([^~\n]+?)~/g
+  let lastIndex = 0
+  let m
+  let keyIdx = 0
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > lastIndex) {
+      segments.push(text.slice(lastIndex, m.index))
+    }
+    const k = `mk-${keyIdx++}`
+    if (m[1] !== undefined) {
+      // Code block
+      segments.push(<pre key={k} style={{
+        background: 'rgba(0,0,0,0.06)', padding: '8px 10px', borderRadius: 6,
+        fontSize: 12, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        margin: '4px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+      }}>{m[1]}</pre>)
+    } else if (m[2] !== undefined) {
+      // Inline code — se o conteúdo for uma URL, deixa clicável dentro do code
+      const inner = m[2]
+      const urlMatch = inner.match(/^(https?:\/\/\S+|www\.\S+)$/)
+      const codeStyle = {
+        background: 'rgba(0,0,0,0.08)', padding: '1px 6px', borderRadius: 4,
+        fontSize: '0.92em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+      }
+      if (urlMatch) {
+        const href = inner.startsWith('http') ? inner : `https://${inner}`
+        segments.push(
+          <a key={k} href={href} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline', wordBreak: 'break-all' }}>
+            <code style={codeStyle}>{inner}</code>
+          </a>
+        )
+      } else {
+        segments.push(<code key={k} style={codeStyle}>{inner}</code>)
+      }
+    } else if (m[3] !== undefined || m[4] !== undefined) {
+      // URL
+      const raw = m[3] || m[4]
+      const href = raw.startsWith('http') ? raw : `https://${raw}`
+      segments.push(<a key={k} href={href} target="_blank" rel="noreferrer" style={{
+        color: 'inherit', textDecoration: 'underline', wordBreak: 'break-all',
+      }}>{raw}</a>)
+    } else if (m[5] !== undefined) {
+      // Bold
+      segments.push(<strong key={k}>{m[5]}</strong>)
+    } else if (m[6] !== undefined) {
+      // Italic
+      segments.push(<em key={k}>{m[6]}</em>)
+    } else if (m[7] !== undefined) {
+      // Strikethrough
+      segments.push(<span key={k} style={{ textDecoration: 'line-through' }}>{m[7]}</span>)
+    }
+    lastIndex = m.index + m[0].length
+  }
+  if (lastIndex < text.length) {
+    segments.push(text.slice(lastIndex))
+  }
+  return segments
+}
+
+// Normaliza foto pra src de img: aceita URL, data: ou base64 cru (detecta tipo)
+function toImgSrc(raw) {
+  if (!raw) return null
+  const s = String(raw).trim()
+  if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:')) return s
+  let mime = 'image/jpeg'
+  if (s.startsWith('iVBOR')) mime = 'image/png'
+  else if (s.startsWith('UklGR')) mime = 'image/webp'
+  else if (s.startsWith('R0lGOD')) mime = 'image/gif'
+  return `data:${mime};base64,${s}`
+}
+
 function detectMedia(b64) {
   if (!b64 || b64.length < 10) return null
   if (b64.startsWith('T2dn')) return { type: 'audio', mime: 'audio/ogg' }
@@ -67,10 +146,10 @@ function detectMedia(b64) {
 function isToolMessage(row) {
   const type = getMessageType(row)
   const content = row.mensagem || ''
+  // Mantem so o filtro de "tool calls" da IA (chamadas internas), que NUNCA sao
+  // mensagens reais. Removemos os filtros por tamanho que cortavam msgs validas.
   if (type === 'tool') return true
   if (type === 'ia' && /^Calling \w+ with input:/i.test(content.trim())) return true
-  if (type === 'ia' && content.length > 800) return true
-  if (type === 'cliente' && content.length > 200 && INJECTED_PROMPT_RE.test(content)) return true
   return false
 }
 
@@ -122,7 +201,8 @@ const REASONS = [
 const AUTO_CLOSE_HOURS = 2
 const MANUAL_REASONS = REASONS.filter(r => r.value !== 'auto_encerrado')
 
-export default function CompanyConversations() {
+export default function CompanyConversations({ mode = 'individual' }) {
+  const isGroupMode = mode === 'grupo'
   const { session } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -163,8 +243,24 @@ export default function CompanyConversations() {
   const [recordTime, setRecordTime]   = useState(0)
   const [attachedFile, setAttachedFile] = useState(null) // { base64, mime, name, size, kind: 'image'|'pdf'|'file' }
   const [savedContacts, setSavedContacts] = useState({}) // numero (só dígitos) → { id, nome, notes }
+  const [clientesMap, setClientesMap]     = useState({}) // session_id → nome (fallback da tabela clientes)
+  const [clientesFotoMap, setClientesFotoMap] = useState({}) // session_id → foto (base64 ou URL)
   const [futureAppts, setFutureAppts]     = useState({}) // numero (só dígitos) → { starts_at, status, agenda_name }
   const [contextMenu, setContextMenu] = useState(null) // { x, y, contact }
+  const [mutedGroups, setMutedGroups] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('nx_muted_groups') || '[]')) } catch { return new Set() }
+  })
+  const [unreadCounts, setUnreadCounts] = useState({}) // { session_id: count }
+
+  function toggleMuteGroup(sid) {
+    setMutedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(sid)) next.delete(sid); else next.add(sid)
+      localStorage.setItem('nx_muted_groups', JSON.stringify([...next]))
+      return next
+    })
+    setContextMenu(null)
+  }
   const [chatActionsOpen, setChatActionsOpen] = useState(false)
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
   const [tagInput, setTagInput] = useState('')
@@ -269,6 +365,63 @@ export default function CompanyConversations() {
     return () => supabase.removeChannel(ch)
   }, [instance])
 
+  // Carrega nomes da tabela clientes (populada pelo n8n) como fallback de nome
+  useEffect(() => {
+    if (!instance) return
+    // Cada empresa pode ter sua propria tabela de contatos (campo companies.contacts_table)
+    const contactsTable = session?.company?.contacts_table || 'clientes'
+    // Carrega em 2 passos: 1) so nome/session_id/numero (rapido, sem foto)
+    //                     2) foto separado em background (nao bloqueia render)
+    supabase.from(contactsTable).select('session_id, numero, nome').eq('instancia', instance)
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[clientes] erro nomes:', error.message)
+          return
+        }
+        if (!data?.length) return
+        const nomeMap = {}
+        data.forEach(c => {
+          const keys = new Set()
+          if (c.session_id) keys.add(c.session_id)
+          if (c.numero) {
+            keys.add(c.numero)
+            const clean = c.numero.replace(/@.*/, '').replace(/\D/g, '')
+            if (clean) {
+              keys.add(clean)
+              keys.add(`${clean}@s.whatsapp.net`)
+            }
+          }
+          keys.forEach(k => {
+            if (c.nome && !nomeMap[k]) nomeMap[k] = c.nome
+          })
+        })
+        setClientesMap(nomeMap)
+      })
+
+    // Carrega fotos em background (não bloqueia render — UI vai aparecer com avatares
+    // padrão e a foto vai preenchendo conforme chega)
+    supabase.from(contactsTable).select('session_id, numero, foto').eq('instancia', instance).not('foto', 'is', null)
+      .then(({ data, error }) => {
+        if (error || !data?.length) return
+        const fotoMap = {}
+        data.forEach(c => {
+          if (!c.foto) return
+          const keys = new Set()
+          if (c.session_id) keys.add(c.session_id)
+          if (c.numero) {
+            keys.add(c.numero)
+            const clean = c.numero.replace(/@.*/, '').replace(/\D/g, '')
+            if (clean) {
+              keys.add(clean)
+              keys.add(`${clean}@s.whatsapp.net`)
+            }
+          }
+          keys.forEach(k => { if (!fotoMap[k]) fotoMap[k] = c.foto })
+        })
+        setClientesFotoMap(fotoMap)
+      })
+  }, [instance, session?.company?.contacts_table])
+
   // Abre conversa via ?contact=xxxx (vindo da página Contatos)
   useEffect(() => {
     const target = searchParams.get('contact')
@@ -310,7 +463,7 @@ export default function CompanyConversations() {
     setSaveContactModal({
       id: existing?.id || null,
       numero,
-      nome: existing?.nome || '',
+      nome: existing?.nome || clientesMap[contact.session_id] || '',
       notes: existing?.notes || '',
     })
     setContextMenu(null)
@@ -372,33 +525,53 @@ export default function CompanyConversations() {
   useEffect(() => {
     if (!instance) return
     setLoadingContacts(true)
-    supabase.from(CONV_TABLE).select('*')
+    // Carrega só colunas leves (sem base64/mensagem) das ultimas 2000 mensagens
+    // pra montar lista de contatos. Reduz payload em 50-100x.
+    supabase.from(CONV_TABLE)
+      .select('id, numero, idgrupo, nomegrupo, nome, type, created_at, horaLastMessage, aplicativo, mensagem')
       .eq('instancia', instance)
       .or('aplicativo.eq.whatsapp,aplicativo.is.null')
       .order('id', { ascending: false })
+      .limit(2000)
       .then(({ data, error }) => {
         if (!error && data) {
           const seen = new Set()
           const unique = []
           // Indexa quem teve resposta de atendente humano em algum momento
           const hasOutsideHuman = new Set()
+          // Mapeia idgrupo → melhor nomegrupo encontrado em qualquer mensagem
+          const groupNames = {}
           for (const row of data) {
             const t = (row.type || '').toLowerCase()
             if ((t === 'atendente' || t === 'humano') && row.numero) {
               hasOutsideHuman.add(row.numero)
             }
+            if (row.idgrupo && row.nomegrupo) {
+              groupNames[row.idgrupo] = row.nomegrupo
+            }
           }
           for (const row of data) {
-            const sid = row.numero
+            // Grupo: tem coluna idgrupo OU o numero termina em @g.us (formato antigo)
+            const isGroup = !!row.idgrupo || (row.numero || '').includes('@g.us')
+            // session_id do contato: pro grupo é o idgrupo (ou numero se vier no formato antigo)
+            const sid = isGroup ? (row.idgrupo || row.numero) : row.numero
             if (!sid || seen.has(sid)) continue
+            if (isGroupMode !== isGroup) continue
             seen.add(sid)
-            const isGroup = sid.includes('@g.us')
+            const groupNameResolved = isGroup ? (groupNames[sid] || row.nomegrupo || 'Grupo') : null
+            // Preview da última msg (primeira linha, 60 chars max, com prefixo do tipo se for atendente)
+            const rawMsg = (row.mensagem || '').toString().trim()
+            const firstLine = rawMsg.split('\n')[0].replace(/^[^\n:]{1,40}:\s+/, '') // tira prefixo "Nome: "
+            const tLow = (row.type || '').toLowerCase()
+            const prefix = (tLow === 'atendente' || tLow === 'humano') ? 'Você: ' : (isGroup && row.nome ? `${row.nome}: ` : '')
+            const lastMessage = firstLine ? (prefix + firstLine).slice(0, 80) : ''
             unique.push({
               session_id: sid,
-              phone: isGroup ? (row.nome || 'Grupo') : formatPhone(sid),
+              phone: isGroup ? groupNameResolved : formatPhone(sid),
               isGroup,
-              groupName: isGroup ? (row.nome || 'Grupo') : null,
+              groupName: groupNameResolved,
               lastTs: getTimestamp(row),
+              lastMessage,
               outsideAssumed: hasOutsideHuman.has(sid),
             })
           }
@@ -424,6 +597,7 @@ export default function CompanyConversations() {
 
   // Auto-encerra tickets sem atividade após AUTO_CLOSE_HOURS horas
   useEffect(() => {
+    if (isGroupMode) return  // grupos não encerram automaticamente
     if (autoCloseDone.current || loadingContacts || !closedLoaded || !attendancesLoaded || !instance || !contacts.length) return
     autoCloseDone.current = true
 
@@ -469,10 +643,21 @@ export default function CompanyConversations() {
           if (!row || isToolMessage(row)) return
           // Ignora mensagens que não são do WhatsApp (Instagram tem tela separada)
           if (row.aplicativo && row.aplicativo !== 'whatsapp') return
-          const sid = row.numero
+          const isGroup = !!row.idgrupo || (row.numero || '').includes('@g.us')
+          const sid = isGroup ? (row.idgrupo || row.numero) : row.numero
           if (!sid) return
-          const isGroup = sid.includes('@g.us')
+          if (isGroupMode !== isGroup) return
           const ts = getTimestamp(row)
+
+          // Incrementa contador de não-lidas se não esta com essa conversa aberta
+          // e (no caso de grupos) se não esta silenciado
+          const incomingTypeForUnread = (row.type || '').toLowerCase()
+          const isFromMe = incomingTypeForUnread === 'atendente' || incomingTypeForUnread === 'humano'
+          const isSilenced = isGroup && mutedGroups.has(sid)
+          const isOpen = selectedRef.current?.session_id === sid
+          if (!isFromMe && !isOpen && !isSilenced) {
+            setUnreadCounts(prev => ({ ...prev, [sid]: (prev[sid] || 0) + 1 }))
+          }
 
           // Reabre ticket encerrado: remove do closed (mantém attendance se já assumido)
           setClosedMap(prev => {
@@ -485,26 +670,50 @@ export default function CompanyConversations() {
             const exists = prev.find(c => c.session_id === sid)
             const incomingType = (row.type || '').toLowerCase()
             const isOutsideHuman = incomingType === 'atendente' || incomingType === 'humano'
+            // Preview da última msg
+            const rawMsg = (row.mensagem || '').toString().trim()
+            const firstLine = rawMsg.split('\n')[0].replace(/^[^\n:]{1,40}:\s+/, '')
+            const prefix = isOutsideHuman ? 'Você: ' : (isGroup && row.nome ? `${row.nome}: ` : '')
+            const lastMessage = firstLine ? (prefix + firstLine).slice(0, 80) : ''
             if (exists) {
               return [
-                { ...exists, lastTs: ts, outsideAssumed: exists.outsideAssumed || isOutsideHuman },
+                { ...exists, lastTs: ts, lastMessage, outsideAssumed: exists.outsideAssumed || isOutsideHuman },
                 ...prev.filter(c => c.session_id !== sid)
               ]
             }
-            return [{ session_id: sid, phone: isGroup ? (row.nome || 'Grupo') : formatPhone(sid), isGroup, groupName: isGroup ? (row.nome || 'Grupo') : null, lastTs: ts, outsideAssumed: isOutsideHuman }, ...prev]
+            return [{ session_id: sid, phone: isGroup ? (row.nomegrupo || row.nome || 'Grupo') : formatPhone(sid), isGroup, groupName: isGroup ? (row.nomegrupo || row.nome || 'Grupo') : null, lastTs: ts, lastMessage, outsideAssumed: isOutsideHuman }, ...prev]
           })
 
 
           if (selectedRef.current?.session_id === sid) {
-            setMessages(msgs => [...msgs, {
-              id: row.id,
-              id_mensagem: row.id_mensagem || null,
-              type: getMessageType(row),
-              content: getMessageContent(row),
-              base64: row.base64 || null,
-              ts,
-            }])
+            const type = getMessageType(row)
+            setMessages(msgs => {
+              // Dedup: já existe por id
+              if (msgs.some(m => m.id === row.id)) return msgs
+              // Se é mensagem do atendente, substitui o optimistic pendente
+              if (type === 'atendente') {
+                const optIdx = msgs.findIndex(m => m._optimistic)
+                if (optIdx !== -1) {
+                  const next = [...msgs]
+                  next[optIdx] = { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true }
+                  return next
+                }
+              }
+              return [...msgs, { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true }]
+            })
           }
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: CONV_TABLE, filter: `instancia=eq.${instance}` },
+        (p) => {
+          const row = p.new
+          if (!row) return
+          // Atualiza msg local (principalmente pra refletir visualizada=true)
+          setMessages(msgs => msgs.map(m => m.id === row.id
+            ? { ...m, visualizada: row.visualizada === true, mine: row.fromMe === true || row['minha?'] === true || row.minha === true }
+            : m
+          ))
         }
       )
       .subscribe()
@@ -532,21 +741,52 @@ export default function CompanyConversations() {
     if (!selected || !instance) return
     setLoadingMsgs(true)
     setMessages([])
-    supabase.from(CONV_TABLE).select('*')
+    // Pega as últimas 200 mensagens (mais recentes primeiro no DB, inverte pra ordem cronológica)
+    // Grupo: filtra por idgrupo + instancia. Individual: filtra por numero + instancia + sem idgrupo.
+    let q = supabase.from(CONV_TABLE).select('*')
       .eq('instancia', instance)
-      .eq('numero', selected.session_id)
-      .or('aplicativo.eq.whatsapp,aplicativo.is.null')
-      .order('id', { ascending: true })
+    if (selected.isGroup) {
+      // Grupo: msgs com idgrupo igual OU msgs enviadas por nos (numero = idgrupo, idgrupo null)
+      q = q.or(`idgrupo.eq.${selected.session_id},numero.eq.${selected.session_id}`)
+    } else {
+      // Individual: numero exato + idgrupo null (nao confundir com participacao em grupo)
+      q = q.eq('numero', selected.session_id).is('idgrupo', null)
+    }
+    q
+      .order('id', { ascending: false })
+      .limit(1000)
       .then(({ data, error }) => {
         if (!error && data) {
-          setMessages(data.filter(r => !isToolMessage(r)).map(r => ({
+          const ordered = [...data].reverse()  // volta pra ordem antigas→novas
+          setMessages(ordered.filter(r => !isToolMessage(r)).map(r => ({
             id: r.id,
             id_mensagem: r.id_mensagem || null,
             type: getMessageType(r),
             content: getMessageContent(r),
             base64: r.base64 || null,
             ts: getTimestamp(r),
+            nome: r.nome || null,
+            // fromMe = padrão Evolution/Baileys; mine/minha? = nossa coluna
+            mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
+            visualizada: r.visualizada === true,
           })))
+
+          // Dispara webhook de presença: avisa o n8n que o atendente abriu a conversa
+          // remoteJid = numero do contato ou idgrupo do grupo
+          // id_mensagem = última mensagem com id_mensagem preenchido (data vem desc, pega o primeiro)
+          const remoteJid = selected.session_id
+          const lastIdMensagem = data.find(r => r.id_mensagem)?.id_mensagem || null
+          const params = new URLSearchParams({
+            instancia: instance || '',
+            apikey: apiInstancia || '',
+            remoteJid: remoteJid || '',
+            id_mensagem: lastIdMensagem || '',
+          })
+          const url = `https://n8n.nexladesenvolvimento.com.br/webhook/presencademensagem?${params.toString()}`
+          console.log('[presenca] disparando GET', url)
+          fetch(url, { method: 'GET', mode: 'no-cors' })
+            .then(() => console.log('[presenca] ok'))
+            .catch(e => console.warn('[presenca] erro:', e))
         }
         setLoadingMsgs(false)
       })
@@ -555,6 +795,30 @@ export default function CompanyConversations() {
   useEffect(() => {
     if (!loadingMsgs) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loadingMsgs])
+
+  // ESC: fecha modais abertos primeiro, depois sai da conversa
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key !== 'Escape') return
+      // Não interfere se usuário tá digitando em input/textarea
+      const tag = (e.target?.tagName || '').toUpperCase()
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable
+      if (isTyping) return
+
+      // Prioridade: fecha modais abertos primeiro
+      if (editingMsg)        { setEditingMsg(null); return }
+      if (tagPopoverOpen)    { setTagPopoverOpen(false); return }
+      if (saveContactModal)  { setSaveContactModal(null); return }
+      if (transferModal)     { setTransferModal(null); return }
+      if (closeModal)        { setCloseModal(null); return }
+      if (contextMenu)       { setContextMenu(null); return }
+
+      // Sem modal aberto: sai da conversa
+      if (selected) setSelected(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selected, editingMsg, tagPopoverOpen, saveContactModal, transferModal, closeModal, contextMenu])
 
   async function handleAssume(contact, e) {
     e?.stopPropagation()
@@ -772,6 +1036,8 @@ export default function CompanyConversations() {
   // Regra: dono da conversa OU admin OU conversa ainda sem atendimento.
   function canRespond(contact) {
     if (!contact) return false
+    // Modo grupo: sempre pode responder, sem assumir/encerrar
+    if (isGroupMode) return true
     if (closedMap[contact.session_id]) return false
     const att = attendancesMap[contact.session_id]
     if (!att) return true
@@ -885,6 +1151,19 @@ export default function CompanyConversations() {
       // Salva com prefixo do atendente no banco (exibido no histórico)
       const mensagemPayload = `${attendantName}: ${rawPayload}`
       const mediaBase64 = audio?.base64 || file?.base64 || null
+
+      // Optimistic update: mostra a mensagem imediatamente sem esperar o Realtime round-trip
+      const optId = `opt-${Date.now()}`
+      setMessages(msgs => [...msgs, {
+        id: optId,
+        id_mensagem: null,
+        type: 'atendente',
+        content: mensagemPayload,
+        base64: mediaBase64,
+        ts: new Date().toISOString(),
+        _optimistic: true,
+      }])
+
       const { error: insErr } = await supabase.rpc('send_mensagem_geral', {
         p_instancia: instance,
         p_numero: selected.session_id,
@@ -894,6 +1173,31 @@ export default function CompanyConversations() {
         p_base64: mediaBase64,
       })
       if (insErr) console.error('send_mensagem_geral:', insErr)
+
+      // fromMe e marcado automaticamente pela trigger do banco
+      // (trg_mensagens_geral_set_frommemine) quando type='atendente'
+
+      // Se for envio pra grupo, complementa idgrupo/nomegrupo na linha recem inserida
+      // (o RPC nao tem esses campos, entao patcheamos aqui)
+      if (selected.isGroup) {
+        try {
+          await new Promise(r => setTimeout(r, 150))
+          const { data: latest } = await supabase.from(CONV_TABLE)
+            .select('id')
+            .eq('instancia', instance)
+            .eq('numero', selected.session_id)
+            .eq('type', 'atendente')
+            .is('idgrupo', null)
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (latest?.id) {
+            await supabase.from(CONV_TABLE)
+              .update({ idgrupo: selected.session_id, nomegrupo: selected.groupName || null })
+              .eq('id', latest.id)
+          }
+        } catch (e) { console.warn('[grupo] patch idgrupo:', e) }
+      }
 
       fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
         method: 'POST',
@@ -941,8 +1245,10 @@ export default function CompanyConversations() {
         }
         const rowId = rows[0].id
         await supabase.from('mensagens_geral').update({ id_mensagem: respIdMensagem }).eq('id', rowId)
-        // Atualiza estado local pra edição funcionar imediatamente
-        setMessages(prev => prev.map(m => m.id === rowId ? { ...m, id_mensagem: respIdMensagem } : m))
+        // Atualiza estado local pra edição funcionar imediatamente (inclui optimistic ainda pendente)
+        setMessages(prev => prev.map(m =>
+          (m.id === rowId || m._optimistic) ? { ...m, id: rowId, id_mensagem: respIdMensagem, _optimistic: false } : m
+        ))
         console.log('[envio] id_mensagem gravado:', respIdMensagem, 'row:', rowId)
       })
       .catch(e => console.warn('webhook envio:', e))
@@ -998,14 +1304,40 @@ export default function CompanyConversations() {
     { id: 'finalizados', label: 'Finalizados',            icon: Archive,    count: finalizados.length },
   ]
 
-  const currentList = tab === 'recepcao' ? recepcao : tab === 'meu-setor' ? meuSetor : finalizados
-  const filtered = currentList.filter(c => c.phone.includes(search))
-  const isClosed = selected ? closed.has(selected.session_id) : false
+  const currentList = isGroupMode
+    ? contacts  // tela de grupos mostra todos sem distincao de tabs
+    : tab === 'recepcao' ? recepcao : tab === 'meu-setor' ? meuSetor : finalizados
+  const filtered = currentList.filter(c => c.phone.toLowerCase().includes(search.toLowerCase()))
+  const isClosed = (selected && !isGroupMode) ? closed.has(selected.session_id) : false
 
   return (
     <div className={`contacts-root${selected ? ' has-chat' : ''}`}>
       <div className="contacts-list">
-        {/* Abas */}
+        {/* Header dedicado para grupos */}
+        {isGroupMode && (
+          <div style={{
+            padding: '14px 16px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--bg-surface)',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <Users size={16} style={{ color: '#7C3AED' }} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Grupos
+            </div>
+            {contacts.length > 0 && (
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 20,
+                background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE',
+              }}>
+                {contacts.length}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Abas só no modo individual */}
+        {!isGroupMode && (
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
           {tabList.map(t => (
             <button
@@ -1036,11 +1368,12 @@ export default function CompanyConversations() {
             </button>
           ))}
         </div>
+        )}
 
         <div className="contacts-list-header" style={{ paddingTop: 10 }}>
           <input
             className="contacts-search"
-            placeholder="Buscar por telefone..."
+            placeholder={isGroupMode ? "Buscar grupo..." : "Buscar por telefone..."}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -1062,40 +1395,44 @@ export default function CompanyConversations() {
             const rs = closedReason ? REASONS.find(r => r.value === closedReason) : null
             const cleanNum = c.phone.replace(/\D/g, '')
             const saved = findSaved(savedContacts, cleanNum)
+            const clienteNome = !saved ? (clientesMap[c.session_id] || null) : null
+            const clienteFoto = clientesFotoMap[c.session_id] || clientesFotoMap[cleanNum] || null
+            const photoSrc = saved?.photo || (clienteFoto ? toImgSrc(clienteFoto) : null)
+            const displayName = saved?.nome || clienteNome || null
             const nextAppt = futureAppts[cleanNum]
             return (
               <div
                 key={c.session_id}
                 className={`contact-item ${selected?.session_id === c.session_id ? 'selected' : ''}`}
-                onClick={() => setSelected(c)}
+                onClick={() => { setSelected(c); setUnreadCounts(prev => { if (!prev[c.session_id]) return prev; const next = { ...prev }; delete next[c.session_id]; return next }) }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   setContextMenu({ x: e.clientX, y: e.clientY, contact: c })
                 }}
               >
                 <div className="contact-avatar" style={
-                  saved?.photo ? { background: 'transparent', overflow: 'hidden' } :
+                  photoSrc ? { background: 'transparent', overflow: 'hidden' } :
                   c.isGroup ? { background: '#EDE9FE', color: '#7C3AED' } : {}
                 }>
-                  {saved?.photo
-                    ? <img src={saved.photo} alt={saved.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {photoSrc
+                    ? <img src={photoSrc} alt={displayName || c.phone} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : c.isGroup
                       ? <Users size={14} />
-                      : saved?.nome
-                        ? <span style={{ fontWeight: 700, fontSize: 12, color: '#2563EB' }}>{saved.nome.charAt(0).toUpperCase()}</span>
+                      : displayName
+                        ? <span style={{ fontWeight: 700, fontSize: 12, color: '#2563EB' }}>{displayName.charAt(0).toUpperCase()}</span>
                         : <User size={14} style={{ opacity: 0.4 }} />}
                 </div>
                 <div className="contact-info" style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                    <div className="contact-name" style={(saved || c.isGroup) ? { fontWeight: 600 } : {}}>
-                      {saved ? saved.nome : c.phone}
+                    <div className="contact-name" style={(displayName || c.isGroup) ? { fontWeight: 600 } : {}}>
+                      {displayName || c.phone}
                     </div>
-                    {c.isGroup && (
+                    {c.isGroup && !isGroupMode && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: '#7C3AED', background: '#F5F3FF', border: '1px solid #DDD6FE', lineHeight: '16px' }}>
                         <Users size={9} /> Grupo
                       </span>
                     )}
-                    {saved && (
+                    {displayName && (
                       <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phone}</span>
                     )}
                     {nextAppt && (
@@ -1108,17 +1445,17 @@ export default function CompanyConversations() {
                         <Calendar size={9} /> {formatApptShort(nextAppt.starts_at)}
                       </span>
                     )}
-                    {tab === 'recepcao' && c.outsideAssumed && (
+                    {!isGroupMode && tab === 'recepcao' && c.outsideAssumed && (
                       <span title="Alguém respondeu direto pelo WhatsApp, fora da plataforma" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A', lineHeight: '16px' }}>
                         <PhoneCall size={9} /> Atendido fora
                       </span>
                     )}
-                    {tab === 'recepcao' && aiEnabled && !c.outsideAssumed && (
+                    {!isGroupMode && tab === 'recepcao' && aiEnabled && !c.outsideAssumed && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', lineHeight: '16px' }}>
                         <Sparkles size={9} /> IA
                       </span>
                     )}
-                    {tab === 'meu-setor' && att && (
+                    {!isGroupMode && tab === 'meu-setor' && att && (
                       <>
                         {att.sector_name && (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: '#fff', background: att.sector_color || '#6B7280', lineHeight: '16px' }}>
@@ -1130,11 +1467,20 @@ export default function CompanyConversations() {
                         </span>
                       </>
                     )}
-                    {tab === 'finalizados' && rs && (
+                    {!isGroupMode && tab === 'finalizados' && rs && (
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: rs.color, background: rs.bg, border: `1px solid ${rs.border}`, lineHeight: '16px' }}>{rs.label}</span>
                     )}
                   </div>
-                  {tab === 'recepcao' && (
+                  {c.lastMessage && (
+                    <div style={{
+                      fontSize: 12, color: 'var(--text-muted)', marginTop: 2,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      maxWidth: '100%',
+                    }}>
+                      {c.lastMessage}
+                    </div>
+                  )}
+                  {!isGroupMode && tab === 'recepcao' && (
                     <button
                       onClick={e => handleAssume(c, e)}
                       disabled={isAssuming}
@@ -1145,8 +1491,19 @@ export default function CompanyConversations() {
                     </button>
                   )}
                 </div>
-                <div className="contact-meta">
+                <div className="contact-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                   {c.lastTs && <div className="contact-time">{formatContactTime(c.lastTs)}</div>}
+                  {unreadCounts[c.session_id] > 0 && (
+                    <span style={{
+                      minWidth: 18, height: 18, padding: '0 6px',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: 20, background: '#2563EB', color: '#fff',
+                      fontSize: 10, fontWeight: 700, lineHeight: 1,
+                    }}>{unreadCounts[c.session_id]}</span>
+                  )}
+                  {c.isGroup && mutedGroups.has(c.session_id) && (
+                    <span title="Grupo silenciado" style={{ fontSize: 10, color: 'var(--text-muted)' }}>🔕</span>
+                  )}
                 </div>
               </div>
             )
@@ -1169,22 +1526,25 @@ export default function CompanyConversations() {
               {(() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
                 const saved = findSaved(savedContacts, cleanNum)
+                const headerName = saved?.nome || clientesMap[selected.session_id] || null
+                const headerFotoRaw = clientesFotoMap[selected.session_id] || clientesFotoMap[cleanNum] || null
+                const headerPhoto = saved?.photo || (headerFotoRaw ? toImgSrc(headerFotoRaw) : null)
                 return (
                   <>
                     <div className="contact-avatar"
                       style={{
                         width: 38, height: 38,
-                        background: saved?.photo ? 'transparent' : undefined,
+                        background: headerPhoto ? 'transparent' : undefined,
                         overflow: 'hidden',
                         cursor: saved ? 'pointer' : 'default',
                       }}
                       onClick={() => saved && navigate(`/painel/contatos/${saved.id}`)}
                       title={saved ? 'Abrir ficha do cliente' : ''}
                     >
-                      {saved?.photo
-                        ? <img src={saved.photo} alt={saved.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : saved?.nome
-                          ? <span style={{ fontWeight: 700, fontSize: 14, color: '#2563EB' }}>{saved.nome.charAt(0).toUpperCase()}</span>
+                      {headerPhoto
+                        ? <img src={headerPhoto} alt={headerName || selected.phone} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : headerName
+                          ? <span style={{ fontWeight: 700, fontSize: 14, color: '#2563EB' }}>{headerName.charAt(0).toUpperCase()}</span>
                           : <User size={14} style={{ opacity: 0.4 }} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -1192,11 +1552,11 @@ export default function CompanyConversations() {
                         style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', cursor: saved ? 'pointer' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         onClick={() => saved && navigate(`/painel/contatos/${saved.id}`)}
                       >
-                        {saved ? saved.nome : selected.phone}
+                        {headerName || selected.phone}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
                         <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                          {saved ? selected.phone : ''}
+                          {headerName ? selected.phone : ''}
                         </span>
                         {!loadingMsgs && <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{messages.length} msg</span>}
                       </div>
@@ -1204,10 +1564,10 @@ export default function CompanyConversations() {
                   </>
                 )
               })()}
-              {!isClosed && (() => {
+              {!isClosed && !isGroupMode && (() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
                 const saved = findSaved(savedContacts, cleanNum)
-                const nome = saved?.nome || ''
+                const nome = saved?.nome || clientesMap[selected.session_id] || ''
                 const hasContact = !!saved
                 const att = attendancesMap[selected.session_id]
                 const isOwner = att && att.attendant_email === session?.user?.email
@@ -1505,6 +1865,7 @@ export default function CompanyConversations() {
                 significa que alguém respondeu por fora (direto no WhatsApp) — mostra
                 aviso laranja em vez do banner azul "sob IA". */}
             {(() => {
+              if (isGroupMode) return null
               if (isClosed || attendancesMap[selected.session_id]) return null
               const respondidaPorFora = messages.some(m => {
                 const t = (m.type || '').toLowerCase()
@@ -1619,9 +1980,16 @@ export default function CompanyConversations() {
               {messages.map(msg => {
                 const isCliente    = msg.type === 'cliente'
                 const isAtendente  = msg.type === 'atendente'
-                const isLeft       = isCliente
+                // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
+                // Regra: atendente / fromMe = direita | cliente = esquerda | IA = direita
+                // msg.mine inclui fromMe (envio direto pelo WhatsApp)
+                const isMine       = msg.mine === true || isAtendente
+                const isMineInGroup = isGroupMode && isMine
+                const isLeft       = isGroupMode
+                  ? !isMineInGroup                  // grupo: minha = direita, outros = esquerda
+                  : (isCliente && !msg.mine)        // individual: cliente = esquerda, exceto se fromMe=true
                 const isImage      = isCliente && /^(esta imagem|a imagem|esse documento|este documento|essa imagem|o documento|a foto|essa foto)/i.test(msg.content.trim())
-                const labelColor   = isCliente ? 'var(--text-muted)' : isAtendente ? '#16A34A' : '#2563EB'
+                const labelColor   = isGroupMode ? '#2563EB' : (isCliente ? 'var(--text-muted)' : isAtendente ? '#16A34A' : '#2563EB')
                 return (
                   <div key={msg.id}>
                     <div className="msg-label" style={{
@@ -1629,11 +1997,13 @@ export default function CompanyConversations() {
                       justifyContent: isLeft ? 'flex-start' : 'flex-end',
                       color: labelColor,
                     }}>
-                      {isCliente
-                        ? <><User size={10} /> Cliente</>
-                        : isAtendente
-                          ? <><Headset size={10} /> Atendente</>
-                          : <><Bot size={10} /> IA</>}
+                      {isGroupMode
+                        ? <><User size={10} /> {msg.nome || 'Participante'}</>
+                        : isCliente
+                          ? <><User size={10} /> Cliente</>
+                          : isAtendente
+                            ? <><Headset size={10} /> Atendente</>
+                            : <><Bot size={10} /> IA</>}
                     </div>
                     <div className={`msg-row ${isLeft ? 'ai' : 'client'}`}>
                       {(() => {
@@ -1645,10 +2015,11 @@ export default function CompanyConversations() {
                         const isPlaceholder = !!fileLine
                         const displayContent = isPlaceholder ? extraText : rawContent
                         const hasOnlyMedia = media && !displayContent
-                        const bubbleStyle = isAtendente
+                        // Bolha azul pra qualquer mensagem do lado direito (minha/atendente/IA/etc)
+                        const bubbleStyle = !isLeft
                           ? hasOnlyMedia
                             ? { background: 'transparent', padding: 0, boxShadow: 'none', border: 'none' }
-                            : { background: '#16A34A', color: '#fff', borderBottomRightRadius: 4 }
+                            : { background: '#2563EB', color: '#fff', borderBottomRightRadius: 4 }
                           : hasOnlyMedia
                             ? { background: 'transparent', padding: 0, boxShadow: 'none', border: 'none' }
                             : {}
@@ -1657,7 +2028,7 @@ export default function CompanyConversations() {
                           <div className="msg-bubble" style={{ ...bubbleStyle, position: 'relative' }}
                             onMouseEnter={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '1') }}
                             onMouseLeave={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '0') }}>
-                            {isAtendente && !isEditing && !hasOnlyMedia && (
+                            {isAtendente && !isEditing && !hasOnlyMedia && !msg._optimistic && (
                               <button
                                 className="msg-edit-btn"
                                 onClick={() => {
@@ -1669,8 +2040,8 @@ export default function CompanyConversations() {
                                 style={{
                                   position: 'absolute', top: -10, right: -10,
                                   width: 26, height: 26, borderRadius: '50%',
-                                  background: '#fff', border: '1px solid #16A34A',
-                                  color: '#16A34A', cursor: 'pointer',
+                                  background: '#fff', border: '1px solid #2563EB',
+                                  color: '#2563EB', cursor: 'pointer',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   opacity: 0, transition: 'opacity 0.15s',
                                   boxShadow: '0 2px 6px rgba(0,0,0,0.12)', zIndex: 2,
@@ -1745,21 +2116,30 @@ export default function CompanyConversations() {
                                     Cancelar
                                   </button>
                                   <button onClick={handleSaveEdit} disabled={savingEdit || !editingMsg.newText?.trim()}
-                                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', background: '#fff', color: '#16A34A', cursor: 'pointer', opacity: savingEdit ? 0.6 : 1 }}>
+                                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', background: '#fff', color: '#2563EB', cursor: 'pointer', opacity: savingEdit ? 0.6 : 1 }}>
                                     {savingEdit ? 'Salvando...' : 'Salvar'}
                                   </button>
                                 </div>
                               </div>
                             ) : displayContent && (
-                              <span style={{ whiteSpace: 'pre-wrap' }}>{displayContent}</span>
+                              <span style={{ whiteSpace: 'pre-wrap' }}>{renderRichText(displayContent)}</span>
                             )}
                           </div>
                         )
                       })()}
                     </div>
                     {msg.ts && (
-                      <div className="msg-time" style={{ textAlign: isLeft ? 'left' : 'right' }}>
-                        {formatMsgTime(msg.ts)}
+                      <div className="msg-time" style={{ textAlign: isLeft ? 'left' : 'right', display: 'flex', alignItems: 'center', gap: 4, justifyContent: isLeft ? 'flex-start' : 'flex-end' }}>
+                        <span>{formatMsgTime(msg.ts)}</span>
+                        {(isAtendente || isMineInGroup) && (
+                          <span title={msg.visualizada ? 'Visualizada' : 'Enviada'}
+                            style={{ display: 'inline-flex', alignItems: 'center', color: msg.visualizada ? '#3B82F6' : '#94A3B8' }}>
+                            <svg width="14" height="10" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M1 6.5L5 10.5L11 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M6 6.5L10 10.5L16 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1911,19 +2291,21 @@ export default function CompanyConversations() {
                     <Send size={14} />
                   </button>
                 </div>
-                <a
-                  href={`https://wa.me/${selected.phone}`}
-                  target="_blank" rel="noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: '#25D366', color: '#fff', borderRadius: 8,
-                    padding: '9px 18px', fontSize: 13, fontWeight: 600,
-                    textDecoration: 'none', boxShadow: '0 1px 4px rgba(37,211,102,0.3)',
-                  }}
-                >
-                  <PhoneCall size={15} /> WhatsApp
-                </a>
-                {session?.company?.digisac_url && (
+                {!isGroupMode && (
+                  <a
+                    href={`https://wa.me/${selected.phone}`}
+                    target="_blank" rel="noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      background: '#25D366', color: '#fff', borderRadius: 8,
+                      padding: '9px 18px', fontSize: 13, fontWeight: 600,
+                      textDecoration: 'none', boxShadow: '0 1px 4px rgba(37,211,102,0.3)',
+                    }}
+                  >
+                    <PhoneCall size={15} /> WhatsApp
+                  </a>
+                )}
+                {!isGroupMode && session?.company?.digisac_url && (
                   <a
                     href={session.company.digisac_url}
                     target="_blank" rel="noreferrer"
@@ -1955,17 +2337,31 @@ export default function CompanyConversations() {
           {(() => {
             const cleanNum = contextMenu.contact.phone.replace(/\D/g, '')
             const saved = findSaved(savedContacts, cleanNum)
+            const isGroup = contextMenu.contact.isGroup
+            const isMuted = isGroup && mutedGroups.has(contextMenu.contact.session_id)
+            const btnStyle = {
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+              padding: '8px 12px', border: 'none', background: 'transparent',
+              fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer',
+              borderRadius: 6, textAlign: 'left',
+            }
+            const onEnter = e => e.currentTarget.style.background = '#F8FAFC'
+            const onLeave = e => e.currentTarget.style.background = 'transparent'
+            if (isGroup) {
+              return (
+                <button
+                  onClick={() => toggleMuteGroup(contextMenu.contact.session_id)}
+                  style={btnStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}
+                >
+                  <span style={{ fontSize: 14 }}>{isMuted ? '🔔' : '🔕'}</span>
+                  {isMuted ? 'Reativar notificações' : 'Silenciar grupo'}
+                </button>
+              )
+            }
             return (
               <button
                 onClick={() => openSaveContact(contextMenu.contact)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                  padding: '8px 12px', border: 'none', background: 'transparent',
-                  fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer',
-                  borderRadius: 6, textAlign: 'left',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                style={btnStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}
               >
                 <User size={13} />
                 {saved ? 'Editar cliente' : 'Salvar cliente'}

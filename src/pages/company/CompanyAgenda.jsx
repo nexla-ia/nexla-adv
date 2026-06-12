@@ -138,6 +138,8 @@ export default function CompanyAgenda() {
   const phoneDropRef = useRef(null)
   const [countryCode, setCountryCode] = useState('55')
   const [showCountryDrop, setShowCountryDrop] = useState(false)
+  const [showContactDrop, setShowContactDrop] = useState(false)
+  const contactDropRef = useRef(null)
   const [savingAppt, setSavingAppt]   = useState(false)
   const [patientHistory, setPatientHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -200,6 +202,7 @@ export default function CompanyAgenda() {
   // Dispara lembretes automáticos para agendamentos futuros
   useEffect(() => {
     if (!instance || !agendas.length || !futureAppointments.length) return
+    let active = true
     const now = Date.now()
     const pending = []
     agendas.forEach(ag => {
@@ -214,12 +217,13 @@ export default function CompanyAgenda() {
         if (diff > 0 && diff <= windowMs) pending.push({ appt, ag })
       })
     })
-    if (!pending.length) return
+    if (!pending.length) return () => { active = false }
 
     // Marca ID no Set ANTES de disparar (bloqueia re-runs)
     pending.forEach(({ appt }) => reminderSentRef.current.add(appt.id))
 
     pending.forEach(async ({ appt, ag }) => {
+      if (!active) return
       const horaFmt = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       const msg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
       // Aguarda update no banco antes de disparar webhook
@@ -245,6 +249,7 @@ export default function CompanyAgenda() {
         }).catch(e => console.warn('webhook reminder:', e))
       }
     })
+    return () => { active = false }
   }, [agendas, futureAppointments, instance, apiInstancia])
 
   // Realtime para agendamentos
@@ -294,6 +299,7 @@ export default function CompanyAgenda() {
       setAgendaErr('Horário final deve ser depois do inicial'); return
     }
     setSavingAgenda(true)
+    try {
     const payload = {
       name: agendaModal.name.trim(),
       color: agendaModal.color,
@@ -308,7 +314,6 @@ export default function CompanyAgenda() {
     const { data, error } = agendaModal.id
       ? await supabase.from('agendas').update(payload).eq('id', agendaModal.id).select().single()
       : await supabase.from('agendas').insert(payload).select().single()
-    setSavingAgenda(false)
     if (error) { setAgendaErr('Erro: ' + error.message); return }
     setAgendas(prev => {
       const exists = prev.find(a => a.id === data.id)
@@ -317,6 +322,11 @@ export default function CompanyAgenda() {
     })
     if (!selectedAgendaId) setSelectedAgendaId(data.id)
     setAgendaModal(null)
+    } catch (e) {
+      setAgendaErr('Erro inesperado. Tente novamente.')
+    } finally {
+      setSavingAgenda(false)
+    }
   }
 
   function handleDeleteAgenda(agenda) {
@@ -421,6 +431,13 @@ export default function CompanyAgenda() {
     return () => document.removeEventListener('mousedown', close)
   }, [showPhoneDrop])
 
+  useEffect(() => {
+    if (!showContactDrop) return
+    const close = (e) => { if (contactDropRef.current && !contactDropRef.current.contains(e.target)) setShowContactDrop(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [showContactDrop])
+
   function openEditAppt(a) {
     const d = new Date(a.starts_at)
     setApptModal({
@@ -470,21 +487,6 @@ export default function CompanyAgenda() {
         }
       }
 
-      // Validação: conflito com outro agendamento do mesmo profissional
-      const conflict = appointments.find(a => {
-        if (a.id === apptModal.id) return false
-        if (a.professional_id !== apptModal.professional_id) return false
-        if (a.status === 'cancelado') return false
-        const aStart = new Date(a.starts_at).getTime()
-        const aEnd = aStart + (a.duration_minutes || 30) * 60000
-        return startsAt.getTime() < aEnd && aStart < endsAt.getTime()
-      })
-      if (conflict) {
-        const cStart = new Date(conflict.starts_at)
-        const cTime = cStart.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        setApptErr(`Conflito de horário: ${conflict.contact_nome} já está marcado às ${cTime} com este profissional.`)
-        return
-      }
     }
 
     setSavingAppt(true)
@@ -521,11 +523,18 @@ export default function CompanyAgenda() {
 
     const isNew = !apptModal.id
     const prevStatus = apptModal._prevStatus
-    const { error } = isNew
-      ? await supabase.from('appointments').insert(payload)
-      : await supabase.from('appointments').update(payload).eq('id', apptModal.id)
+    let apptResult
+    try {
+      apptResult = isNew
+        ? await supabase.from('appointments').insert(payload)
+        : await supabase.from('appointments').update(payload).eq('id', apptModal.id)
+    } catch (e) {
+      setApptErr('Erro inesperado. Tente novamente.')
+      setSavingAppt(false)
+      return
+    }
     setSavingAppt(false)
-    if (error) { setApptErr('Erro: ' + error.message); return }
+    if (apptResult.error) { setApptErr('Erro: ' + apptResult.error.message); return }
 
     // Registra evento na conversa do cliente (se tem número)
     if (numero) {
@@ -608,7 +617,48 @@ export default function CompanyAgenda() {
   async function confirmDeleteApptAction() {
     if (!apptModal?.id) return
     setDeletingNow(true)
-    await supabase.from('appointments').delete().eq('id', apptModal.id)
+    const appt = apptModal
+
+    // Envia aviso de cancelamento pro cliente antes de apagar
+    const numero = (appt.contact_numero || '').replace(/\D/g, '')
+    if (numero) {
+      const sessionId = `${numero}@s.whatsapp.net`
+      const dateStr = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      const firstName = (appt.contact_nome || '').split(' ')[0] || 'cliente'
+      const aviso = `Olá ${firstName}, infelizmente seu agendamento de ${dateStr} foi cancelado. Em caso de dúvidas, entre em contato.`
+
+      // Registra no historico de conversa
+      await supabase.rpc('send_mensagem_geral', {
+        p_instancia: instance,
+        p_numero: sessionId,
+        p_mensagem: aviso,
+        p_type: 'atendente',
+        p_hora: new Date().toISOString(),
+        p_base64: null,
+      }).catch(() => {})
+
+      // Envia pelo WhatsApp via n8n
+      fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: aviso,
+          session_id: sessionId,
+          phone: numero,
+          instancia: instance,
+          api_instancia: apiInstancia,
+          ai_enabled: false,
+          company: session?.company?.name,
+          sender_name: session?.user?.name,
+          sender_email: session?.user?.email,
+          is_agenda_event: true,
+        }),
+      }).catch(e => console.warn('webhook exclusao:', e))
+    }
+
+    await supabase.from('appointments').delete().eq('id', appt.id)
+    // Atualiza UI imediatamente (sem esperar realtime/F5)
+    setAppointments(prev => prev.filter(a => a.id !== appt.id))
     setDeletingNow(false)
     setConfirmDeleteAppt(false)
     setApptModal(null)
@@ -900,27 +950,39 @@ export default function CompanyAgenda() {
                               if (working && !appt) e.currentTarget.style.background = 'transparent'
                             }}
                           >
-                            {appt && status && (
-                              <div style={{
-                                background: status.color,
-                                color: '#fff',
-                                borderLeft: `3px solid ${status.color}`,
-                                borderRadius: 5,
-                                padding: '5px 8px',
-                                fontSize: 11, fontWeight: 700, lineHeight: 1.3,
-                                height: '100%',
-                                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                                overflow: 'hidden',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                              }}>
-                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {appt.contact_nome}
+                            {appt && status && (() => {
+                              // Quantos slots o agendamento ocupa
+                              const slotMin = selectedAgenda.slot_minutes || 30
+                              const duration = appt.duration_minutes || slotMin
+                              const span = Math.max(1, Math.ceil(duration / slotMin))
+                              // Altura: 46px por slot + 1px border entre eles (menos a propria celula)
+                              const SLOT_H = 46
+                              const totalHeight = span * SLOT_H + (span - 1) // soma os borders intermediarios
+                              return (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 3, left: 3, right: 3,
+                                  height: totalHeight - 6,
+                                  background: status.color,
+                                  color: '#fff',
+                                  borderLeft: `3px solid ${status.color}`,
+                                  borderRadius: 5,
+                                  padding: '5px 8px',
+                                  fontSize: 11, fontWeight: 700, lineHeight: 1.3,
+                                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                                  overflow: 'hidden',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                                  zIndex: 2,
+                                }}>
+                                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {appt.contact_nome}
+                                  </div>
+                                  <div style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, marginTop: 1 }}>
+                                    {hhmm} · {duration}min · {status.label}
+                                  </div>
                                 </div>
-                                <div style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, marginTop: 1 }}>
-                                  {hhmm} · {status.label}
-                                </div>
-                              </div>
-                            )}
+                              )
+                            })()}
                           </div>
                         )
                       })}
@@ -1088,18 +1150,68 @@ export default function CompanyAgenda() {
                   {agendas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
-              <div>
+              <div style={{ position: 'relative' }} ref={contactDropRef}>
                 <label style={labelStyle}>Nome do cliente</label>
-                <input className="nx-input" autoFocus list="agenda-contact-list" placeholder="Digite ou escolha um contato salvo"
+                <input className="nx-input" autoFocus placeholder="Digite ou escolha um contato salvo"
                   value={apptModal.contact_nome}
+                  onFocus={() => setShowContactDrop(true)}
                   onChange={e => {
-                    const value = e.target.value
-                    const match = savedContacts.find(c => c.nome === value)
-                    setApptModal(p => ({ ...p, contact_nome: value, contact_numero: match?.numero || p.contact_numero }))
+                    setApptModal(p => ({ ...p, contact_nome: e.target.value }))
+                    setShowContactDrop(true)
                   }} />
-                <datalist id="agenda-contact-list">
-                  {savedContacts.map(c => <option key={c.id} value={c.nome}>{c.numero}</option>)}
-                </datalist>
+                {showContactDrop && savedContacts.length > 0 && (() => {
+                  const q = (apptModal.contact_nome || '').trim().toLowerCase()
+                  const filtered = q
+                    ? savedContacts.filter(c =>
+                        (c.nome || '').toLowerCase().includes(q) ||
+                        (c.numero || '').replace(/\D/g, '').includes(q.replace(/\D/g, ''))
+                      )
+                    : savedContacts
+                  if (!filtered.length) return null
+                  return (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
+                      background: '#fff', border: '1px solid var(--border)',
+                      borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                      marginTop: 4, maxHeight: 220, overflowY: 'auto',
+                    }}>
+                      {filtered.slice(0, 30).map(c => (
+                        <button key={c.id} type="button"
+                          onMouseDown={() => {
+                            const phoneDigits = (c.numero || '').replace(/\D/g, '')
+                            const localNumber = phoneDigits.startsWith(countryCode) ? phoneDigits.slice(countryCode.length) : phoneDigits
+                            setApptModal(p => ({ ...p, contact_nome: c.nome, contact_numero: localNumber }))
+                            setShowContactDrop(false)
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            width: '100%', padding: '8px 12px', border: 'none',
+                            background: '#fff', cursor: 'pointer', textAlign: 'left',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                          onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                        >
+                          <div style={{
+                            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                            background: '#EFF6FF', color: '#2563EB',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, fontWeight: 700,
+                          }}>
+                            {(c.nome || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {c.nome}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                              {c.numero}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
               <div style={{ position: 'relative' }} ref={phoneDropRef}>
                 <label style={labelStyle}>Telefone</label>
