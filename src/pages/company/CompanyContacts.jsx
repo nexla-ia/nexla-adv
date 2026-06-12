@@ -86,9 +86,14 @@ export default function CompanyContacts() {
         // Normaliza pra comparar: pega últimos 8 dígitos (ignora 9 extra BR + DDI)
         const norm = (n) => (n || '').replace(/\D/g, '').slice(-8)
         const savedKeys = new Set((pat || []).map(p => norm(p.numero)).filter(Boolean))
-        const uniques = [...new Set(msgs.map(m =>
-          m.numero?.replace(/@.*/, '').replace(/\D/g, '')
-        ).filter(Boolean))]
+        const uniques = [...new Set(
+          msgs
+            // EXCLUI grupos (@g.us) — so numeros individuais
+            .filter(m => !(m.numero || '').includes('@g.us'))
+            .map(m => m.numero?.replace(/@.*/, '').replace(/\D/g, ''))
+            // Filtra IDs muito longos (defesa adicional contra IDs de grupo sem @g.us)
+            .filter(n => n && n.length <= 13)
+        )]
         const unsaved = uniques.filter(n => !savedKeys.has(norm(n)))
         setChatPhones(unsaved.slice(0, 200))
       }
