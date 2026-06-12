@@ -164,6 +164,22 @@ function formatMsgTime(ts) {
   return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${hhmm}`
 }
 
+// Formata data pra separador entre msgs: "Hoje", "Ontem", "dd 'de' MMMM" ou "dd/MM/yyyy"
+function formatDayDivider(ts) {
+  if (!ts) return ''
+  const date = new Date(ts)
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) return 'Hoje'
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Ontem'
+  const sameYear = date.getFullYear() === now.getFullYear()
+  if (sameYear) {
+    // 09 de junho (mês por extenso)
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
+  }
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 function formatApptShort(ts) {
   if (!ts) return ''
   const d = new Date(ts)
@@ -1977,7 +1993,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
               {!loadingMsgs && messages.length === 0 && (
                 <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', marginTop: '2rem' }}>Sem mensagens.</div>
               )}
-              {messages.map(msg => {
+              {messages.map((msg, mi) => {
+                // Divisor de data: mostra antes do 1o msg do dia
+                const prev = mi > 0 ? messages[mi - 1] : null
+                const curDay = msg.ts ? new Date(msg.ts).toDateString() : null
+                const prevDay = prev?.ts ? new Date(prev.ts).toDateString() : null
+                const showDayDivider = curDay && curDay !== prevDay
+
                 const isCliente    = msg.type === 'cliente'
                 const isAtendente  = msg.type === 'atendente'
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
@@ -1992,6 +2014,21 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const labelColor   = isGroupMode ? '#2563EB' : (isCliente ? 'var(--text-muted)' : isAtendente ? '#16A34A' : '#2563EB')
                 return (
                   <div key={msg.id}>
+                    {showDayDivider && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '16px 0 12px',
+                      }}>
+                        <span style={{
+                          background: 'rgba(15,23,42,0.06)', color: 'var(--text-secondary)',
+                          fontSize: 11, fontWeight: 600, padding: '4px 12px',
+                          borderRadius: 20, letterSpacing: 0.2,
+                          textTransform: 'capitalize',
+                        }}>
+                          {formatDayDivider(msg.ts)}
+                        </span>
+                      </div>
+                    )}
                     <div className="msg-label" style={{
                       display: 'flex', alignItems: 'center', gap: 4,
                       justifyContent: isLeft ? 'flex-start' : 'flex-end',
