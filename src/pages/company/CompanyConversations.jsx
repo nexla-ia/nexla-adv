@@ -2125,11 +2125,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       color: labelColor,
                     }}>
                       {isGroupMode
-                        ? <><User size={10} /> {senderFromPrefix || msg.nome || 'Participante'}</>
+                        ? <><User size={10} /> {senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))}</>
                         : isCliente
                           ? <><User size={10} /> Cliente</>
                           : isAtendente
-                            ? <><Headset size={10} /> {senderFromPrefix || msg.nome || 'Atendente'}</>
+                            ? <><Headset size={10} /> {senderFromPrefix || 'Não rastreado'}</>
                             : <><Bot size={10} /> IA</>}
                     </div>
                     <div className={`msg-row ${isLeft ? 'ai' : 'client'}`}>
