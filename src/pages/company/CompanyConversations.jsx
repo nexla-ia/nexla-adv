@@ -2088,6 +2088,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
                 const isCliente    = msg.type === 'cliente'
                 const isAtendente  = msg.type === 'atendente'
+
+                // Extrai nome do prefixo "Nome: " do conteudo (msgs enviadas pelo painel/grupo)
+                const prefixMatch = (msg.content || '').match(/^([^\n:]{1,40}):\s+/)
+                const senderFromPrefix = prefixMatch ? prefixMatch[1].trim() : null
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
                 // Regra: atendente / fromMe = direita | cliente = esquerda | IA = direita
                 // msg.mine inclui fromMe (envio direto pelo WhatsApp)
@@ -2121,17 +2125,20 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       color: labelColor,
                     }}>
                       {isGroupMode
-                        ? <><User size={10} /> {msg.nome || 'Participante'}</>
+                        ? <><User size={10} /> {senderFromPrefix || msg.nome || 'Participante'}</>
                         : isCliente
                           ? <><User size={10} /> Cliente</>
                           : isAtendente
-                            ? <><Headset size={10} /> Atendente</>
+                            ? <><Headset size={10} /> {senderFromPrefix || msg.nome || 'Atendente'}</>
                             : <><Bot size={10} /> IA</>}
                     </div>
                     <div className={`msg-row ${isLeft ? 'ai' : 'client'}`}>
                       {(() => {
                         const media = detectMedia(msg.base64)
-                        const rawContent = msg.content || ''
+                        // Remove prefixo "Nome: " do conteudo (ja exibido no label)
+                        const rawContent = senderFromPrefix
+                          ? (msg.content || '').slice(prefixMatch[0].length)
+                          : (msg.content || '')
                         const fileLineMatch = rawContent.match(/^(🎤 Áudio|🖼️ [^\n]+|📄 [^\n]+|📎 [^\n]+)(\n([\s\S]*))?$/)
                         const fileLine = fileLineMatch?.[1] || null
                         const extraText = fileLineMatch?.[3]?.trim() || ''
