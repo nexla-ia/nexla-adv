@@ -1088,9 +1088,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
     setRecordTime(0)
   }
 
-  async function handlePickFile(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
+  // Converte um Blob/File em estado attachedFile (reutilizado por upload e paste)
+  async function attachBlobAsFile(file, fallbackName = 'imagem.png') {
     if (!file) return
     const MAX = 15 * 1024 * 1024 // 15 MB
     if (file.size > MAX) {
@@ -1109,7 +1108,33 @@ export default function CompanyConversations({ mode = 'individual' }) {
     const kind = file.type.startsWith('image/') ? 'image'
       : file.type === 'application/pdf' ? 'pdf'
       : 'file'
-    setAttachedFile({ base64, mime: file.type || 'application/octet-stream', name: file.name, size: file.size, kind })
+    const name = file.name || fallbackName
+    setAttachedFile({ base64, mime: file.type || 'application/octet-stream', name, size: file.size, kind })
+  }
+
+  async function handlePickFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    await attachBlobAsFile(file)
+  }
+
+  // Handler de paste no input — captura imagens do clipboard (Ctrl+V / Cmd+V)
+  async function handlePasteFile(e) {
+    if (!canRespond(selected)) return
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile()
+        if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
+          e.preventDefault()
+          const ext = file.type.split('/')[1] || 'png'
+          await attachBlobAsFile(file, `colado-${Date.now()}.${ext}`)
+          return
+        }
+      }
+    }
   }
 
   function discardFile() {
@@ -2395,6 +2420,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         handleSend()
                       }
                     }}
+                    onPaste={handlePasteFile}
                     disabled={sending || recording || !canRespond(selected)}
                   />
                   <input
