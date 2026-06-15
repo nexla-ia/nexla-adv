@@ -2367,18 +2367,34 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                  <input
+                  <textarea
                     className="nx-input"
-                    style={{ flex: 1, fontSize: 13 }}
+                    rows={1}
+                    style={{
+                      flex: 1, fontSize: 13, resize: 'none',
+                      minHeight: 38, maxHeight: 140, lineHeight: 1.4,
+                      padding: '9px 12px', overflowY: 'auto',
+                    }}
                     placeholder={
                       !canRespond(selected) ? "Conversa está com outro atendente — você não pode responder"
                       : recordedAudio ? "Mensagem opcional para acompanhar o áudio..."
                       : attachedFile ? "Mensagem opcional para acompanhar o arquivo..."
-                      : "Digite uma mensagem..."
+                      : "Digite uma mensagem... (Shift+Enter = nova linha)"
                     }
                     value={msgText}
-                    onChange={e => setMsgText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                    onChange={e => {
+                      setMsgText(e.target.value)
+                      // Auto-grow conforme o conteudo
+                      const el = e.target
+                      el.style.height = 'auto'
+                      el.style.height = Math.min(140, el.scrollHeight) + 'px'
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSend()
+                      }
+                    }}
                     disabled={sending || recording || !canRespond(selected)}
                   />
                   <input
