@@ -835,22 +835,33 @@ export default function CompanyConversations({ mode = 'individual' }) {
           })))
           setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
 
-          // Dispara webhook de presença: avisa o n8n que o atendente abriu a conversa
-          // remoteJid = numero do contato ou idgrupo do grupo
-          // id_mensagem = última mensagem com id_mensagem preenchido (data vem desc, pega o primeiro)
+          // Dispara webhook de presença: só dispara se a ultima msg do contato
+          // for diferente da ultima ja "vista" por esse atendente (evita rajada
+          // de chamadas se o usuario fica abrindo/fechando a mesma conversa)
           const remoteJid = selected.session_id
-          const lastIdMensagem = data.find(r => r.id_mensagem)?.id_mensagem || null
-          const params = new URLSearchParams({
-            instancia: instance || '',
-            apikey: apiInstancia || '',
-            remoteJid: remoteJid || '',
-            id_mensagem: lastIdMensagem || '',
+          // Pega ultima msg INCOMING (do cliente, nao nossa)
+          const lastIncoming = data.find(r => {
+            const t = (r.type || '').toLowerCase()
+            return r.id_mensagem && t !== 'atendente' && t !== 'humano'
+              && !(r.fromMe === true || r['minha?'] === true || r.minha === true)
           })
-          const url = `https://n8n.nexladesenvolvimento.com.br/webhook/presencademensagem?${params.toString()}`
-          console.log('[presenca] disparando GET', url)
-          fetch(url, { method: 'GET', mode: 'no-cors' })
-            .then(() => console.log('[presenca] ok'))
-            .catch(e => console.warn('[presenca] erro:', e))
+          const lastIdMensagem = lastIncoming?.id_mensagem || null
+          if (lastIdMensagem) {
+            const seenKey = `nx_seen_${instance}_${remoteJid}`
+            const alreadySeen = localStorage.getItem(seenKey)
+            if (alreadySeen !== lastIdMensagem) {
+              const params = new URLSearchParams({
+                instancia: instance || '',
+                apikey: apiInstancia || '',
+                remoteJid: remoteJid || '',
+                id_mensagem: lastIdMensagem,
+              })
+              const url = `https://n8n.nexladesenvolvimento.com.br/webhook/presencademensagem?${params.toString()}`
+              fetch(url, { method: 'GET', mode: 'no-cors' })
+                .then(() => localStorage.setItem(seenKey, lastIdMensagem))
+                .catch(e => console.warn('[presenca] erro:', e))
+            }
+          }
         }
         setLoadingMsgs(false)
       })
@@ -1513,7 +1524,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
               <div
                 key={c.session_id}
                 className={`contact-item ${selected?.session_id === c.session_id ? 'selected' : ''}`}
-                onClick={() => { setSelected(c); setUnreadCounts(prev => { if (!prev[c.session_id]) return prev; const next = { ...prev }; delete next[c.session_id]; return next }) }}
+                onClick={() => { setSelected(c) }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   setContextMenu({ x: e.clientX, y: e.clientY, contact: c })
