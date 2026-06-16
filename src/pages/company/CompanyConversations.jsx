@@ -1427,7 +1427,19 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const currentList = isGroupMode
     ? contacts  // tela de grupos mostra todos sem distincao de tabs
     : tab === 'recepcao' ? recepcao : tab === 'meu-setor' ? meuSetor : finalizados
-  const filtered = currentList.filter(c => c.phone.toLowerCase().includes(search.toLowerCase()))
+  // Busca: matches em telefone OU nome (salvo OU vindo de clientes OU nome do grupo)
+  const filtered = (() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return currentList
+    return currentList.filter(c => {
+      const cleanNum = (c.phone || '').replace(/\D/g, '')
+      const saved = findSaved(savedContacts, cleanNum)
+      const clienteNome = !saved ? (clientesMap[c.session_id] || '') : ''
+      const nome = (saved?.nome || clienteNome || c.groupName || '').toLowerCase()
+      const phoneStr = (c.phone || '').toLowerCase()
+      return nome.includes(q) || phoneStr.includes(q)
+    })
+  })()
   const isClosed = (selected && !isGroupMode) ? closed.has(selected.session_id) : false
 
   return (
