@@ -1536,7 +1536,16 @@ export default function CompanyConversations({ mode = 'individual' }) {
               <div
                 key={c.session_id}
                 className={`contact-item ${selected?.session_id === c.session_id ? 'selected' : ''}`}
-                onClick={() => { setSelected(c) }}
+                onClick={() => {
+                  setSelected(c)
+                  // Zera SO o contador desse contato (outros permanecem)
+                  setUnreadCounts(prev => {
+                    if (!prev[c.session_id]) return prev
+                    const next = { ...prev }
+                    delete next[c.session_id]
+                    return next
+                  })
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   setContextMenu({ x: e.clientX, y: e.clientY, contact: c })
