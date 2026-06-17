@@ -290,13 +290,28 @@ export default function CompanyConversations({ mode = 'individual' }) {
     setContextMenu(null)
   }
 
-  // Toca som de notificacao estilo WhatsApp/Messenger (2 pops curtos ascendentes)
+  // Toca som de notificacao estilo WhatsApp/Messenger
+  // Reaproveita um unico AudioContext (browser bloqueia novos sem gesto do user)
+  const audioCtxRef = useRef(null)
+  function getAudioCtx() {
+    if (!audioCtxRef.current) {
+      try {
+        const Ctor = window.AudioContext || window.webkitAudioContext
+        if (!Ctor) return null
+        audioCtxRef.current = new Ctor()
+      } catch { return null }
+    }
+    return audioCtxRef.current
+  }
+
   function playNotificationSound() {
+    const ctx = getAudioCtx()
+    if (!ctx) return
+    // Browser pode ter o contexto suspenso ate o primeiro gesto
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
       const now = ctx.currentTime
-      // Pop helper: cria um "ploc" curto numa frequencia
-      const pop = (freq, startAt, dur = 0.08) => {
+      const pop = (freq, startAt, dur = 0.09) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         const filter = ctx.createBiquadFilter()
@@ -307,16 +322,29 @@ export default function CompanyConversations({ mode = 'individual' }) {
         osc.frequency.setValueAtTime(freq * 0.7, startAt)
         osc.frequency.exponentialRampToValueAtTime(freq, startAt + 0.015)
         gain.gain.setValueAtTime(0.0001, startAt)
-        gain.gain.exponentialRampToValueAtTime(0.22, startAt + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.4, startAt + 0.01)
         gain.gain.exponentialRampToValueAtTime(0.0001, startAt + dur)
         osc.start(startAt)
         osc.stop(startAt + dur + 0.02)
       }
-      // 2 pops: primeiro grave, segundo um pouco mais agudo (estilo Messenger)
       pop(620, now)
-      pop(820, now + 0.11)
-    } catch {}
+      pop(820, now + 0.12)
+    } catch (e) { console.warn('[notif] som erro:', e) }
   }
+
+  // Destrava o AudioContext no primeiro click/keydown do usuario
+  useEffect(() => {
+    function unlock() {
+      const ctx = getAudioCtx()
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {})
+    }
+    window.addEventListener('pointerdown', unlock, { once: false })
+    window.addEventListener('keydown', unlock, { once: false })
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
   const [chatActionsOpen, setChatActionsOpen] = useState(false)
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
   const [tagInput, setTagInput] = useState('')
