@@ -33,14 +33,21 @@ function findSaved(savedContacts, cleanNum) {
 
 // Gera o preview curto pra lista de contatos
 // Detecta media (audio/imagem/arquivo) e devolve label amigavel
-function getPreviewText(rawMsg) {
+// b64Hint = primeiros bytes do base64 (opcional) pra detectar tipo quando texto vazio
+function getPreviewText(rawMsg, b64Hint) {
   const s = (rawMsg || '').toString().trim()
-  if (!s) return ''
-  // Tira prefixo "Nome: "
   const noPrefix = s.replace(/^[^\n:]{1,40}:\s+/, '')
   const first = noPrefix.split('\n')[0].trim()
-  if (!first) return ''
-  // Detecta placeholders de media
+  // Texto vazio: provavelmente eh midia (audio/imagem/pdf sem caption)
+  if (!first) {
+    if (b64Hint) {
+      if (/^T2dn/.test(b64Hint) || /^\/\/uQ/.test(b64Hint) || /^SUQz/.test(b64Hint) || /^GkXf/.test(b64Hint)) return '🎤 Áudio'
+      if (/^\/9j\//.test(b64Hint) || /^iVBOR/.test(b64Hint) || /^UklGR/.test(b64Hint) || /^R0lGOD/.test(b64Hint)) return '🖼️ Imagem'
+      if (/^JVBERi/.test(b64Hint)) return '📄 PDF'
+    }
+    return '📎 Mídia'
+  }
+  // Texto presente: detecta placeholders de media
   if (/^🎤\s*Áudio/i.test(first) || /^\(áudio\)$/i.test(first)) return '🎤 Áudio'
   if (/^🖼️/.test(first)) return '🖼️ Imagem'
   if (/^📄/.test(first)) return '📄 Arquivo'
