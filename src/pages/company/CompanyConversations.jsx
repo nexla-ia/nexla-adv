@@ -290,21 +290,31 @@ export default function CompanyConversations({ mode = 'individual' }) {
     setContextMenu(null)
   }
 
-  // Toca som de notificacao (beep simples via Web Audio)
+  // Toca som de notificacao estilo WhatsApp/Messenger (2 pops curtos ascendentes)
   function playNotificationSound() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(880, ctx.currentTime)
-      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.18)
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4)
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.4)
+      const now = ctx.currentTime
+      // Pop helper: cria um "ploc" curto numa frequencia
+      const pop = (freq, startAt, dur = 0.08) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        const filter = ctx.createBiquadFilter()
+        filter.type = 'lowpass'
+        filter.frequency.value = 2400
+        osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(freq * 0.7, startAt)
+        osc.frequency.exponentialRampToValueAtTime(freq, startAt + 0.015)
+        gain.gain.setValueAtTime(0.0001, startAt)
+        gain.gain.exponentialRampToValueAtTime(0.22, startAt + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + dur)
+        osc.start(startAt)
+        osc.stop(startAt + dur + 0.02)
+      }
+      // 2 pops: primeiro grave, segundo um pouco mais agudo (estilo Messenger)
+      pop(620, now)
+      pop(820, now + 0.11)
     } catch {}
   }
   const [chatActionsOpen, setChatActionsOpen] = useState(false)
