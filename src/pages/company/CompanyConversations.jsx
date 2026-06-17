@@ -267,8 +267,16 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [clientesFotoMap, setClientesFotoMap] = useState({}) // session_id → foto (base64 ou URL)
   const [futureAppts, setFutureAppts]     = useState({}) // numero (só dígitos) → { starts_at, status, agenda_name }
   const [contextMenu, setContextMenu] = useState(null) // { x, y, contact }
+  // Silenciados: vale pra conversas individuais E grupos
   const [mutedGroups, setMutedGroups] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('nx_muted_groups') || '[]')) } catch { return new Set() }
+    try {
+      // Migra chave antiga "nx_muted_groups" pra nova "nx_muted_contacts"
+      const old = localStorage.getItem('nx_muted_groups')
+      const cur = localStorage.getItem('nx_muted_contacts')
+      const list = JSON.parse(cur || old || '[]')
+      if (old && !cur) localStorage.setItem('nx_muted_contacts', JSON.stringify(list))
+      return new Set(list)
+    } catch { return new Set() }
   })
   const [unreadCounts, setUnreadCounts] = useState({}) // { session_id: count }
 
@@ -276,10 +284,28 @@ export default function CompanyConversations({ mode = 'individual' }) {
     setMutedGroups(prev => {
       const next = new Set(prev)
       if (next.has(sid)) next.delete(sid); else next.add(sid)
-      localStorage.setItem('nx_muted_groups', JSON.stringify([...next]))
+      localStorage.setItem('nx_muted_contacts', JSON.stringify([...next]))
       return next
     })
     setContextMenu(null)
+  }
+
+  // Toca som de notificacao (beep simples via Web Audio)
+  function playNotificationSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.18)
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.4)
+    } catch {}
   }
   const [chatActionsOpen, setChatActionsOpen] = useState(false)
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
@@ -683,13 +709,16 @@ export default function CompanyConversations({ mode = 'individual' }) {
           const ts = getTimestamp(row)
 
           // Incrementa contador de não-lidas se não esta com essa conversa aberta
-          // e (no caso de grupos) se não esta silenciado
+          // e nao esta silenciada (vale pra individual e grupo)
           const incomingTypeForUnread = (row.type || '').toLowerCase()
           const isFromMe = incomingTypeForUnread === 'atendente' || incomingTypeForUnread === 'humano'
-          const isSilenced = isGroup && mutedGroups.has(sid)
+            || row.fromMe === true || row['minha?'] === true || row.minha === true
+          const isSilenced = mutedGroups.has(sid)
           const isOpen = selectedRef.current?.session_id === sid
           if (!isFromMe && !isOpen && !isSilenced) {
             setUnreadCounts(prev => ({ ...prev, [sid]: (prev[sid] || 0) + 1 }))
+            // Toca som de notificacao
+            playNotificationSound()
           }
 
           // Reabre ticket encerrado: remove do closed (mantém attendance se já assumido)
@@ -1655,8 +1684,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       fontSize: 10, fontWeight: 700, lineHeight: 1,
                     }}>{unreadCounts[c.session_id]}</span>
                   )}
-                  {c.isGroup && mutedGroups.has(c.session_id) && (
-                    <span title="Grupo silenciado" style={{ fontSize: 10, color: 'var(--text-muted)' }}>🔕</span>
+                  {mutedGroups.has(c.session_id) && (
+                    <span title={c.isGroup ? 'Grupo silenciado' : 'Conversa silenciada'} style={{ fontSize: 10, color: 'var(--text-muted)' }}>🔕</span>
                   )}
                 </div>
               </div>
@@ -2565,7 +2594,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
             const cleanNum = contextMenu.contact.phone.replace(/\D/g, '')
             const saved = findSaved(savedContacts, cleanNum)
             const isGroup = contextMenu.contact.isGroup
-            const isMuted = isGroup && mutedGroups.has(contextMenu.contact.session_id)
+            const isMuted = mutedGroups.has(contextMenu.contact.session_id)
             const btnStyle = {
               display: 'flex', alignItems: 'center', gap: 8, width: '100%',
               padding: '8px 12px', border: 'none', background: 'transparent',
@@ -2574,25 +2603,27 @@ export default function CompanyConversations({ mode = 'individual' }) {
             }
             const onEnter = e => e.currentTarget.style.background = '#F8FAFC'
             const onLeave = e => e.currentTarget.style.background = 'transparent'
-            if (isGroup) {
-              return (
+            return (
+              <>
+                {!isGroup && (
+                  <button
+                    onClick={() => openSaveContact(contextMenu.contact)}
+                    style={btnStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}
+                  >
+                    <User size={13} />
+                    {saved ? 'Editar cliente' : 'Salvar cliente'}
+                  </button>
+                )}
                 <button
                   onClick={() => toggleMuteGroup(contextMenu.contact.session_id)}
                   style={btnStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}
                 >
                   <span style={{ fontSize: 14 }}>{isMuted ? '🔔' : '🔕'}</span>
-                  {isMuted ? 'Reativar notificações' : 'Silenciar grupo'}
+                  {isMuted
+                    ? 'Reativar notificações'
+                    : (isGroup ? 'Silenciar grupo' : 'Silenciar conversa')}
                 </button>
-              )
-            }
-            return (
-              <button
-                onClick={() => openSaveContact(contextMenu.contact)}
-                style={btnStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}
-              >
-                <User size={13} />
-                {saved ? 'Editar cliente' : 'Salvar cliente'}
-              </button>
+              </>
             )
           })()}
         </div>
