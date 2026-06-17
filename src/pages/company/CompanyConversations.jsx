@@ -598,6 +598,17 @@ export default function CompanyConversations({ mode = 'individual' }) {
             })
           }
           setContacts(unique)
+          // Calcula badges iniciais: pra cada contato com lastTs > lastView salvo → marca como nao lido
+          const initialUnread = {}
+          for (const c of unique) {
+            if (!c.lastTs) continue
+            const lastView = parseInt(localStorage.getItem(`nx_lastview_${instance}_${c.session_id}`) || '0', 10)
+            const lastTsMs = new Date(c.lastTs).getTime()
+            if (lastTsMs > lastView) {
+              initialUnread[c.session_id] = 1  // 1+ msgs novas
+            }
+          }
+          setUnreadCounts(initialUnread)
         }
         setLoadingContacts(false)
       })
@@ -1545,6 +1556,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
                     delete next[c.session_id]
                     return next
                   })
+                  // Marca timestamp da ultima vista pra esse contato
+                  try { localStorage.setItem(`nx_lastview_${instance}_${c.session_id}`, String(Date.now())) } catch {}
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault()
