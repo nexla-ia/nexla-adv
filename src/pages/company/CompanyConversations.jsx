@@ -31,6 +31,27 @@ function findSaved(savedContacts, cleanNum) {
   return null
 }
 
+// Gera o preview curto pra lista de contatos
+// Detecta media (audio/imagem/arquivo) e devolve label amigavel
+function getPreviewText(rawMsg) {
+  const s = (rawMsg || '').toString().trim()
+  if (!s) return ''
+  // Tira prefixo "Nome: "
+  const noPrefix = s.replace(/^[^\n:]{1,40}:\s+/, '')
+  const first = noPrefix.split('\n')[0].trim()
+  if (!first) return ''
+  // Detecta placeholders de media
+  if (/^🎤\s*Áudio/i.test(first) || /^\(áudio\)$/i.test(first)) return '🎤 Áudio'
+  if (/^🖼️/.test(first)) return '🖼️ Imagem'
+  if (/^📄/.test(first)) return '📄 Arquivo'
+  if (/^📎/.test(first)) return '📎 Arquivo'
+  // IA transcrevendo midia
+  if (/^(esta imagem|a imagem|essa imagem|a foto|essa foto)/i.test(first)) return '🖼️ Imagem'
+  if (/^(esse documento|este documento|o documento)/i.test(first)) return '📄 Documento'
+  if (/^(este audio|esse audio|o audio|este áudio|esse áudio|o áudio)/i.test(first)) return '🎤 Áudio'
+  return first
+}
+
 function getMessageContent(row) {
   return (row.mensagem || '').replace(/^\*[^*]+\*:\n/, '').trim()
 }
@@ -645,12 +666,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
             if (isGroupMode !== isGroup) continue
             seen.add(sid)
             const groupNameResolved = isGroup ? (groupNames[sid] || row.nomegrupo || 'Grupo') : null
-            // Preview da última msg (primeira linha, 60 chars max, com prefixo do tipo se for atendente)
-            const rawMsg = (row.mensagem || '').toString().trim()
-            const firstLine = rawMsg.split('\n')[0].replace(/^[^\n:]{1,40}:\s+/, '') // tira prefixo "Nome: "
+            // Preview da última msg (detecta media e formata)
+            const previewBody = getPreviewText(row.mensagem)
             const tLow = (row.type || '').toLowerCase()
             const prefix = (tLow === 'atendente' || tLow === 'humano') ? 'Você: ' : (isGroup && row.nome ? `${row.nome}: ` : '')
-            const lastMessage = firstLine ? (prefix + firstLine).slice(0, 80) : ''
+            const lastMessage = previewBody ? (prefix + previewBody).slice(0, 80) : ''
             unique.push({
               session_id: sid,
               phone: isGroup ? groupNameResolved : formatPhone(sid),
@@ -770,11 +790,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
             const exists = prev.find(c => c.session_id === sid)
             const incomingType = (row.type || '').toLowerCase()
             const isOutsideHuman = incomingType === 'atendente' || incomingType === 'humano'
-            // Preview da última msg
-            const rawMsg = (row.mensagem || '').toString().trim()
-            const firstLine = rawMsg.split('\n')[0].replace(/^[^\n:]{1,40}:\s+/, '')
+            // Preview da última msg (detecta media)
+            const previewBody = getPreviewText(row.mensagem)
             const prefix = isOutsideHuman ? 'Você: ' : (isGroup && row.nome ? `${row.nome}: ` : '')
-            const lastMessage = firstLine ? (prefix + firstLine).slice(0, 80) : ''
+            const lastMessage = previewBody ? (prefix + previewBody).slice(0, 80) : ''
             if (exists) {
               return [
                 { ...exists, lastTs: ts, lastMessage, outsideAssumed: exists.outsideAssumed || isOutsideHuman },
