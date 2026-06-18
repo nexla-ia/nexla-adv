@@ -246,18 +246,35 @@ export default function CompanyAgenda() {
     let active = true
     const now = Date.now()
     const pending = []
+    const debug = []
     agendas.forEach(ag => {
-      if (!ag.reminder_hours) return
+      if (!ag.reminder_hours) {
+        debug.push({ agenda: ag.name, motivo: 'sem reminder_hours configurado' })
+        return
+      }
       const windowMs = ag.reminder_hours * 3600_000
       futureAppointments.forEach(appt => {
         if (appt.agenda_id !== ag.id) return
-        if (appt.reminder_sent) return
-        if (reminderSentRef.current.has(appt.id)) return // já processado nessa sessão
+        if (appt.reminder_sent) {
+          debug.push({ appt: appt.id, motivo: 'reminder_sent=true' })
+          return
+        }
+        if (reminderSentRef.current.has(appt.id)) {
+          debug.push({ appt: appt.id, motivo: 'ja processado nessa sessao' })
+          return
+        }
         const startsAt = new Date(appt.starts_at).getTime()
         const diff = startsAt - now
-        if (diff > 0 && diff <= windowMs) pending.push({ appt, ag })
+        const diffMin = Math.round(diff / 60000)
+        if (diff > 0 && diff <= windowMs) {
+          pending.push({ appt, ag })
+          debug.push({ appt: appt.id, ok: true, diffMin })
+        } else {
+          debug.push({ appt: appt.id, motivo: diff <= 0 ? 'passado' : 'fora da janela', diffMin })
+        }
       })
     })
+    console.log('[reminder-check]', { now: new Date().toLocaleTimeString(), totalAppts: futureAppointments.length, pending: pending.length, debug })
     if (!pending.length) return () => { active = false }
 
     // Marca ID no Set ANTES de disparar (bloqueia re-runs)
