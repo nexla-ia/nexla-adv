@@ -289,7 +289,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
         apikey: apiInstancia || '',
         idgrupo,
       })
-      const url = `https://n8n.nexladesenvolvimento.com.br/webhook/infogrupo?${params.toString()}`
+      const url = `https://n8n.nexladesenvolvimento.com.br/webhook/infogrupoadv?${params.toString()}`
       console.log('[infogrupo] GET', url)
       const res = await fetch(url, { method: 'GET' })
       console.log('[infogrupo] status:', res.status, res.statusText)
