@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X, Pencil } from 'lucide-react'
 
 const TAG_PALETTES = [
   { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -17,7 +17,7 @@ export function tagColor(tag) {
   return TAG_PALETTES[h % TAG_PALETTES.length]
 }
 
-export function TagBadge({ tag, onRemove, small }) {
+export function TagBadge({ tag, onRemove, onEdit, small }) {
   const { bg, color, border } = tagColor(tag)
   return (
     <span style={{
@@ -28,8 +28,16 @@ export function TagBadge({ tag, onRemove, small }) {
       lineHeight: '16px',
     }}>
       {tag}
+      {onEdit && (
+        <button onClick={onEdit} title="Editar etiqueta" style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          color, display: 'inline-flex', alignItems: 'center', opacity: 0.7,
+        }}>
+          <Pencil size={9} />
+        </button>
+      )}
       {onRemove && (
-        <button onClick={onRemove} style={{
+        <button onClick={onRemove} title="Remover" style={{
           background: 'none', border: 'none', cursor: 'pointer', padding: 0,
           color, display: 'inline-flex', alignItems: 'center', opacity: 0.7,
         }}>

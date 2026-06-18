@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile } from 'lucide-react'
+import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile, Kanban } from 'lucide-react'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
@@ -396,6 +396,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [recordTime, setRecordTime]   = useState(0)
   const [attachedFile, setAttachedFile] = useState(null) // { base64, mime, name, size, kind: 'image'|'pdf'|'file' }
   const [savedContacts, setSavedContacts] = useState({}) // numero (só dígitos) → { id, nome, notes }
+  const [kanbanColumns, setKanbanColumns] = useState([])  // colunas do kanban da empresa
+  const [kanbanPickerOpen, setKanbanPickerOpen] = useState(false)  // popover de "Adicionar ao Kanban"
+  const [addingToKanban, setAddingToKanban] = useState(false)
   const [clientesMap, setClientesMap]     = useState({}) // session_id → nome (fallback da tabela clientes)
   const [clientesFotoMap, setClientesFotoMap] = useState({}) // session_id → foto (base64 ou URL)
   const [futureAppts, setFutureAppts]     = useState({}) // numero (só dígitos) → { starts_at, status, agenda_name }
@@ -702,6 +705,51 @@ export default function CompanyConversations({ mode = 'individual' }) {
     setSavingContact(false)
     if (!error) setSaveContactModal(null)
     else setToast({ message: 'Erro ao salvar: ' + error.message, color: '#DC2626' })
+  }
+
+  // Carrega colunas do Kanban pra dropdown de "Adicionar ao Kanban"
+  useEffect(() => {
+    if (!instance) return
+    supabase.from('kanban_columns').select('*').eq('instancia', instance).order('position')
+      .then(({ data }) => setKanbanColumns(data || []))
+  }, [instance])
+
+  async function addContactToKanban(columnId) {
+    if (!selected || !columnId || addingToKanban) return
+    setAddingToKanban(true)
+    const cleanNum = (selected.phone || '').replace(/\D/g, '')
+    const saved = findSaved(savedContacts, cleanNum)
+    const displayName = saved?.nome
+      || clientesMap[selected.session_id]
+      || (selected.isGroup ? selected.groupName : null)
+      || selected.phone
+    const title = selected.isGroup ? `[Grupo] ${displayName}` : displayName
+    const { data: existingCards } = await supabase.from('kanban_cards')
+      .select('position').eq('column_id', columnId).order('position', { ascending: false }).limit(1)
+    const nextPos = (existingCards?.[0]?.position ?? 0) + 1
+    const { error } = await supabase.from('kanban_cards').insert({
+      column_id: columnId,
+      instancia: instance,
+      title,
+      description: selected.isGroup ? '' : `Contato: ${selected.phone}`,
+      assigned_user_id: session?.user?.id || null,
+      assigned_user_name: session?.user?.name || null,
+      priority: 'normal',
+      position: nextPos,
+      contact_session_id: selected.session_id,
+      contact_phone: selected.phone,
+      contact_name: displayName,
+      created_by_email: session?.user?.email,
+    })
+    setAddingToKanban(false)
+    setKanbanPickerOpen(false)
+    if (error) {
+      setToast({ message: 'Erro ao adicionar: ' + error.message, color: '#DC2626' })
+    } else {
+      const col = kanbanColumns.find(c => c.id === columnId)
+      setToast({ message: `Adicionado ao Kanban · ${col?.name || ''}`, color: '#16A34A' })
+    }
+    setTimeout(() => setToast(null), 3000)
   }
 
   // Carrega atendimentos ativos (quem está em qual setor + atendente)
@@ -2166,6 +2214,49 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         onClick={() => navigate(`/painel/agenda?numero=${cleanNum}${nome ? `&nome=${encodeURIComponent(nome)}` : ''}`)}>
                         <Calendar size={14} /> Agendar
                       </button>
+                      {/* Adicionar ao Kanban */}
+                      <div style={{ position: 'relative' }}>
+                        <button className="nx-btn-ghost"
+                          style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6, color: '#0891B2' }}
+                          onClick={() => setKanbanPickerOpen(v => !v)}>
+                          <Kanban size={14} /> Kanban
+                        </button>
+                        {kanbanPickerOpen && (
+                          <>
+                            <div onClick={() => setKanbanPickerOpen(false)}
+                              style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
+                            <div style={{
+                              position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                              zIndex: 1000, background: '#fff', border: '1px solid var(--border)',
+                              borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                              minWidth: 220, maxHeight: 280, overflowY: 'auto',
+                            }}>
+                              <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid var(--border)' }}>
+                                Adicionar a uma fila
+                              </div>
+                              {kanbanColumns.length === 0 ? (
+                                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+                                  Nenhuma coluna no Kanban. Crie em <strong>Atividades</strong>.
+                                </div>
+                              ) : kanbanColumns.map(col => (
+                                <button key={col.id}
+                                  onClick={() => addContactToKanban(col.id)}
+                                  disabled={addingToKanban}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                                    padding: '10px 12px', border: 'none', background: 'transparent',
+                                    fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left',
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: col.color || '#6B7280', flexShrink: 0 }} />
+                                  <span style={{ flex: 1, fontWeight: 600 }}>{col.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
                       {canTransfer && (
                         <button className="nx-btn-ghost"
                           style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6, color: '#0891B2' }}
@@ -2224,6 +2315,33 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', saved.id)
                         setSavedContacts(prev => ({ ...prev, [cleanNum]: { ...prev[cleanNum], tags: newTags } }))
                       }
+                      async function renameTag(oldTag) {
+                        const novo = prompt(`Renomear etiqueta "${oldTag}" pra:`, oldTag)
+                        if (!novo || novo.trim() === oldTag) return
+                        const novoNorm = novo.trim().toLowerCase()
+                        // Aplica em TODOS os contatos da instancia que tem essa tag
+                        const { data: affected } = await supabase.from('saved_contacts')
+                          .select('id, tags').eq('instancia', instance).contains('tags', [oldTag])
+                        for (const c of (affected || [])) {
+                          const newTags = (c.tags || []).map(t => t === oldTag ? novoNorm : t)
+                          // Remove duplicatas caso ja tivesse a tag nova
+                          const unique = [...new Set(newTags)]
+                          await supabase.from('saved_contacts').update({ tags: unique }).eq('id', c.id)
+                        }
+                        // Atualiza state local de TODOS
+                        setSavedContacts(prev => {
+                          const next = { ...prev }
+                          for (const key of Object.keys(next)) {
+                            const t = next[key].tags || []
+                            if (t.includes(oldTag)) {
+                              next[key] = { ...next[key], tags: [...new Set(t.map(x => x === oldTag ? novoNorm : x))] }
+                            }
+                          }
+                          return next
+                        })
+                        setToast({ message: `Etiqueta renomeada em ${affected?.length || 0} contato(s)`, color: '#16A34A' })
+                        setTimeout(() => setToast(null), 3000)
+                      }
                       return (
                         <div style={{ position: 'relative' }}>
                           <button
@@ -2275,7 +2393,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 {tags.length > 0 && (
                                   <div style={{ padding: '10px 14px', display: 'flex', gap: 5, flexWrap: 'wrap', borderBottom: '1px solid var(--border)' }}>
                                     {tags.map(t => (
-                                      <TagBadge key={t} tag={t} onRemove={() => removeTag(t)} />
+                                      <TagBadge key={t} tag={t} onEdit={() => renameTag(t)} onRemove={() => removeTag(t)} />
                                     ))}
                                   </div>
                                 )}

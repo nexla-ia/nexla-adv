@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   Plus, X, Trash2, Pencil, Calendar, User as UserIcon, Flag,
-  GripVertical, MoreVertical, Tag, ChevronRight,
+  GripVertical, MoreVertical, Tag, ChevronRight, MessageSquare as MessageSquareIcon,
 } from 'lucide-react'
 import './Company.css'
 
@@ -437,6 +437,24 @@ export default function CompanyKanban() {
                             </span>
                           )}
                         </div>
+                        {card.contact_session_id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const num = (card.contact_phone || '').replace(/\D/g, '')
+                              if (num) window.location.href = `/painel/conversas?contact=${num}`
+                            }}
+                            title="Abrir conversa do contato"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              marginTop: 6, fontSize: 10, fontWeight: 700,
+                              padding: '3px 8px', borderRadius: 5,
+                              color: '#0891B2', background: '#ECFEFF', border: '1px solid #A5F3FC',
+                              cursor: 'pointer',
+                            }}>
+                            <MessageSquareIcon size={9} /> {card.contact_name || card.contact_phone}
+                          </button>
+                        )}
                       </div>
                     )
                   })}
