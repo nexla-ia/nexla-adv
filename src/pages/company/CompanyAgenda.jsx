@@ -232,6 +232,14 @@ export default function CompanyAgenda() {
   // Set persistente de IDs já processados (sobrevive a re-renders)
   const reminderSentRef = useRef(new Set())
 
+  // Tick a cada 30s pra re-checar lembretes mesmo sem mudanca de state
+  // (cobre o caso: agenda criada, esperando entrar na janela do reminder_hours)
+  const [reminderTick, setReminderTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setReminderTick(t => t + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
   // Dispara lembretes automáticos para agendamentos futuros
   useEffect(() => {
     if (!instance || !agendas.length || !futureAppointments.length) return
@@ -303,7 +311,7 @@ export default function CompanyAgenda() {
       })
     })
     return () => { active = false }
-  }, [agendas, futureAppointments, instance, apiInstancia])
+  }, [agendas, futureAppointments, instance, apiInstancia, reminderTick])
 
   // Realtime para agendamentos
   useEffect(() => {
