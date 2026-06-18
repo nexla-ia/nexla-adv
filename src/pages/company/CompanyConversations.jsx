@@ -290,9 +290,12 @@ export default function CompanyConversations({ mode = 'individual' }) {
         idgrupo,
       })
       const url = `https://n8n.nexladesenvolvimento.com.br/webhook/infogrupo?${params.toString()}`
+      console.log('[infogrupo] GET', url)
       const res = await fetch(url, { method: 'GET' })
+      console.log('[infogrupo] status:', res.status, res.statusText)
       if (!res.ok) throw new Error('Webhook retornou ' + res.status)
       const data = await res.json()
+      console.log('[infogrupo] resposta:', data)
       // Aceita varios formatos: [{...}], {participants: [...]}, {members: [...]}
       let members = Array.isArray(data) ? data
         : (data?.participants || data?.members || data?.integrantes || [])
