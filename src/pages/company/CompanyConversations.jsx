@@ -2950,11 +2950,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                   })}
                                 </div>
                                 {/* Grid */}
-                                <div style={{ padding: 6, maxHeight: 260, overflowY: 'auto' }}>
+                                <div style={{ padding: 6, maxHeight: 260, overflowY: 'auto', overflowX: 'hidden' }}>
                                   <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 6px 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                     {activeTab.name}
                                   </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2 }}>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 2 }}>
                                     {activeTab.emojis.length === 0 ? (
                                       <div style={{ gridColumn: 'span 8', padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
                                         Use um emoji pra aparecer aqui
@@ -2963,12 +2963,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                       <button key={i}
                                         onClick={() => insertEmoji(em)}
                                         style={{
+                                          minWidth: 0, width: '100%', boxSizing: 'border-box',
                                           background: 'transparent', border: 'none', cursor: 'pointer',
-                                          fontSize: 22, padding: 4, borderRadius: 8, lineHeight: 1,
-                                          transition: 'all 0.1s',
+                                          fontSize: 20, padding: 4, borderRadius: 8, lineHeight: 1,
+                                          transition: 'background 0.1s',
                                         }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.transform = 'scale(1.15)' }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9' }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                                       >{em}</button>
                                     ))}
                                   </div>
