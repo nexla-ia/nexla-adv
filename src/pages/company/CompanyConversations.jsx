@@ -2309,7 +2309,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
                             if (clickable) {
                               return (
                                 <span
-                                  onClick={() => setMemberPopover({ msgId: msg.id, name: displayName, number: partNum, phoneStr })}
+                                  onClick={(e) => {
+                                    const r = e.currentTarget.getBoundingClientRect()
+                                    setMemberPopover({ msgId: msg.id, name: displayName, number: partNum, phoneStr, x: r.left, y: r.bottom + 4 })
+                                  }}
                                   title="Abrir opcoes"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                                 >
@@ -2681,58 +2684,54 @@ export default function CompanyConversations({ mode = 'individual' }) {
         )}
       </div>
 
-      {/* Popover do membro do grupo (clicou no nome) */}
+      {/* Mini-menu compacto ao clicar no membro do grupo */}
       {memberPopover && createPortal(
-        <div
-          onClick={() => setMemberPopover(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'transparent' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
+        <>
+          {/* backdrop invisível pra fechar ao clicar fora */}
+          <div onClick={() => setMemberPopover(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 99997, background: 'transparent' }} />
+          <div onClick={e => e.stopPropagation()}
             style={{
-              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-              background: '#fff', borderRadius: 12, boxShadow: '0 10px 40px rgba(0,0,0,0.22)',
-              padding: 18, minWidth: 280, maxWidth: '90vw',
+              position: 'fixed',
+              left: Math.min(memberPopover.x, window.innerWidth - 200),
+              top: Math.min(memberPopover.y, window.innerHeight - 100),
+              zIndex: 99998,
+              background: '#fff', border: '1px solid var(--border)',
+              borderRadius: 8, boxShadow: '0 6px 24px rgba(0,0,0,0.12)',
+              padding: 4, minWidth: 180,
             }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: '50%', background: '#EFF6FF', color: '#2563EB',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16,
-              }}>{(memberPopover.name || '?').charAt(0).toUpperCase()}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>~ {memberPopover.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{memberPopover.phoneStr}</div>
-              </div>
-            </div>
             <button
               onClick={() => {
                 openSaveContact({ session_id: `${memberPopover.number}@s.whatsapp.net`, phone: memberPopover.number, nome: memberPopover.name })
                 setMemberPopover(null)
               }}
+              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               style={{
-                width: '100%', padding: '10px 14px', borderRadius: 8,
-                border: '1px solid var(--border)', background: '#fff',
-                fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                marginBottom: 8,
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                padding: '8px 12px', border: 'none', background: 'transparent',
+                fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer',
+                borderRadius: 6, textAlign: 'left',
               }}>
-              <UserPlus size={14} /> Adicionar contato
+              <UserPlus size={13} /> Adicionar contato
             </button>
             <button
               onClick={() => {
                 setMemberConfirm({ name: memberPopover.name, number: memberPopover.number })
                 setMemberPopover(null)
               }}
+              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               style={{
-                width: '100%', padding: '10px 14px', borderRadius: 8,
-                border: 'none', background: '#2563EB', color: '#fff',
-                fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                padding: '8px 12px', border: 'none', background: 'transparent',
+                fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer',
+                borderRadius: 6, textAlign: 'left',
               }}>
-              <MessageSquare size={14} /> Entrar em contato
+              <MessageSquare size={13} /> Entrar em contato
             </button>
           </div>
-        </div>
+        </>
       , document.body)}
 
       {/* Modal de confirmacao pra entrar em contato com membro do grupo */}
