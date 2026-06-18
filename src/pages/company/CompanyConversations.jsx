@@ -2261,11 +2261,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const senderFromPrefix = prefixMatch ? prefixMatch[1].trim() : null
 
                 // Agrupa mensagens consecutivas do mesmo remetente (so mostra label na 1a)
+                // Regra extra: se passou >5min do msg anterior, volta a mostrar header
                 const prevPrefixMatch = prev ? (prev.content || '').match(/^([^\n:]{1,40}):\s+/) : null
                 const prevSenderName = prevPrefixMatch ? prevPrefixMatch[1].trim() : null
                 const curSenderKey = msg.participantNumber || senderFromPrefix || msg.nome || msg.type
                 const prevSenderKey = prev ? (prev.participantNumber || prevSenderName || prev.nome || prev.type) : null
-                const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey
+                const gapMs = (prev && prev.ts && msg.ts) ? (new Date(msg.ts).getTime() - new Date(prev.ts).getTime()) : Infinity
+                const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey && gapMs < 5 * 60 * 1000
                 const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
                 // Regra: atendente / fromMe = direita | cliente = esquerda | IA = direita
@@ -2318,25 +2320,37 @@ export default function CompanyConversations({ mode = 'individual' }) {
                             const niceName = displayName.length > 3 && displayName === displayName.toUpperCase()
                               ? displayName.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
                               : displayName
+                            // Gera cor pseudo-aleatoria estavel pra o avatar
+                            const colorPalette = ['#2563EB', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2', '#65A30D']
+                            const avatarColor = colorPalette[(niceName.charCodeAt(0) || 0) % colorPalette.length]
                             return (
                               <>
-                                {/* Nome à esquerda — clicável se possível */}
-                                {clickable ? (
-                                  <span
-                                    onClick={(e) => {
-                                      const r = e.currentTarget.getBoundingClientRect()
-                                      const MENU_W = 200
-                                      const right = r.right + 6
-                                      const flipLeft = (right + MENU_W) > window.innerWidth
-                                      const x = flipLeft ? Math.max(8, r.left - MENU_W - 6) : right
-                                      setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x, y: r.top })
-                                    }}
-                                    title="Abrir opcoes"
-                                    style={{ fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
-                                  >~ {niceName}</span>
-                                ) : (
-                                  <span style={{ fontWeight: 700, fontSize: 12 }}>~ {niceName}</span>
-                                )}
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                  {/* Avatar com inicial */}
+                                  <span style={{
+                                    width: 20, height: 20, borderRadius: '50%',
+                                    background: avatarColor + '22', color: avatarColor,
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: 700, fontSize: 10, flexShrink: 0,
+                                  }}>{niceName.charAt(0).toUpperCase()}</span>
+                                  {/* Nome — clicavel se membro real */}
+                                  {clickable ? (
+                                    <span
+                                      onClick={(e) => {
+                                        const r = e.currentTarget.getBoundingClientRect()
+                                        const MENU_W = 200
+                                        const right = r.right + 6
+                                        const flipLeft = (right + MENU_W) > window.innerWidth
+                                        const x = flipLeft ? Math.max(8, r.left - MENU_W - 6) : right
+                                        setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x, y: r.top })
+                                      }}
+                                      title="Abrir opcoes"
+                                      style={{ fontWeight: 700, fontSize: 12, cursor: 'pointer', color: avatarColor }}
+                                    >~ {niceName}</span>
+                                  ) : (
+                                    <span style={{ fontWeight: 700, fontSize: 12, color: avatarColor }}>~ {niceName}</span>
+                                  )}
+                                </span>
                                 {/* Telefone à direita */}
                                 <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
                               </>
