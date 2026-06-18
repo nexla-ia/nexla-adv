@@ -1274,14 +1274,30 @@ export default function CompanyConversations({ mode = 'individual' }) {
       assumed_at: new Date().toISOString(),
     }
 
-    // UPSERT pra cobrir tanto update quanto create
-    const { error: upErr } = await supabase
+    // Verifica se ja existe row pra essa conversa
+    const { data: existing } = await supabase
       .from('attendances')
-      .upsert(fullPayload, { onConflict: 'numero,instancia' })
-    console.log('[transfer] upsert resultado:', upErr?.message || 'ok', 'payload:', fullPayload)
-    if (upErr) {
+      .select('id')
+      .eq('numero', transferModal.session_id)
+      .eq('instancia', instance)
+      .maybeSingle()
+
+    let saveErr = null
+    if (existing?.id) {
+      const { error } = await supabase
+        .from('attendances')
+        .update(fullPayload)
+        .eq('id', existing.id)
+      saveErr = error
+    } else {
+      const { error } = await supabase.from('attendances').insert(fullPayload)
+      saveErr = error
+    }
+
+    console.log('[transfer] save resultado:', saveErr?.message || 'ok', 'existing:', !!existing?.id, 'payload:', fullPayload)
+    if (saveErr) {
       setTransferring(false)
-      setToast({ message: 'Erro ao transferir: ' + upErr.message, color: '#DC2626' })
+      setToast({ message: 'Erro ao transferir: ' + saveErr.message, color: '#DC2626' })
       setTimeout(() => setToast(null), 3500)
       return
     }
@@ -1518,7 +1534,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
           attendant_name: name, attendant_email: session?.user?.email,
           assumed_at: new Date().toISOString(),
         }
-        await supabase.from('attendances').upsert(newAtt, { onConflict: 'numero,instancia' })
+        // Verifica se ja existe; se sim UPDATE, senao INSERT (attendances nao tem unique constraint)
+        const { data: existAtt } = await supabase
+          .from('attendances').select('id')
+          .eq('numero', selected.session_id).eq('instancia', instance).maybeSingle()
+        if (existAtt?.id) {
+          await supabase.from('attendances').update(newAtt).eq('id', existAtt.id)
+        } else {
+          await supabase.from('attendances').insert(newAtt)
+        }
         setAttendancesMap(prev => ({ ...prev, [selected.session_id]: newAtt }))
         changeTab('meu-setor')
       }
