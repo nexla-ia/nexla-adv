@@ -928,6 +928,17 @@ export default function CompanyConversations({ mode = 'individual' }) {
     return () => supabase.removeChannel(ch)
   }, [instance])
 
+  // Conjunto de "nomes meus" inferidos: nomes que aparecem em msgs com fromMe=true
+  // (ou type=atendente). Usado pra marcar msgs subsequentes do mesmo nome como minhas.
+  const knownMineNames = useMemo(() => {
+    const s = new Set()
+    for (const m of messages) {
+      const isMineRow = m.mine === true || m.type === 'atendente' || m.type === 'humano'
+      if (isMineRow && m.nome) s.add(m.nome.trim().toLowerCase())
+    }
+    return s
+  }, [messages])
+
   // Helper: monta filtro base de mensagens da conversa selecionada
   function buildMessagesQuery() {
     let q = supabase.from(CONV_TABLE).select('*').eq('instancia', instance)
@@ -2443,23 +2454,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey && gapMs < 2 * 60 * 1000
                 const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
-                // Mine = fromMe OR type=atendente OR (em grupo) nome do remetente bate
-                // com a instancia/empresa/user da conta logada (match parcial)
+                // Mine = fromMe OR type=atendente OR (em grupo) o nome do remetente
+                // ja foi visto em uma msg minha (knownMineNames vem do banco)
                 const matchesMyAccount = (() => {
                   if (!isGroupMode) return false
-                  const candidates = [
-                    session?.user?.name,
-                    session?.user?.name?.split(' ')[0],   // primeiro nome
-                    session?.company?.name,
-                    session?.company?.instance,
-                  ].filter(Boolean).map(s => String(s).trim().toLowerCase()).filter(s => s.length >= 3)
-                  const sources = [
-                    (senderFromPrefix || '').trim().toLowerCase(),
-                    (msg.nome || '').trim().toLowerCase(),
-                  ].filter(s => s.length >= 3)
-                  if (!candidates.length || !sources.length) return false
-                  // Match se source CONTEM candidato ou candidato CONTEM source (substring 3+ chars)
-                  return sources.some(src => candidates.some(c => src === c || src.includes(c) || c.includes(src)))
+                  const fromPrefix = (senderFromPrefix || '').trim().toLowerCase()
+                  const fromNome = (msg.nome || '').trim().toLowerCase()
+                  if (fromPrefix && knownMineNames.has(fromPrefix)) return true
+                  if (fromNome && knownMineNames.has(fromNome)) return true
+                  return false
                 })()
                 const isMine       = msg.mine === true || isAtendente || matchesMyAccount
                 const isMineInGroup = isGroupMode && isMine
