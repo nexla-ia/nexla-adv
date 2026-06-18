@@ -159,12 +159,33 @@ export default function CompanyAgenda() {
       supabase.from('procedures').select('*').eq('instancia', instance).order('name'),
       supabase.from('insurance_plans').select('*').eq('instancia', instance).order('name'),
       supabase.from('procedure_prices').select('*'),
-    ]).then(([{ data: ag }, { data: sc }, { data: pros }, { data: procs }, { data: plans }, { data: prices }]) => {
+      // Pra dropdown: pega tambem numeros que ja conversaram (sem nome)
+      supabase.from('mensagens_geral').select('numero, idgrupo, nome').eq('instancia', instance).limit(3000),
+    ]).then(([{ data: ag }, { data: sc }, { data: pros }, { data: procs }, { data: plans }, { data: prices }, { data: msgs }]) => {
       if (ag) {
         setAgendas(ag)
         if (!selectedAgendaId && ag.length) setSelectedAgendaId(ag[0].id)
       }
       if (sc) setSavedContacts(sc)
+      // Constroi lista combinada: saved_contacts + numeros que ja mandaram msg (nao salvos)
+      if (msgs) {
+        const savedKeys = new Set((sc || []).map(c => (c.numero || '').replace(/\D/g, '').slice(-8)))
+        const seen = new Set()
+        const extras = []
+        for (const m of msgs) {
+          if ((m.numero || '').includes('@g.us') || m.idgrupo) continue   // exclui grupo
+          const num = (m.numero || '').replace(/@.*/, '').replace(/\D/g, '')
+          if (!num || num.length < 8 || num.length > 13) continue
+          if (savedKeys.has(num.slice(-8))) continue
+          if (seen.has(num)) continue
+          seen.add(num)
+          extras.push({ id: `m_${num}`, nome: m.nome || `+${num}`, numero: num })
+          if (extras.length >= 200) break
+        }
+        // Combina: saved primeiro (com nome real), depois extras
+        const combined = [...(sc || []), ...extras]
+        setSavedContacts(combined)
+      }
       if (pros) setProfessionals(pros.filter(p => p.active !== false))
       if (procs) setProcedures(procs.filter(p => p.active !== false))
       if (plans) setInsurancePlans(plans.filter(p => p.active !== false))
