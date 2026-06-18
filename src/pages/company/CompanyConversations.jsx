@@ -2550,10 +2550,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         ? (() => {
                             const partNum = (msg.participantNumber || '').replace(/@.*/, '').replace(/\D/g, '')
                             const savedMember = partNum ? findSaved(savedContacts, partNum) : null
-                            // Se ja esta salvo, usa o nome salvo (sem o ~)
+                            // Tambem considera "conhecido" se tem nome em clientes (n8n)
+                            const clienteNameForMember = partNum ? (clientesMap[`${partNum}@s.whatsapp.net`] || clientesMap[partNum]) : null
+                            const isKnown = !!savedMember || !!clienteNameForMember
                             const rawName = senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))
-                            const displayName = savedMember?.nome || rawName
-                            // Permite click pra qualquer participante (mesmo @lid) — exceto minhas e ids de grupo
+                            const displayName = savedMember?.nome || clienteNameForMember || rawName
                             const clickable = !msg.mine && partNum && !msg.participantNumber.includes('@g.us')
                             const fmtPhone = (n) => {
                               if (!n) return ''
@@ -2600,13 +2601,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                       }}
                                       title="Abrir opcoes"
                                       style={{ fontWeight: 700, fontSize: 12, cursor: 'pointer', color: avatarColor }}
-                                    >{savedMember ? niceName : `~ ${niceName}`}</span>
+                                    >{isKnown ? niceName : `~ ${niceName}`}</span>
                                   ) : (
-                                    <span style={{ fontWeight: 700, fontSize: 12, color: avatarColor }}>{savedMember ? niceName : `~ ${niceName}`}</span>
+                                    <span style={{ fontWeight: 700, fontSize: 12, color: avatarColor }}>{isKnown ? niceName : `~ ${niceName}`}</span>
                                   )}
                                 </span>
-                                {/* Telefone à direita — esconde se contato ja esta salvo */}
-                                {!savedMember && (
+                                {/* Telefone à direita — esconde se contato eh conhecido */}
+                                {!isKnown && (
                                   <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
                                 )}
                               </>
