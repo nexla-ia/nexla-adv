@@ -2315,7 +2315,12 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 <span
                                   onClick={(e) => {
                                     const r = e.currentTarget.getBoundingClientRect()
-                                    setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x: r.left, y: r.bottom + 4 })
+                                    // Posiciona ao LADO do nome — direita se tem espaco, senao esquerda
+                                    const MENU_W = 200
+                                    const right = r.right + 6
+                                    const flipLeft = (right + MENU_W) > window.innerWidth
+                                    const x = flipLeft ? Math.max(8, r.left - MENU_W - 6) : right
+                                    setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x, y: r.top })
                                   }}
                                   title="Abrir opcoes"
                                   style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, cursor: 'pointer' }}
