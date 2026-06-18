@@ -275,6 +275,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [hasMoreMsgs, setHasMoreMsgs] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [showScrollDown, setShowScrollDown] = useState(false)
+  const [memberPopover, setMemberPopover] = useState(null) // { msgId, name, number }
+  const [memberConfirm, setMemberConfirm] = useState(null) // { name, number }
   const MSG_PAGE_SIZE = 35
   const [closeModal, setCloseModal]   = useState(null)
   const [reason, setReason]           = useState('')
@@ -2292,21 +2294,36 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       {isGroupMode
                         ? (() => {
                             const displayName = senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))
-                            // Numero do participante: extrai do session_id real (numero@s.whatsapp.net)
                             const partNum = (msg.participantNumber || '').replace(/@.*/, '').replace(/\D/g, '')
                             const clickable = !msg.mine && partNum && !msg.participantNumber.includes('@g.us') && !msg.participantNumber.includes('@lid')
+                            // Formata "+55 69 8116-1007"
+                            const fmtPhone = (n) => {
+                              if (!n) return ''
+                              const d = n.replace(/\D/g, '')
+                              if (d.length === 13 && d.startsWith('55')) return `+55 ${d.slice(2,4)} ${d.slice(4,8)}-${d.slice(8)}`
+                              if (d.length === 12 && d.startsWith('55')) return `+55 ${d.slice(2,4)} ${d.slice(4,8)}-${d.slice(8)}`
+                              if (d.length === 11) return `${d.slice(0,2)} ${d.slice(2,7)}-${d.slice(7)}`
+                              return `+${d}`
+                            }
+                            const phoneStr = clickable ? fmtPhone(partNum) : ''
                             if (clickable) {
                               return (
                                 <span
-                                  onClick={() => navigate(`/painel/conversas?contact=${partNum}`)}
-                                  title="Abrir conversa individual"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                                  onClick={() => setMemberPopover({ msgId: msg.id, name: displayName, number: partNum, phoneStr })}
+                                  title="Abrir opcoes"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                                 >
-                                  <User size={10} /> {displayName}
+                                  <User size={10} />
+                                  <span style={{ fontWeight: 600 }}>~ {displayName}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{phoneStr}</span>
                                 </span>
                               )
                             }
-                            return <><User size={10} /> {displayName}</>
+                            return (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <User size={10} /> ~ {displayName}
+                              </span>
+                            )
                           })()
                         : isCliente
                           ? <><User size={10} /> Cliente</>
@@ -2663,6 +2680,93 @@ export default function CompanyConversations({ mode = 'individual' }) {
           </>
         )}
       </div>
+
+      {/* Popover do membro do grupo (clicou no nome) */}
+      {memberPopover && createPortal(
+        <div
+          onClick={() => setMemberPopover(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'transparent' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              background: '#fff', borderRadius: 12, boxShadow: '0 10px 40px rgba(0,0,0,0.22)',
+              padding: 18, minWidth: 280, maxWidth: '90vw',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: '50%', background: '#EFF6FF', color: '#2563EB',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16,
+              }}>{(memberPopover.name || '?').charAt(0).toUpperCase()}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>~ {memberPopover.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{memberPopover.phoneStr}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                openSaveContact({ session_id: `${memberPopover.number}@s.whatsapp.net`, phone: memberPopover.number, nome: memberPopover.name })
+                setMemberPopover(null)
+              }}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 8,
+                border: '1px solid var(--border)', background: '#fff',
+                fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                marginBottom: 8,
+              }}>
+              <UserPlus size={14} /> Adicionar contato
+            </button>
+            <button
+              onClick={() => {
+                setMemberConfirm({ name: memberPopover.name, number: memberPopover.number })
+                setMemberPopover(null)
+              }}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 8,
+                border: 'none', background: '#2563EB', color: '#fff',
+                fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+              <MessageSquare size={14} /> Entrar em contato
+            </button>
+          </div>
+        </div>
+      , document.body)}
+
+      {/* Modal de confirmacao pra entrar em contato com membro do grupo */}
+      {memberConfirm && createPortal(
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 10000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }} onClick={() => setMemberConfirm(null)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 12, padding: 22, maxWidth: 360, width: '100%', boxShadow: '0 16px 48px rgba(0,0,0,0.25)' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', marginBottom: 8 }}>
+              Entrar em contato?
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 18, lineHeight: 1.45 }}>
+              Vai abrir uma conversa individual com <strong>{memberConfirm.name}</strong>.
+              {' '}Tem certeza?
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setMemberConfirm(null)}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => {
+                const num = memberConfirm.number
+                setMemberConfirm(null)
+                navigate(`/painel/conversas?contact=${num}`)
+              }}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Sim, abrir
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
 
       {contextMenu && createPortal(
         <div style={{
