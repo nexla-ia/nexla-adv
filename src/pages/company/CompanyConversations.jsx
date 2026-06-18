@@ -2444,17 +2444,22 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
                 // Mine = fromMe OR type=atendente OR (em grupo) nome do remetente bate
-                // com a instancia/empresa/user da conta logada
+                // com a instancia/empresa/user da conta logada (match parcial)
                 const matchesMyAccount = (() => {
                   if (!isGroupMode) return false
                   const candidates = [
                     session?.user?.name,
+                    session?.user?.name?.split(' ')[0],   // primeiro nome
                     session?.company?.name,
                     session?.company?.instance,
-                  ].filter(Boolean).map(s => String(s).trim().toLowerCase())
-                  const fromPrefix = (senderFromPrefix || '').trim().toLowerCase()
-                  const fromNome = (msg.nome || '').trim().toLowerCase()
-                  return candidates.some(c => c === fromPrefix || c === fromNome)
+                  ].filter(Boolean).map(s => String(s).trim().toLowerCase()).filter(s => s.length >= 3)
+                  const sources = [
+                    (senderFromPrefix || '').trim().toLowerCase(),
+                    (msg.nome || '').trim().toLowerCase(),
+                  ].filter(s => s.length >= 3)
+                  if (!candidates.length || !sources.length) return false
+                  // Match se source CONTEM candidato ou candidato CONTEM source (substring 3+ chars)
+                  return sources.some(src => candidates.some(c => src === c || src.includes(c) || c.includes(src)))
                 })()
                 const isMine       = msg.mine === true || isAtendente || matchesMyAccount
                 const isMineInGroup = isGroupMode && isMine
