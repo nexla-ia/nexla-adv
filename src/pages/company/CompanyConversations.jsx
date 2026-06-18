@@ -1720,25 +1720,26 @@ export default function CompanyConversations({ mode = 'individual' }) {
   }
 
   const closed = new Set(Object.keys(closedMap))
-  // Recepcao: nao finalizadas E (sem atendente OU em outro setor que nao o meu)
-  // Conversas atribuidas ao meu setor ficam SO na "Meu setor"
+  // Recepcao: nao finalizadas E (sem atendente OU em outro setor — desde que nao seja minha)
   const recepcao    = contacts.filter(c => {
     if (closed.has(c.session_id)) return false
     const att = attendancesMap[c.session_id]
     if (!att) return true   // sem atendente → Recepcao
+    if (att.attendant_email === session?.user?.email) return false  // ja eh minha → Meu setor
     if (isAdmin) return false   // admin ve em Meu setor (com tudo)
-    if (!userSector) return true  // sem setor → Recepcao mostra tudo
+    if (!userSector) return true  // sem setor → ve outras
     return att.sector_id !== userSector.id  // outro setor → ainda na Recepcao
   })
   const meuSetor    = contacts.filter(c => {
     if (closed.has(c.session_id)) return false
     const att = attendancesMap[c.session_id]
     if (!att) return false
-    // Admin ve todas
     if (isAdmin) return true
-    // So mostra se a conversa esta no MESMO setor do usuario logado
-    if (!userSector) return false
-    return att.sector_id === userSector.id
+    // Conversa atribuida diretamente a mim — sempre aparece
+    if (att.attendant_email === session?.user?.email) return true
+    // Mesmo setor que o meu
+    if (userSector && att.sector_id === userSector.id) return true
+    return false
   })
   const finalizados = contacts.filter(c => closed.has(c.session_id))
 
