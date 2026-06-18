@@ -3,11 +3,21 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown } from 'lucide-react'
+import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile } from 'lucide-react'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
 const CONV_TABLE = 'mensagens_geral'
+
+// Emojis mais usados, agrupados por categoria
+const EMOJI_CATEGORIES = [
+  { name: 'Recentes', emojis: ['👍','❤️','😂','🙏','🔥','✅','😊','😍'] },
+  { name: 'Sorrisos', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥳','🤩','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'] },
+  { name: 'Gestos', emojis: ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤝','👏','🙌','👐','🤲','🙏','✍️','💪','🦾','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','💋','🩸'] },
+  { name: 'Coração', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'] },
+  { name: 'Objetos', emojis: ['🎉','🎊','🎂','🎁','🎈','🌹','🌸','🌻','🌷','🌼','🌺','🥀','🌿','🍀','🌟','⭐','✨','⚡','🔥','💧','💯','✅','❌','⚠️','🚀','📌','📍','📎','📝','📅','📆','💰','💵','💴','💶','💷','💸','🏆','🥇','🥈','🥉','⚽','🏀','🎮','🎯','🎲','🎵','🎶'] },
+  { name: 'Comida', emojis: ['🍎','🍌','🍇','🍓','🍑','🥭','🍕','🍔','🍟','🌭','🥪','🌮','🌯','🍜','🍝','🍣','🍱','🍤','🍦','🍩','🍪','🎂','🍫','🍬','🍭','☕','🍵','🥤','🍺','🍷','🥂'] },
+]
 
 function formatPhone(val) {
   return (val || '').replace(/@.*$/, '')
@@ -294,6 +304,25 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
   const [groupMembers, setGroupMembers] = useState(null) // null | { members: [], loading: bool, error: str }
   const msgInputRef = useRef(null)
+  const [emojiOpen, setEmojiOpen] = useState(false)
+
+  function insertEmoji(emoji) {
+    const el = msgInputRef.current
+    if (!el) {
+      setMsgText(t => t + emoji)
+      return
+    }
+    const caret = el.selectionStart || msgText.length
+    const newText = msgText.slice(0, caret) + emoji + msgText.slice(caret)
+    setMsgText(newText)
+    requestAnimationFrame(() => {
+      const pos = caret + emoji.length
+      el.focus()
+      el.setSelectionRange(pos, pos)
+      el.style.height = 'auto'
+      el.style.height = Math.min(140, el.scrollHeight) + 'px'
+    })
+  }
 
   async function fetchGroupMembers(idgrupo) {
     if (!idgrupo) return
@@ -2847,6 +2876,59 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   />
                   {!recording && !recordedAudio && !attachedFile && (
                     <>
+                      {/* Emoji */}
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <button
+                          onClick={() => setEmojiOpen(v => !v)}
+                          title="Emoji"
+                          disabled={!canRespond(selected)}
+                          style={{
+                            padding: '0 14px', flexShrink: 0,
+                            background: emojiOpen ? '#FEF3C7' : '#fff',
+                            border: '1px solid var(--border)',
+                            borderRadius: 8, color: emojiOpen ? '#D97706' : '#6B7280',
+                            cursor: canRespond(selected) ? 'pointer' : 'not-allowed',
+                            opacity: canRespond(selected) ? 1 : 0.45,
+                            display: 'inline-flex', alignItems: 'center', height: 38,
+                          }}>
+                          <Smile size={16} />
+                        </button>
+                        {emojiOpen && (
+                          <>
+                            <div onClick={() => setEmojiOpen(false)}
+                              style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
+                            <div style={{
+                              position: 'absolute', bottom: '100%', right: 0,
+                              marginBottom: 8, background: '#fff',
+                              border: '1px solid var(--border)', borderRadius: 10,
+                              boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
+                              width: 320, maxHeight: 320, overflowY: 'auto',
+                              padding: 8, zIndex: 50,
+                            }}>
+                              {EMOJI_CATEGORIES.map(cat => (
+                                <div key={cat.name} style={{ marginBottom: 8 }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    {cat.name}
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2 }}>
+                                    {cat.emojis.map((em, i) => (
+                                      <button key={i}
+                                        onClick={() => { insertEmoji(em); /* fechar opcional: setEmojiOpen(false) */ }}
+                                        style={{
+                                          background: 'transparent', border: 'none', cursor: 'pointer',
+                                          fontSize: 22, padding: 4, borderRadius: 6, lineHeight: 1,
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                      >{em}</button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         title="Anexar imagem ou PDF"
