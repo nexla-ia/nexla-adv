@@ -1709,13 +1709,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
     if (closed.has(c.session_id)) return false
     const att = attendancesMap[c.session_id]
     if (!att) return false
-    // Sempre mostra se a conversa está atribuída diretamente a mim
-    if (att.attendant_email === session?.user?.email) return true
-    // Admin vê todas
+    // Admin ve todas
     if (isAdmin) return true
-    // Sem setor → vê todas do meu setor
-    if (!userSector) return true
-    // Mesmo setor → vê
+    // So mostra se a conversa esta no MESMO setor do usuario logado
+    if (!userSector) return false
     return att.sector_id === userSector.id
   })
   const finalizados = contacts.filter(c => closed.has(c.session_id))
