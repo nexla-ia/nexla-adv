@@ -305,7 +305,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
         : (data?.participants || data?.members || data?.integrantes || [])
       // Normaliza: cada membro vira { numero, isAdmin, nome? }
       members = members.map(m => {
-        const numero = (m.id || m.jid || m.number || m.numero || '').replace(/@.*/, '').replace(/\D/g, '')
+        const rawNum = m.phoneNumber || m.id || m.jid || m.number || m.numero || ''
+        const numero = String(rawNum).replace(/@.*/, '').replace(/\D/g, '')
         const admin = m.admin === 'admin' || m.admin === 'superadmin' || m.isAdmin === true || m.role === 'admin'
         return { numero, isAdmin: admin, nome: m.nome || m.name || m.pushName || null }
       }).filter(m => m.numero)
