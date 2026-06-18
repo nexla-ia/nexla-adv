@@ -1258,26 +1258,42 @@ export default function CompanyConversations({ mode = 'individual' }) {
       .maybeSingle()
     const targetSector = memberData?.sectors || null
 
-    const updated = {
+    const fullPayload = {
+      numero: transferModal.session_id,
+      instancia: instance,
       attendant_name: target.name,
       attendant_email: target.email,
       sector_id:    targetSector?.id ?? null,
       sector_name:  targetSector?.name ?? null,
       sector_color: targetSector?.color ?? '#6B7280',
+      assumed_at: new Date().toISOString(),
     }
 
-    const { error } = await supabase
+    // UPDATE primeiro
+    const { data: updRow, error } = await supabase
       .from('attendances')
-      .update(updated)
+      .update(fullPayload)
       .eq('numero', transferModal.session_id)
       .eq('instancia', instance)
+      .select()
+      .maybeSingle()
 
-    if (error) {
+    // Se não atualizou nenhuma linha (não existia), INSERT
+    if (!error && !updRow) {
+      const { error: insErr } = await supabase.from('attendances').insert(fullPayload)
+      if (insErr) {
+        setTransferring(false)
+        setToast({ message: 'Erro ao transferir: ' + insErr.message, color: '#DC2626' })
+        setTimeout(() => setToast(null), 3500)
+        return
+      }
+    } else if (error) {
       setTransferring(false)
       setToast({ message: 'Erro ao transferir: ' + error.message, color: '#DC2626' })
       setTimeout(() => setToast(null), 3500)
       return
     }
+    const updated = fullPayload
 
     // Mensagem-marco no histórico
     const meName = session?.user?.name || 'Atendente'
