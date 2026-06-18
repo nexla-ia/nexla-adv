@@ -1876,6 +1876,102 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   </>
                 )
               })()}
+              {/* Botão Tag para grupos */}
+              {selected?.isGroup && (() => {
+                const groupKey = selected.session_id  // usa session_id (idgrupo) como chave
+                const groupSaved = savedContacts[groupKey] || null
+                const groupTags = (groupSaved?.tags) || []
+                async function ensureGroupSavedAndGetId() {
+                  if (groupSaved?.id) return groupSaved.id
+                  const { data: existing } = await supabase.from('saved_contacts')
+                    .select('*').eq('numero', groupKey).eq('instancia', instance).maybeSingle()
+                  if (existing) {
+                    setSavedContacts(prev => ({ ...prev, [groupKey]: existing }))
+                    return existing.id
+                  }
+                  const { data } = await supabase.from('saved_contacts').insert({
+                    numero: groupKey, instancia: instance,
+                    nome: selected.groupName || 'Grupo',
+                    created_by_email: session?.user?.email,
+                  }).select().single()
+                  if (data) {
+                    setSavedContacts(prev => ({ ...prev, [groupKey]: data }))
+                    return data.id
+                  }
+                  return null
+                }
+                async function addGroupTag() {
+                  const t = tagInput.trim().toLowerCase()
+                  if (!t || groupTags.includes(t)) { setTagInput(''); return }
+                  setSavingTag(true)
+                  const id = await ensureGroupSavedAndGetId()
+                  if (!id) { setSavingTag(false); return }
+                  const newTags = [...groupTags, t]
+                  await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', id)
+                  setSavedContacts(prev => ({ ...prev, [groupKey]: { ...prev[groupKey], tags: newTags } }))
+                  setSavingTag(false)
+                  setTagInput('')
+                }
+                async function removeGroupTag(tag) {
+                  if (!groupSaved?.id) return
+                  const newTags = groupTags.filter(x => x !== tag)
+                  await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', groupSaved.id)
+                  setSavedContacts(prev => ({ ...prev, [groupKey]: { ...prev[groupKey], tags: newTags } }))
+                }
+                return (
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      title="Etiquetar grupo"
+                      onClick={() => { setTagPopoverOpen(v => !v); setTagInput('') }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        background: groupTags.length ? '#F5F3FF' : 'var(--bg-hover)',
+                        border: `1px solid ${groupTags.length ? '#DDD6FE' : 'var(--border)'}`,
+                        borderRadius: 8, padding: '7px 10px', cursor: 'pointer',
+                        color: groupTags.length ? '#7C3AED' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
+                      }}>
+                      <Tag size={14} />
+                      <span className="tag-btn-label">{groupTags.length > 0 ? groupTags.length : 'Etiqueta'}</span>
+                    </button>
+                    {tagPopoverOpen && (
+                      <>
+                        <div className="tag-popover-backdrop" onClick={() => setTagPopoverOpen(false)} />
+                        <div className="tag-popover" style={{ overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 14px 8px', background: 'linear-gradient(180deg, #FAFAFF 0%, #fff 100%)', borderBottom: groupTags.length > 0 ? '1px solid var(--border)' : 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <Tag size={12} style={{ color: '#7C3AED' }} />
+                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                Etiquetas do grupo
+                              </span>
+                            </div>
+                          </div>
+                          {groupTags.length > 0 && (
+                            <div style={{ padding: '10px 14px', display: 'flex', gap: 5, flexWrap: 'wrap', borderBottom: '1px solid var(--border)' }}>
+                              {groupTags.map(t => <TagBadge key={t} tag={t} onRemove={() => removeGroupTag(t)} />)}
+                            </div>
+                          )}
+                          <div style={{ padding: '12px 14px' }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <input autoFocus
+                                style={{ flex: 1, fontSize: 13, padding: '8px 12px', background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 8, outline: 'none' }}
+                                placeholder="Ex: parceiros, suporte, dev..."
+                                value={tagInput}
+                                onChange={e => setTagInput(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && addGroupTag()}
+                              />
+                              <button onClick={addGroupTag} disabled={savingTag || !tagInput.trim()}
+                                style={{ padding: '0 14px', background: tagInput.trim() ? '#7C3AED' : '#E2E8F0', color: tagInput.trim() ? '#fff' : '#94A3B8', border: 'none', borderRadius: 8, cursor: tagInput.trim() ? 'pointer' : 'not-allowed', fontWeight: 700 }}>
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
+
               {!isClosed && !isGroupMode && (() => {
                 const cleanNum = selected.phone.replace(/\D/g, '')
                 const saved = findSaved(savedContacts, cleanNum)
