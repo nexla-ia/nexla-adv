@@ -225,29 +225,49 @@ export default function CompanyAgenda() {
     pending.forEach(async ({ appt, ag }) => {
       if (!active) return
       const horaFmt = new Date(appt.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-      const msg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
-      // Aguarda update no banco antes de disparar webhook
+      const defaultMsg = `📅 Olá${appt.contact_nome ? `, ${appt.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag.name}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
+      // Substitui placeholders na mensagem custom
+      const customMsg = (appt.reminder_message || '')
+        .replace(/\{nome\}/gi, appt.contact_nome || '')
+        .replace(/\{agenda\}/gi, ag.name || '')
+        .replace(/\{data\}/gi, horaFmt)
+      const msg = customMsg.trim() || defaultMsg
+
+      // Atualiza no banco antes de disparar
       const { error } = await supabase.from('appointments').update({ reminder_sent: true }).eq('id', appt.id)
       if (error) {
-        reminderSentRef.current.delete(appt.id) // permite retry se falhou
+        reminderSentRef.current.delete(appt.id)
         console.warn('reminder update falhou:', error.message)
         return
       }
-      if (appt.contact_numero && apiInstancia) {
+
+      // Lista de destinatários: reminder_recipients OU fallback pro contact_numero (compat)
+      const recipients = Array.isArray(appt.reminder_recipients) && appt.reminder_recipients.length > 0
+        ? appt.reminder_recipients
+        : (appt.contact_numero ? [{ type: 'contact', id: appt.contact_numero, name: appt.contact_nome }] : [])
+
+      if (!recipients.length || !apiInstancia) return
+
+      recipients.forEach(r => {
+        const rawId = r.id || ''
+        // Detecta automaticamente: termina em @g.us → grupo; tem @ → sessionId; só digito → adiciona sufixo
+        const cleanId = rawId.includes('@') ? rawId : (r.type === 'group' ? `${rawId.replace(/\D/g, '')}@g.us` : rawId.replace(/\D/g, ''))
+        const phoneOrId = cleanId.replace(/@.*/, '')
         fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: msg,
-            session_id: appt.contact_numero,
-            phone: appt.contact_numero.replace(/\D/g, ''),
+            session_id: cleanId,
+            phone: phoneOrId,
             instancia: instance,
             api_instancia: apiInstancia,
             ai_enabled: false,
             is_reminder: true,
+            is_group: cleanId.includes('@g.us'),
           }),
         }).catch(e => console.warn('webhook reminder:', e))
-      }
+      })
     })
     return () => { active = false }
   }, [agendas, futureAppointments, instance, apiInstancia])
@@ -520,6 +540,8 @@ export default function CompanyAgenda() {
     payload.price = parseFloat(apptModal.price) || 0
     payload.payment_status = paymentStatus
     payload.paid_at = paidAt
+    payload.reminder_message = apptModal.reminder_message?.trim() || null
+    payload.reminder_recipients = Array.isArray(apptModal.reminder_recipients) ? apptModal.reminder_recipients : []
 
     const isNew = !apptModal.id
     const prevStatus = apptModal._prevStatus
@@ -1456,6 +1478,91 @@ export default function CompanyAgenda() {
                 <textarea className="nx-input" rows={2} placeholder="Anotações sobre este agendamento..."
                   value={apptModal.notes || ''}
                   onChange={e => setApptModal(p => ({ ...p, notes: e.target.value }))} />
+              </div>
+
+              {/* ─── LEMBRETE PERSONALIZADO ───────────────────────────── */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+                <label style={labelStyle}>Mensagem de lembrete (opcional)</label>
+                <textarea className="nx-input" rows={3}
+                  placeholder="Deixe vazio pra usar a mensagem padrão. Placeholders: {nome}, {agenda}, {data}"
+                  value={apptModal.reminder_message || ''}
+                  onChange={e => setApptModal(p => ({ ...p, reminder_message: e.target.value }))} />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Use <code>{'{nome}'}</code> · <code>{'{agenda}'}</code> · <code>{'{data}'}</code> pra substituir
+                </div>
+              </div>
+
+              {/* ─── DESTINATÁRIOS DO LEMBRETE ──────────────────────── */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                <label style={labelStyle}>Destinatários do lembrete</label>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Se vazio, manda só pro contato principal. Pode adicionar números individuais ou IDs de grupo.
+                </div>
+                {(apptModal.reminder_recipients || []).length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                    {apptModal.reminder_recipients.map((r, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '6px 10px', background: '#F8FAFC',
+                        border: '1px solid var(--border)', borderRadius: 8,
+                      }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                          color: r.type === 'group' ? '#7C3AED' : '#2563EB',
+                          background: r.type === 'group' ? '#F5F3FF' : '#EFF6FF',
+                          border: `1px solid ${r.type === 'group' ? '#DDD6FE' : '#BFDBFE'}`,
+                        }}>
+                          {r.type === 'group' ? 'GRUPO' : 'CONTATO'}
+                        </span>
+                        <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                          {r.name ? `${r.name} (${r.id})` : r.id}
+                        </span>
+                        <button type="button"
+                          onClick={() => setApptModal(p => ({ ...p, reminder_recipients: p.reminder_recipients.filter((_, j) => j !== i) }))}
+                          style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: 4 }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <select className="nx-select"
+                    value={apptModal._newRecipType || 'contact'}
+                    onChange={e => setApptModal(p => ({ ...p, _newRecipType: e.target.value }))}
+                    style={{ width: 110, fontSize: 12 }}>
+                    <option value="contact">Contato</option>
+                    <option value="group">Grupo</option>
+                  </select>
+                  <input className="nx-input" style={{ flex: 1, fontSize: 12 }}
+                    placeholder={apptModal._newRecipType === 'group' ? 'ID do grupo (sem @g.us)' : 'Número (com DDI + DDD)'}
+                    value={apptModal._newRecipId || ''}
+                    onChange={e => setApptModal(p => ({ ...p, _newRecipId: e.target.value }))} />
+                  <input className="nx-input" style={{ flex: 1, fontSize: 12 }}
+                    placeholder="Nome (opcional)"
+                    value={apptModal._newRecipName || ''}
+                    onChange={e => setApptModal(p => ({ ...p, _newRecipName: e.target.value }))} />
+                  <button type="button"
+                    onClick={() => {
+                      const id = (apptModal._newRecipId || '').trim()
+                      if (!id) return
+                      const type = apptModal._newRecipType || 'contact'
+                      const cleanId = id.replace(/\D/g, '')
+                      const fullId = type === 'group'
+                        ? `${cleanId}@g.us`
+                        : (cleanId.startsWith('55') ? cleanId : `55${cleanId}`)
+                      setApptModal(p => ({
+                        ...p,
+                        reminder_recipients: [...(p.reminder_recipients || []), { type, id: fullId, name: (p._newRecipName || '').trim() || null }],
+                        _newRecipId: '', _newRecipName: '',
+                      }))
+                    }}
+                    style={{
+                      padding: '0 14px', background: '#2563EB', color: '#fff',
+                      border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer',
+                    }}>+
+                  </button>
+                </div>
               </div>
 
               {apptModal.contact_numero && (
