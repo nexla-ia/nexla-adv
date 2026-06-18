@@ -2298,10 +2298,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
                     )}
                     {showSenderLabel && (
                     <div className="msg-label" style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      justifyContent: isGroupMode ? 'space-between' : (isLeft ? 'flex-start' : 'flex-end'),
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      justifyContent: isGroupMode ? 'flex-start' : (isLeft ? 'flex-start' : 'flex-end'),
                       color: labelColor,
-                      width: isGroupMode ? '100%' : undefined,
                     }}>
                       {isGroupMode
                         ? (() => {
