@@ -2488,7 +2488,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         </span>
                       </div>
                     )}
-                    {showSenderLabel && (
+                    {showSenderLabel && !isMineInGroup && (
                     <div className="msg-label" style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       justifyContent: isGroupMode ? 'flex-start' : (isLeft ? 'flex-start' : 'flex-end'),
