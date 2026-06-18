@@ -2817,7 +2817,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         !canRespond(selected) ? "Conversa está com outro atendente — você não pode responder"
                         : recordedAudio ? "Mensagem opcional para acompanhar o áudio..."
                         : attachedFile ? "Mensagem opcional para acompanhar o arquivo..."
-                        : "Digite uma mensagem... (Shift+Enter = nova linha)"
+                        : "Digite uma mensagem"
                       }
                       value={msgText}
                       onChange={e => {
