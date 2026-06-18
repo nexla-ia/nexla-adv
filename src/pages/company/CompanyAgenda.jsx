@@ -9,7 +9,7 @@ import { getEffectiveLimits, reachedLimit, upgradeMessage, formatLimit } from '.
 import {
   Calendar, Plus, X, Pencil, Trash2, ChevronLeft, ChevronRight,
   Clock, User as UserIcon, Phone, ListChecks, CheckCircle2, XCircle, AlertCircle, Settings,
-  MessageSquare, History, Lock
+  MessageSquare, History, Lock, Send
 } from 'lucide-react'
 import './Company.css'
 
@@ -613,6 +613,12 @@ export default function CompanyAgenda() {
         const ex = prev.find(a => a.id === apptResult.data.id)
         return ex ? prev.map(a => a.id === apptResult.data.id ? apptResult.data : a) : [...prev, apptResult.data]
       })
+      // Tambem atualiza futureAppointments pra que o dispatcher de lembrete veja
+      setFutureAppointments(prev => {
+        if (apptResult.data.reminder_sent) return prev.filter(a => a.id !== apptResult.data.id)
+        const ex = prev.find(a => a.id === apptResult.data.id)
+        return ex ? prev.map(a => a.id === apptResult.data.id ? apptResult.data : a) : [...prev, apptResult.data]
+      })
     }
 
     // Registra evento na conversa do cliente (se tem número)
@@ -693,6 +699,55 @@ export default function CompanyAgenda() {
     if (!apptModal?.id) return
     setConfirmDeleteAppt(true)
   }
+  // Envia lembrete manualmente (ignora janela reminder_hours)
+  async function sendReminderNow() {
+    if (!apptModal?.id) return
+    const ag = agendas.find(a => a.id === apptModal.agenda_id)
+    const horaFmt = new Date(apptModal.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    const defaultMsg = `📅 Olá${apptModal.contact_nome ? `, ${apptModal.contact_nome}` : ''}! Lembrando do seu agendamento em *${ag?.name || ''}* no dia *${horaFmt}*. Qualquer dúvida, é só falar com a gente! 😊`
+    const customMsg = (apptModal.reminder_message || '')
+      .replace(/\{nome\}/gi, apptModal.contact_nome || '')
+      .replace(/\{agenda\}/gi, ag?.name || '')
+      .replace(/\{data\}/gi, horaFmt)
+    const msg = customMsg.trim() || defaultMsg
+
+    const recipients = Array.isArray(apptModal.reminder_recipients) && apptModal.reminder_recipients.length > 0
+      ? apptModal.reminder_recipients
+      : (apptModal.contact_numero ? [{ type: 'contact', id: apptModal.contact_numero, name: apptModal.contact_nome }] : [])
+
+    if (!recipients.length) {
+      setToast({ message: 'Sem destinatarios pra enviar lembrete', color: '#DC2626' })
+      setTimeout(() => setToast(null), 3000)
+      return
+    }
+    if (!apiInstancia) return
+
+    recipients.forEach(r => {
+      const rawId = r.id || ''
+      const cleanId = rawId.includes('@') ? rawId : (r.type === 'group' ? `${rawId.replace(/\D/g, '')}@g.us` : rawId.replace(/\D/g, ''))
+      const phoneOrId = cleanId.replace(/@.*/, '')
+      fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: msg,
+          session_id: cleanId,
+          phone: phoneOrId,
+          instancia: instance,
+          api_instancia: apiInstancia,
+          ai_enabled: false,
+          is_reminder: true,
+          is_group: cleanId.includes('@g.us'),
+        }),
+      }).catch(e => console.warn('webhook reminder manual:', e))
+    })
+
+    // Marca reminder_sent pra nao disparar dnv automaticamente
+    await supabase.from('appointments').update({ reminder_sent: true }).eq('id', apptModal.id)
+    setToast({ message: `Lembrete enviado pra ${recipients.length} destinatario(s)`, color: '#16A34A' })
+    setTimeout(() => setToast(null), 3000)
+  }
+
   async function confirmDeleteApptAction() {
     if (!apptModal?.id) return
     setDeletingNow(true)
@@ -1723,11 +1778,17 @@ export default function CompanyAgenda() {
             </div>
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
               {apptErr && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{apptErr}</div>}
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {apptModal.id && (
                   <button onClick={handleDeleteAppt}
                     style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     <Trash2 size={13} /> Excluir
+                  </button>
+                )}
+                {apptModal.id && (
+                  <button onClick={sendReminderNow}
+                    style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#D97706', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Send size={13} /> Enviar lembrete
                   </button>
                 )}
                 <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setApptModal(null)}>Cancelar</button>
