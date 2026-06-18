@@ -2259,6 +2259,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 // Extrai nome do prefixo "Nome: " do conteudo (msgs enviadas pelo painel/grupo)
                 const prefixMatch = (msg.content || '').match(/^([^\n:]{1,40}):\s+/)
                 const senderFromPrefix = prefixMatch ? prefixMatch[1].trim() : null
+
+                // Agrupa mensagens consecutivas do mesmo remetente (so mostra label na 1a)
+                const prevPrefixMatch = prev ? (prev.content || '').match(/^([^\n:]{1,40}):\s+/) : null
+                const prevSenderName = prevPrefixMatch ? prevPrefixMatch[1].trim() : null
+                const curSenderKey = msg.participantNumber || senderFromPrefix || msg.nome || msg.type
+                const prevSenderKey = prev ? (prev.participantNumber || prevSenderName || prev.nome || prev.type) : null
+                const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey
+                const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
                 // Regra: atendente / fromMe = direita | cliente = esquerda | IA = direita
                 // msg.mine inclui fromMe (envio direto pelo WhatsApp)
@@ -2286,6 +2294,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         </span>
                       </div>
                     )}
+                    {showSenderLabel && (
                     <div className="msg-label" style={{
                       display: 'flex', alignItems: 'center', gap: 4,
                       justifyContent: isGroupMode ? 'space-between' : (isLeft ? 'flex-start' : 'flex-end'),
@@ -2339,6 +2348,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                             ? <><Headset size={10} /> {senderFromPrefix || 'Não rastreado'}</>
                             : <><Bot size={10} /> IA</>}
                     </div>
+                    )}
                     <div className={`msg-row ${isLeft ? 'ai' : 'client'}`}>
                       {(() => {
                         const media = detectMedia(msg.base64)
