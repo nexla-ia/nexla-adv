@@ -80,14 +80,13 @@ function getTimestamp(row) { return parseTimestamp(row.horaLastMessage) || row.c
 const INJECTED_PROMPT_RE = /responda em portugu[eê]s|de forma objetiva|solicite\s|n[aã]o informar|indicar que|apresentaremos|breve explica[çc][aã]o|orienta[çc][õo]es gerais|avalia[çc][aã]o pr[eé]-operat/i
 
 // Renderiza texto com markdown estilo WhatsApp:
-// *bold*, _italic_, ~strike~, `code`, ```block```, URLs clicáveis
-function renderRichText(text) {
+// *bold*, _italic_, ~strike~, `code`, ```block```, URLs clicáveis, @mention
+function renderRichText(text, opts = {}) {
   if (!text) return null
+  const { onMentionClick } = opts
   const segments = []
-  // 1) Primeiro extrai code blocks (``` ```) e inline code (` `)
-  //    pra que o conteúdo interno não seja afetado por outros markdowns.
-  // Regex que captura: ```...``` | `...` | http(s)://... | www.... | *...* | _..._ | ~...~
-  const regex = /```([\s\S]+?)```|`([^`\n]+?)`|(https?:\/\/[^\s]+)|(www\.[^\s]+)|\*([^*\n]+?)\*|_([^_\n]+?)_|~([^~\n]+?)~/g
+  // Regex que captura: ```...``` | `...` | http(s)://... | www.... | @mention | *...* | _..._ | ~...~
+  const regex = /```([\s\S]+?)```|`([^`\n]+?)`|(https?:\/\/[^\s]+)|(www\.[^\s]+)|@(\d{8,15})\b|\*([^*\n]+?)\*|_([^_\n]+?)_|~([^~\n]+?)~/g
   let lastIndex = 0
   let m
   let keyIdx = 0
@@ -129,14 +128,29 @@ function renderRichText(text) {
         color: 'inherit', textDecoration: 'underline', wordBreak: 'break-all',
       }}>{raw}</a>)
     } else if (m[5] !== undefined) {
-      // Bold
-      segments.push(<strong key={k}>{m[5]}</strong>)
+      // Mention @number
+      const num = m[5]
+      segments.push(
+        <span
+          key={k}
+          onClick={(e) => { e.stopPropagation(); onMentionClick && onMentionClick(num) }}
+          style={{
+            display: 'inline-block', padding: '0 4px', borderRadius: 4,
+            background: 'rgba(124,58,237,0.15)', color: 'inherit',
+            cursor: onMentionClick ? 'pointer' : 'default', fontWeight: 600,
+          }}
+          title={onMentionClick ? 'Abrir conversa individual' : ''}
+        >@{num}</span>
+      )
     } else if (m[6] !== undefined) {
-      // Italic
-      segments.push(<em key={k}>{m[6]}</em>)
+      // Bold
+      segments.push(<strong key={k}>{m[6]}</strong>)
     } else if (m[7] !== undefined) {
+      // Italic
+      segments.push(<em key={k}>{m[7]}</em>)
+    } else if (m[8] !== undefined) {
       // Strikethrough
-      segments.push(<span key={k} style={{ textDecoration: 'line-through' }}>{m[7]}</span>)
+      segments.push(<span key={k} style={{ textDecoration: 'line-through' }}>{m[8]}</span>)
     }
     lastIndex = m.index + m[0].length
   }
@@ -2429,8 +2443,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey && gapMs < 2 * 60 * 1000
                 const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
-                // Regra: atendente / fromMe = direita | cliente = esquerda | IA = direita
-                // msg.mine inclui fromMe (envio direto pelo WhatsApp)
+                // Regra estrita: so vai pra direita se for fromMe (msg.mine) ou type=atendente
                 const isMine       = msg.mine === true || isAtendente
                 const isMineInGroup = isGroupMode && isMine
                 const isLeft       = isGroupMode
@@ -2641,7 +2654,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 </div>
                               </div>
                             ) : displayContent && (
-                              <span style={{ whiteSpace: 'pre-wrap' }}>{renderRichText(displayContent)}</span>
+                              <span style={{ whiteSpace: 'pre-wrap' }}>{renderRichText(displayContent, {
+                                onMentionClick: (num) => navigate(`/painel/conversas?contact=${num}`)
+                              })}</span>
                             )}
                           </div>
                         )
