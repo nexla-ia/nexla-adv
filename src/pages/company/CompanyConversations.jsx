@@ -2820,6 +2820,19 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   if (d.length === 11) return `${d.slice(0,2)} ${d.slice(2,7)}-${d.slice(7)}`
                   return `+${d}`
                 })()
+                // Cor estavel por numero — paleta de 8 tons pastel
+                const palette = [
+                  { bg: '#FEE2E2', fg: '#DC2626' }, // vermelho
+                  { bg: '#FEF3C7', fg: '#D97706' }, // ambar
+                  { bg: '#DCFCE7', fg: '#16A34A' }, // verde
+                  { bg: '#CFFAFE', fg: '#0891B2' }, // ciano
+                  { bg: '#DBEAFE', fg: '#2563EB' }, // azul
+                  { bg: '#EDE9FE', fg: '#7C3AED' }, // violeta
+                  { bg: '#FCE7F3', fg: '#DB2777' }, // rosa
+                  { bg: '#F1F5F9', fg: '#475569' }, // cinza
+                ]
+                const hash = m.numero.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+                const color = palette[hash % palette.length]
                 return (
                   <button key={i}
                     onClick={() => {
@@ -2836,14 +2849,17 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   >
                     <div style={{
                       width: 38, height: 38, borderRadius: '50%',
-                      background: photoSrc ? 'transparent' : '#EFF6FF', color: '#2563EB',
+                      background: photoSrc ? 'transparent' : color.bg,
+                      color: color.fg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontWeight: 700, fontSize: 14, flexShrink: 0,
                       overflow: 'hidden',
                     }}>
                       {photoSrc
                         ? <img src={photoSrc} alt={displayName || m.numero} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : (displayName || '?').charAt(0).toUpperCase()}
+                        : displayName
+                          ? displayName.charAt(0).toUpperCase()
+                          : <User size={18} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
