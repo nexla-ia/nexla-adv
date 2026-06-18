@@ -135,6 +135,10 @@ export default function CompanyAgenda() {
   const [apptErr, setApptErr]         = useState('')
   const [phoneSuggestions, setPhoneSuggestions] = useState([])
   const [showPhoneDrop, setShowPhoneDrop] = useState(false)
+  const [groupOptions, setGroupOptions] = useState([])  // [{idgrupo, nomegrupo}]
+  const [recipSearch, setRecipSearch] = useState('')
+  const [showRecipDrop, setShowRecipDrop] = useState(false)
+  const recipDropRef = useRef(null)
   const phoneDropRef = useRef(null)
   const [countryCode, setCountryCode] = useState('55')
   const [showCountryDrop, setShowCountryDrop] = useState(false)
@@ -168,12 +172,20 @@ export default function CompanyAgenda() {
       }
       if (sc) setSavedContacts(sc)
       // Constroi lista combinada: saved_contacts + numeros que ja mandaram msg (nao salvos)
+      // Tambem extrai grupos pra usar como destinatarios de lembrete
       if (msgs) {
         const savedKeys = new Set((sc || []).map(c => (c.numero || '').replace(/\D/g, '').slice(-8)))
         const seen = new Set()
         const extras = []
+        const groupSeen = new Set()
+        const groups = []
         for (const m of msgs) {
-          if ((m.numero || '').includes('@g.us') || m.idgrupo) continue   // exclui grupo
+          // Grupos: agrega por idgrupo
+          if (m.idgrupo && !groupSeen.has(m.idgrupo)) {
+            groupSeen.add(m.idgrupo)
+            groups.push({ idgrupo: m.idgrupo, nome: m.nomegrupo || 'Grupo' })
+          }
+          if ((m.numero || '').includes('@g.us') || m.idgrupo) continue
           const num = (m.numero || '').replace(/@.*/, '').replace(/\D/g, '')
           if (!num || num.length < 8 || num.length > 13) continue
           if (savedKeys.has(num.slice(-8))) continue
@@ -182,9 +194,9 @@ export default function CompanyAgenda() {
           extras.push({ id: `m_${num}`, nome: m.nome || `+${num}`, numero: num })
           if (extras.length >= 200) break
         }
-        // Combina: saved primeiro (com nome real), depois extras
         const combined = [...(sc || []), ...extras]
         setSavedContacts(combined)
+        setGroupOptions(groups)
       }
       if (pros) setProfessionals(pros.filter(p => p.active !== false))
       if (procs) setProcedures(procs.filter(p => p.active !== false))
@@ -478,6 +490,13 @@ export default function CompanyAgenda() {
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [showContactDrop])
+
+  useEffect(() => {
+    if (!showRecipDrop) return
+    const close = (e) => { if (recipDropRef.current && !recipDropRef.current.contains(e.target)) setShowRecipDrop(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [showRecipDrop])
 
   function openEditAppt(a) {
     const d = new Date(a.starts_at)
@@ -1564,42 +1583,72 @@ export default function CompanyAgenda() {
                     ))}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <select className="nx-select"
-                    value={apptModal._newRecipType || 'contact'}
-                    onChange={e => setApptModal(p => ({ ...p, _newRecipType: e.target.value }))}
-                    style={{ width: 110, fontSize: 12 }}>
-                    <option value="contact">Contato</option>
-                    <option value="group">Grupo</option>
-                  </select>
-                  <input className="nx-input" style={{ flex: 1, fontSize: 12 }}
-                    placeholder={apptModal._newRecipType === 'group' ? 'ID do grupo (sem @g.us)' : 'Número (com DDI + DDD)'}
-                    value={apptModal._newRecipId || ''}
-                    onChange={e => setApptModal(p => ({ ...p, _newRecipId: e.target.value }))} />
-                  <input className="nx-input" style={{ flex: 1, fontSize: 12 }}
-                    placeholder="Nome (opcional)"
-                    value={apptModal._newRecipName || ''}
-                    onChange={e => setApptModal(p => ({ ...p, _newRecipName: e.target.value }))} />
-                  <button type="button"
-                    onClick={() => {
-                      const id = (apptModal._newRecipId || '').trim()
-                      if (!id) return
-                      const type = apptModal._newRecipType || 'contact'
-                      const cleanId = id.replace(/\D/g, '')
-                      const fullId = type === 'group'
-                        ? `${cleanId}@g.us`
-                        : (cleanId.startsWith('55') ? cleanId : `55${cleanId}`)
-                      setApptModal(p => ({
-                        ...p,
-                        reminder_recipients: [...(p.reminder_recipients || []), { type, id: fullId, name: (p._newRecipName || '').trim() || null }],
-                        _newRecipId: '', _newRecipName: '',
-                      }))
-                    }}
-                    style={{
-                      padding: '0 14px', background: '#2563EB', color: '#fff',
-                      border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer',
-                    }}>+
-                  </button>
+                {/* Search picker: contato ou grupo existente */}
+                <div style={{ position: 'relative' }} ref={recipDropRef}>
+                  <input className="nx-input" style={{ width: '100%', fontSize: 12 }}
+                    placeholder="Buscar contato salvo ou grupo..."
+                    value={recipSearch}
+                    onChange={e => { setRecipSearch(e.target.value); setShowRecipDrop(true) }}
+                    onFocus={() => setShowRecipDrop(true)} />
+                  {showRecipDrop && (() => {
+                    const q = recipSearch.trim().toLowerCase()
+                    const already = new Set((apptModal.reminder_recipients || []).map(r => r.id))
+                    const matchedContacts = savedContacts
+                      .filter(c => !q || (c.nome || '').toLowerCase().includes(q) || (c.numero || '').includes(q.replace(/\D/g, '')))
+                      .filter(c => {
+                        const num = (c.numero || '').replace(/\D/g, '')
+                        return !already.has(num) && !already.has(`${num}@s.whatsapp.net`)
+                      })
+                      .slice(0, 12)
+                    const matchedGroups = groupOptions
+                      .filter(g => !q || (g.nome || '').toLowerCase().includes(q))
+                      .filter(g => !already.has(g.idgrupo))
+                      .slice(0, 8)
+                    if (!matchedContacts.length && !matchedGroups.length) return null
+                    return (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
+                        background: '#fff', border: '1px solid var(--border)',
+                        borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                        marginTop: 4, maxHeight: 240, overflowY: 'auto',
+                      }}>
+                        {matchedContacts.map(c => (
+                          <button key={`c_${c.id}`} type="button"
+                            onMouseDown={() => {
+                              const num = (c.numero || '').replace(/\D/g, '')
+                              setApptModal(p => ({
+                                ...p,
+                                reminder_recipients: [...(p.reminder_recipients || []), { type: 'contact', id: num, name: c.nome }],
+                              }))
+                              setRecipSearch(''); setShowRecipDrop(false)
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', border: 'none', background: '#fff', cursor: 'pointer', textAlign: 'left' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, color: '#2563EB', background: '#EFF6FF' }}>CONTATO</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{c.nome}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.numero}</span>
+                          </button>
+                        ))}
+                        {matchedGroups.map(g => (
+                          <button key={`g_${g.idgrupo}`} type="button"
+                            onMouseDown={() => {
+                              setApptModal(p => ({
+                                ...p,
+                                reminder_recipients: [...(p.reminder_recipients || []), { type: 'group', id: g.idgrupo, name: g.nome }],
+                              }))
+                              setRecipSearch(''); setShowRecipDrop(false)
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', border: 'none', background: '#fff', cursor: 'pointer', textAlign: 'left' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, color: '#7C3AED', background: '#F5F3FF' }}>GRUPO</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{g.nome}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
 
