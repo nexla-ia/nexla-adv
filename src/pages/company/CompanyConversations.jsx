@@ -304,7 +304,6 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [groupMembers, setGroupMembers] = useState(null) // null | { members: [], loading: bool, error: str }
   const msgInputRef = useRef(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
-  const [emojiTab, setEmojiTab] = useState(null) // null = recentes (se houver) ou 1a categoria
   const [recentEmojis, setRecentEmojis] = useState(() => {
     try { return JSON.parse(localStorage.getItem('nx_recent_emojis') || '[]') } catch { return [] }
   })
@@ -2905,79 +2904,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                           }}>
                           <Smile size={16} />
                         </button>
-                        {emojiOpen && (() => {
-                          // Tabs: Recentes (se tem) + categorias
-                          const tabs = [
-                            ...(recentEmojis.length ? [{ name: 'Recentes', icon: '🕐', emojis: recentEmojis }] : []),
-                            ...EMOJI_CATEGORIES,
-                          ]
-                          const activeTab = tabs.find(t => t.name === emojiTab) || tabs[0]
-                          return (
-                            <>
-                              <div onClick={() => setEmojiOpen(false)}
-                                style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
-                              <div style={{
-                                position: 'absolute', bottom: '100%', right: 0,
-                                marginBottom: 8, background: '#fff',
-                                border: '1px solid var(--border)', borderRadius: 12,
-                                boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
-                                width: 332, zIndex: 50,
-                                display: 'flex', flexDirection: 'column',
-                                overflow: 'hidden',
-                              }}>
-                                {/* Tabs */}
-                                <div style={{
-                                  display: 'flex', gap: 2, padding: '6px 8px',
-                                  borderBottom: '1px solid var(--border)',
-                                  background: '#FAFAFA',
-                                }}>
-                                  {tabs.map(t => {
-                                    const isActive = activeTab.name === t.name
-                                    return (
-                                      <button key={t.name}
-                                        onClick={() => setEmojiTab(t.name)}
-                                        title={t.name}
-                                        style={{
-                                          flex: 1, padding: '6px 0', border: 'none',
-                                          background: isActive ? '#fff' : 'transparent',
-                                          borderRadius: 8, cursor: 'pointer',
-                                          fontSize: 18, lineHeight: 1,
-                                          boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                                        }}>
-                                        {t.icon}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                                {/* Grid */}
-                                <div style={{ padding: 6, maxHeight: 260, overflowY: 'auto', overflowX: 'hidden' }}>
-                                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 6px 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    {activeTab.name}
-                                  </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 2 }}>
-                                    {activeTab.emojis.length === 0 ? (
-                                      <div style={{ gridColumn: 'span 8', padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
-                                        Use um emoji pra aparecer aqui
-                                      </div>
-                                    ) : activeTab.emojis.map((em, i) => (
-                                      <button key={i}
-                                        onClick={() => insertEmoji(em)}
-                                        style={{
-                                          minWidth: 0, width: '100%', boxSizing: 'border-box',
-                                          background: 'transparent', border: 'none', cursor: 'pointer',
-                                          fontSize: 20, padding: 4, borderRadius: 8, lineHeight: 1,
-                                          transition: 'background 0.1s',
-                                        }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9' }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                                      >{em}</button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          )
-                        })()}
+                        {emojiOpen && <EmojiPicker
+                          recentEmojis={recentEmojis}
+                          onSelect={insertEmoji}
+                          onClose={() => setEmojiOpen(false)}
+                        />}
                       </div>
                       <button
                         onClick={() => fileInputRef.current?.click()}
@@ -3481,5 +3412,117 @@ export default function CompanyConversations({ mode = 'individual' }) {
         </div>
       , document.body)}
     </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// EmojiPicker: scroll continuo + tabs indicam categoria visivel
+// ────────────────────────────────────────────────────────────────────────────
+function EmojiPicker({ recentEmojis, onSelect, onClose }) {
+  const tabs = [
+    ...(recentEmojis.length ? [{ name: 'Recentes', icon: '🕐', emojis: recentEmojis }] : []),
+    ...EMOJI_CATEGORIES,
+  ]
+  const scrollRef = useRef(null)
+  const sectionRefs = useRef({})
+  const [activeTab, setActiveTab] = useState(tabs[0]?.name)
+
+  // Atualiza tab ativa conforme rolagem
+  useEffect(() => {
+    const body = scrollRef.current
+    if (!body) return
+    function onScroll() {
+      const top = body.scrollTop + 20
+      let current = tabs[0]?.name
+      for (const t of tabs) {
+        const el = sectionRefs.current[t.name]
+        if (el && el.offsetTop <= top) current = t.name
+      }
+      setActiveTab(current)
+    }
+    body.addEventListener('scroll', onScroll)
+    return () => body.removeEventListener('scroll', onScroll)
+  }, [tabs.length])
+
+  function scrollToTab(name) {
+    const el = sectionRefs.current[name]
+    if (el && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: el.offsetTop - 4, behavior: 'smooth' })
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
+      <div style={{
+        position: 'absolute', bottom: '100%', right: 0,
+        marginBottom: 8, background: '#fff',
+        border: '1px solid var(--border)', borderRadius: 12,
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
+        width: 332, zIndex: 50,
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Tabs */}
+        <div style={{
+          display: 'flex', gap: 2, padding: '6px 8px',
+          borderBottom: '1px solid var(--border)',
+          background: '#FAFAFA',
+        }}>
+          {tabs.map(t => {
+            const isActive = activeTab === t.name
+            return (
+              <button key={t.name}
+                onClick={() => scrollToTab(t.name)}
+                title={t.name}
+                style={{
+                  flex: 1, padding: '6px 0', border: 'none',
+                  background: isActive ? '#fff' : 'transparent',
+                  borderRadius: 8, cursor: 'pointer',
+                  fontSize: 18, lineHeight: 1,
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  borderBottom: isActive ? '2px solid #2563EB' : '2px solid transparent',
+                  transition: 'all 0.15s',
+                }}>
+                {t.icon}
+              </button>
+            )
+          })}
+        </div>
+        {/* Lista scrollavel — todas as categorias empilhadas */}
+        <div ref={scrollRef} style={{ padding: 6, maxHeight: 300, overflowY: 'auto', overflowX: 'hidden' }}>
+          {tabs.map(cat => (
+            <div key={cat.name} ref={el => { sectionRefs.current[cat.name] = el }} style={{ marginBottom: 8 }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+                padding: '6px 6px 6px', textTransform: 'uppercase', letterSpacing: 0.5,
+                position: 'sticky', top: 0, background: '#fff', zIndex: 1,
+              }}>
+                {cat.name}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 2 }}>
+                {cat.emojis.length === 0 ? (
+                  <div style={{ gridColumn: 'span 8', padding: 18, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+                    Use um emoji pra aparecer aqui
+                  </div>
+                ) : cat.emojis.map((em, i) => (
+                  <button key={i}
+                    onClick={() => onSelect(em)}
+                    style={{
+                      minWidth: 0, width: '100%', boxSizing: 'border-box',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      fontSize: 20, padding: 4, borderRadius: 8, lineHeight: 1,
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  >{em}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
