@@ -248,11 +248,9 @@ export default function CompanyAgenda() {
     const pending = []
     const debug = []
     agendas.forEach(ag => {
-      if (!ag.reminder_hours) {
-        debug.push({ agenda: ag.name, motivo: 'sem reminder_hours configurado' })
-        return
-      }
-      const windowMs = ag.reminder_hours * 3600_000
+      // Se a agenda nao tem reminder_hours, usa 1 hora como padrao (comportamento minimo)
+      const reminderHours = ag.reminder_hours || 1
+      const windowMs = reminderHours * 3600_000
       futureAppointments.forEach(appt => {
         if (appt.agenda_id !== ag.id) return
         if (appt.reminder_sent) {
@@ -747,27 +745,31 @@ export default function CompanyAgenda() {
     }
     if (!apiInstancia) return
 
+    console.log('[reminder-manual] disparando pra', recipients.length, 'destinatario(s)', recipients)
     recipients.forEach(r => {
       const rawId = r.id || ''
       const cleanId = rawId.includes('@') ? rawId : (r.type === 'group' ? `${rawId.replace(/\D/g, '')}@g.us` : rawId.replace(/\D/g, ''))
       const phoneOrId = cleanId.replace(/@.*/, '')
+      const body = {
+        message: msg,
+        session_id: cleanId,
+        phone: phoneOrId,
+        instancia: instance,
+        api_instancia: apiInstancia,
+        ai_enabled: false,
+        is_reminder: true,
+        is_group: cleanId.includes('@g.us'),
+      }
+      console.log('[reminder-manual] fetch body:', body)
       fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: msg,
-          session_id: cleanId,
-          phone: phoneOrId,
-          instancia: instance,
-          api_instancia: apiInstancia,
-          ai_enabled: false,
-          is_reminder: true,
-          is_group: cleanId.includes('@g.us'),
-        }),
-      }).catch(e => console.warn('webhook reminder manual:', e))
+        body: JSON.stringify(body),
+      })
+        .then(r => console.log('[reminder-manual] resposta:', r.status))
+        .catch(e => console.warn('[reminder-manual] erro fetch:', e))
     })
 
-    // Marca reminder_sent pra nao disparar dnv automaticamente
     await supabase.from('appointments').update({ reminder_sent: true }).eq('id', apptModal.id)
     setToast({ message: `Lembrete enviado pra ${recipients.length} destinatario(s)`, color: '#16A34A' })
     setTimeout(() => setToast(null), 3000)
