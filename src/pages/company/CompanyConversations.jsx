@@ -2288,15 +2288,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
                     )}
                     <div className="msg-label" style={{
                       display: 'flex', alignItems: 'center', gap: 4,
-                      justifyContent: isLeft ? 'flex-start' : 'flex-end',
+                      justifyContent: isGroupMode ? 'space-between' : (isLeft ? 'flex-start' : 'flex-end'),
                       color: labelColor,
+                      width: isGroupMode ? '100%' : undefined,
                     }}>
                       {isGroupMode
                         ? (() => {
                             const displayName = senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))
                             const partNum = (msg.participantNumber || '').replace(/@.*/, '').replace(/\D/g, '')
                             const clickable = !msg.mine && partNum && !msg.participantNumber.includes('@g.us') && !msg.participantNumber.includes('@lid')
-                            // Formata "+55 69 8116-1007"
                             const fmtPhone = (n) => {
                               if (!n) return ''
                               const d = n.replace(/\D/g, '')
@@ -2306,32 +2306,31 @@ export default function CompanyConversations({ mode = 'individual' }) {
                               return `+${d}`
                             }
                             const phoneStr = clickable ? fmtPhone(partNum) : ''
-                            // Capitaliza nome (evita NEXLA em caixa alta)
                             const niceName = displayName.length > 3 && displayName === displayName.toUpperCase()
                               ? displayName.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
                               : displayName
-                            if (clickable) {
-                              return (
-                                <span
-                                  onClick={(e) => {
-                                    const r = e.currentTarget.getBoundingClientRect()
-                                    // Posiciona ao LADO do nome — direita se tem espaco, senao esquerda
-                                    const MENU_W = 200
-                                    const right = r.right + 6
-                                    const flipLeft = (right + MENU_W) > window.innerWidth
-                                    const x = flipLeft ? Math.max(8, r.left - MENU_W - 6) : right
-                                    setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x, y: r.top })
-                                  }}
-                                  title="Abrir opcoes"
-                                  style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, cursor: 'pointer' }}
-                                >
-                                  <span style={{ fontWeight: 700, fontSize: 12 }}>~ {niceName}</span>
-                                  <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
-                                </span>
-                              )
-                            }
                             return (
-                              <span style={{ fontWeight: 700, fontSize: 12 }}>~ {niceName}</span>
+                              <>
+                                {/* Nome à esquerda — clicável se possível */}
+                                {clickable ? (
+                                  <span
+                                    onClick={(e) => {
+                                      const r = e.currentTarget.getBoundingClientRect()
+                                      const MENU_W = 200
+                                      const right = r.right + 6
+                                      const flipLeft = (right + MENU_W) > window.innerWidth
+                                      const x = flipLeft ? Math.max(8, r.left - MENU_W - 6) : right
+                                      setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x, y: r.top })
+                                    }}
+                                    title="Abrir opcoes"
+                                    style={{ fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                                  >~ {niceName}</span>
+                                ) : (
+                                  <span style={{ fontWeight: 700, fontSize: 12 }}>~ {niceName}</span>
+                                )}
+                                {/* Telefone à direita */}
+                                <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
+                              </>
                             )
                           })()
                         : isCliente
