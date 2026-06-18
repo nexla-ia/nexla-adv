@@ -2267,7 +2267,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const curSenderKey = msg.participantNumber || senderFromPrefix || msg.nome || msg.type
                 const prevSenderKey = prev ? (prev.participantNumber || prevSenderName || prev.nome || prev.type) : null
                 const gapMs = (prev && prev.ts && msg.ts) ? (new Date(msg.ts).getTime() - new Date(prev.ts).getTime()) : Infinity
-                const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey && gapMs < 5 * 60 * 1000
+                const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey && gapMs < 2 * 60 * 1000
                 const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
                 // Regra: atendente / fromMe = direita | cliente = esquerda | IA = direita
