@@ -2306,26 +2306,27 @@ export default function CompanyConversations({ mode = 'individual' }) {
                               return `+${d}`
                             }
                             const phoneStr = clickable ? fmtPhone(partNum) : ''
+                            // Capitaliza nome (evita NEXLA em caixa alta)
+                            const niceName = displayName.length > 3 && displayName === displayName.toUpperCase()
+                              ? displayName.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+                              : displayName
                             if (clickable) {
                               return (
                                 <span
                                   onClick={(e) => {
                                     const r = e.currentTarget.getBoundingClientRect()
-                                    setMemberPopover({ msgId: msg.id, name: displayName, number: partNum, phoneStr, x: r.left, y: r.bottom + 4 })
+                                    setMemberPopover({ msgId: msg.id, name: niceName, number: partNum, phoneStr, x: r.left, y: r.bottom + 4 })
                                   }}
                                   title="Abrir opcoes"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                                  style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, cursor: 'pointer' }}
                                 >
-                                  <User size={10} />
-                                  <span style={{ fontWeight: 600 }}>~ {displayName}</span>
-                                  <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{phoneStr}</span>
+                                  <span style={{ fontWeight: 700, fontSize: 12 }}>~ {niceName}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
                                 </span>
                               )
                             }
                             return (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                <User size={10} /> ~ {displayName}
-                              </span>
+                              <span style={{ fontWeight: 700, fontSize: 12 }}>~ {niceName}</span>
                             )
                           })()
                         : isCliente
