@@ -561,23 +561,40 @@ export default function CompanyAgenda() {
     payload.price = parseFloat(apptModal.price) || 0
     payload.payment_status = paymentStatus
     payload.paid_at = paidAt
-    payload.reminder_message = apptModal.reminder_message?.trim() || null
-    payload.reminder_recipients = Array.isArray(apptModal.reminder_recipients) ? apptModal.reminder_recipients : []
+    // So envia campos novos se foram preenchidos (evita erro se coluna nao existir no banco)
+    if (apptModal.reminder_message?.trim()) {
+      payload.reminder_message = apptModal.reminder_message.trim()
+    }
+    if (Array.isArray(apptModal.reminder_recipients) && apptModal.reminder_recipients.length > 0) {
+      payload.reminder_recipients = apptModal.reminder_recipients
+    }
 
     const isNew = !apptModal.id
     const prevStatus = apptModal._prevStatus
     let apptResult
     try {
       apptResult = isNew
-        ? await supabase.from('appointments').insert(payload)
-        : await supabase.from('appointments').update(payload).eq('id', apptModal.id)
+        ? await supabase.from('appointments').insert(payload).select().single()
+        : await supabase.from('appointments').update(payload).eq('id', apptModal.id).select().single()
     } catch (e) {
+      console.error('handleSaveAppt exception:', e)
       setApptErr('Erro inesperado. Tente novamente.')
       setSavingAppt(false)
       return
     }
     setSavingAppt(false)
-    if (apptResult.error) { setApptErr('Erro: ' + apptResult.error.message); return }
+    if (apptResult.error) {
+      console.error('handleSaveAppt erro:', apptResult.error)
+      setApptErr('Erro: ' + apptResult.error.message)
+      return
+    }
+    // Atualiza local state imediato (nao espera realtime)
+    if (apptResult.data) {
+      setAppointments(prev => {
+        const ex = prev.find(a => a.id === apptResult.data.id)
+        return ex ? prev.map(a => a.id === apptResult.data.id ? apptResult.data : a) : [...prev, apptResult.data]
+      })
+    }
 
     // Registra evento na conversa do cliente (se tem número)
     if (numero) {
