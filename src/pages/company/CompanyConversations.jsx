@@ -1247,16 +1247,21 @@ export default function CompanyConversations({ mode = 'individual' }) {
   async function handleTransfer() {
     if (!transferModal || !transferringTo || transferring) return
     const target = companyUsers.find(u => u.email === transferringTo)
-    if (!target) return
+    if (!target) {
+      console.warn('[transfer] target nao encontrado em companyUsers:', transferringTo, companyUsers)
+      return
+    }
     setTransferring(true)
 
     // Tenta achar o setor do novo atendente
-    const { data: memberData } = await supabase
+    const { data: memberData, error: memErr } = await supabase
       .from('sector_members')
       .select('sector_id, sectors(id, name, color)')
       .eq('user_id', target.id)
       .maybeSingle()
+    if (memErr) console.warn('[transfer] sector_members erro:', memErr.message)
     const targetSector = memberData?.sectors || null
+    console.log('[transfer] target:', target.email, 'setor:', targetSector)
 
     const fullPayload = {
       numero: transferModal.session_id,
@@ -1269,27 +1274,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
       assumed_at: new Date().toISOString(),
     }
 
-    // UPDATE primeiro
-    const { data: updRow, error } = await supabase
+    // UPSERT pra cobrir tanto update quanto create
+    const { error: upErr } = await supabase
       .from('attendances')
-      .update(fullPayload)
-      .eq('numero', transferModal.session_id)
-      .eq('instancia', instance)
-      .select()
-      .maybeSingle()
-
-    // Se não atualizou nenhuma linha (não existia), INSERT
-    if (!error && !updRow) {
-      const { error: insErr } = await supabase.from('attendances').insert(fullPayload)
-      if (insErr) {
-        setTransferring(false)
-        setToast({ message: 'Erro ao transferir: ' + insErr.message, color: '#DC2626' })
-        setTimeout(() => setToast(null), 3500)
-        return
-      }
-    } else if (error) {
+      .upsert(fullPayload, { onConflict: 'numero,instancia' })
+    console.log('[transfer] upsert resultado:', upErr?.message || 'ok', 'payload:', fullPayload)
+    if (upErr) {
       setTransferring(false)
-      setToast({ message: 'Erro ao transferir: ' + error.message, color: '#DC2626' })
+      setToast({ message: 'Erro ao transferir: ' + upErr.message, color: '#DC2626' })
       setTimeout(() => setToast(null), 3500)
       return
     }
@@ -1704,7 +1696,16 @@ export default function CompanyConversations({ mode = 'individual' }) {
   }
 
   const closed = new Set(Object.keys(closedMap))
-  const recepcao    = contacts.filter(c => !closed.has(c.session_id) && !attendancesMap[c.session_id])
+  // Recepcao: nao finalizadas E (sem atendente OU em outro setor que nao o meu)
+  // Conversas atribuidas ao meu setor ficam SO na "Meu setor"
+  const recepcao    = contacts.filter(c => {
+    if (closed.has(c.session_id)) return false
+    const att = attendancesMap[c.session_id]
+    if (!att) return true   // sem atendente → Recepcao
+    if (isAdmin) return false   // admin ve em Meu setor (com tudo)
+    if (!userSector) return true  // sem setor → Recepcao mostra tudo
+    return att.sector_id !== userSector.id  // outro setor → ainda na Recepcao
+  })
   const meuSetor    = contacts.filter(c => {
     if (closed.has(c.session_id)) return false
     const att = attendancesMap[c.session_id]
