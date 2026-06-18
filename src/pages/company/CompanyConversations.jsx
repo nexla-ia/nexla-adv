@@ -2548,8 +2548,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                     }}>
                       {isGroupMode
                         ? (() => {
-                            const displayName = senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))
                             const partNum = (msg.participantNumber || '').replace(/@.*/, '').replace(/\D/g, '')
+                            const savedMember = partNum ? findSaved(savedContacts, partNum) : null
+                            // Se ja esta salvo, usa o nome salvo (sem o ~)
+                            const rawName = senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))
+                            const displayName = savedMember?.nome || rawName
                             // Permite click pra qualquer participante (mesmo @lid) — exceto minhas e ids de grupo
                             const clickable = !msg.mine && partNum && !msg.participantNumber.includes('@g.us')
                             const fmtPhone = (n) => {
@@ -2565,8 +2568,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
                               ? displayName.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
                               : displayName
                             // Gera cor pseudo-aleatoria estavel pra o avatar
-                            const colorPalette = ['#2563EB', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2', '#65A30D']
-                            const avatarColor = colorPalette[(niceName.charCodeAt(0) || 0) % colorPalette.length]
+                            const colorPalette = ['#2563EB', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2', '#65A30D', '#E11D48', '#9333EA', '#0EA5E9', '#16A34A', '#EA580C', '#BE185D', '#475569']
+                            // Hash robusto baseado no numero do participante (mais unico que so a inicial)
+                            const hashSrc = partNum || msg.participantNumber || niceName
+                            let hash = 0
+                            for (let ci = 0; ci < hashSrc.length; ci++) {
+                              hash = ((hash << 5) - hash) + hashSrc.charCodeAt(ci)
+                              hash |= 0
+                            }
+                            const avatarColor = colorPalette[Math.abs(hash) % colorPalette.length]
                             return (
                               <>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -2590,13 +2600,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                       }}
                                       title="Abrir opcoes"
                                       style={{ fontWeight: 700, fontSize: 12, cursor: 'pointer', color: avatarColor }}
-                                    >~ {niceName}</span>
+                                    >{savedMember ? niceName : `~ ${niceName}`}</span>
                                   ) : (
-                                    <span style={{ fontWeight: 700, fontSize: 12, color: avatarColor }}>~ {niceName}</span>
+                                    <span style={{ fontWeight: 700, fontSize: 12, color: avatarColor }}>{savedMember ? niceName : `~ ${niceName}`}</span>
                                   )}
                                 </span>
-                                {/* Telefone à direita */}
-                                <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
+                                {/* Telefone à direita — esconde se contato ja esta salvo */}
+                                {!savedMember && (
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 11, fontFamily: 'monospace' }}>{phoneStr}</span>
+                                )}
                               </>
                             )
                           })()
