@@ -310,6 +310,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
         const admin = m.admin === 'admin' || m.admin === 'superadmin' || m.isAdmin === true || m.role === 'admin'
         return { numero, isAdmin: admin, nome: m.nome || m.name || m.pushName || null }
       }).filter(m => m.numero)
+      // Ordena: admins primeiro, depois por numero
+      members.sort((a, b) => {
+        if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1
+        return a.numero.localeCompare(b.numero)
+      })
       setGroupMembers({ members, loading: false, error: null })
     } catch (e) {
       setGroupMembers({ members: [], loading: false, error: String(e.message ?? e) })
@@ -2806,6 +2811,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
               {groupMembers?.members?.map((m, i) => {
                 const saved = findSaved(savedContacts, m.numero)
                 const displayName = m.nome || saved?.nome || clientesMap[`${m.numero}@s.whatsapp.net`] || clientesMap[m.numero]
+                const photoRaw = saved?.photo || clientesFotoMap[`${m.numero}@s.whatsapp.net`] || clientesFotoMap[m.numero]
+                const photoSrc = photoRaw ? toImgSrc(photoRaw) : null
                 const fmtPhone = (() => {
                   const d = m.numero
                   if (d.length === 13 && d.startsWith('55')) return `+55 ${d.slice(2,4)} ${d.slice(4,8)}-${d.slice(8)}`
@@ -2829,11 +2836,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   >
                     <div style={{
                       width: 38, height: 38, borderRadius: '50%',
-                      background: '#EFF6FF', color: '#2563EB',
+                      background: photoSrc ? 'transparent' : '#EFF6FF', color: '#2563EB',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontWeight: 700, fontSize: 14, flexShrink: 0,
+                      overflow: 'hidden',
                     }}>
-                      {(displayName || '?').charAt(0).toUpperCase()}
+                      {photoSrc
+                        ? <img src={photoSrc} alt={displayName || m.numero} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : (displayName || '?').charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
