@@ -78,7 +78,7 @@ export default function CompanyContacts() {
     Promise.all([
       supabase.from('saved_contacts').select('*').eq('instancia', instance).order('nome', { ascending: true }),
       supabase.from('insurance_plans').select('id, name').eq('instancia', instance).eq('active', true).order('name'),
-      supabase.from('mensagens_geral').select('numero').eq('instancia', instance).limit(5000),
+      supabase.from('mensagens_geral').select('numero, idgrupo').eq('instancia', instance).limit(5000),
     ]).then(([{ data: pat }, { data: plans }, { data: msgs }]) => {
       if (pat) setPatients(pat)
       if (plans) setInsurancePlans(plans)
@@ -88,13 +88,14 @@ export default function CompanyContacts() {
         const savedKeys = new Set((pat || []).map(p => norm(p.numero)).filter(Boolean))
         const uniques = [...new Set(
           msgs
-            // EXCLUI grupos (@g.us) — so numeros individuais
-            .filter(m => !(m.numero || '').includes('@g.us'))
+            // EXCLUI grupos (@g.us OU rows com idgrupo preenchido)
+            .filter(m => !(m.numero || '').includes('@g.us') && !m.idgrupo)
             .map(m => m.numero?.replace(/@.*/, '').replace(/\D/g, ''))
             // Filtra IDs muito longos (defesa adicional contra IDs de grupo sem @g.us)
-            .filter(n => n && n.length <= 13)
+            .filter(n => n && n.length >= 8 && n.length <= 13)
         )]
         const unsaved = uniques.filter(n => !savedKeys.has(norm(n)))
+        console.log('[novo cliente] candidatos:', uniques.length, 'nao salvos:', unsaved.length)
         setChatPhones(unsaved.slice(0, 200))
       }
       setLoading(false)
@@ -452,11 +453,16 @@ export default function CompanyContacts() {
                     onBlur={() => setTimeout(() => setPhoneFocus(false), 180)}
                   />
                 </div>
-                {phoneFocus && phoneSuggestions.length > 0 && (
+                {phoneFocus && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5, background: 'white', border: '1px solid var(--border)', borderRadius: 10, marginTop: 4, padding: 4, boxShadow: '0 12px 28px -10px rgba(15,14,27,0.18)', maxHeight: 260, overflowY: 'auto' }}>
                     <div style={{ padding: '8px 10px 6px', fontSize: 10, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5, borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-                      <Sparkles size={10} style={{ color: '#7C3AED' }} /> Já conversaram · não cadastrados
+                      <Sparkles size={10} style={{ color: '#7C3AED' }} /> Já conversaram · não cadastrados {phoneSuggestions.length > 0 && <span style={{ color: '#7C3AED', marginLeft: 'auto' }}>{phoneSuggestions.length}</span>}
                     </div>
+                    {phoneSuggestions.length === 0 && (
+                      <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+                        {chatPhones.length === 0 ? 'Nenhum contato anterior encontrado.' : 'Nenhum resultado pra esse filtro.'}
+                      </div>
+                    )}
                     {phoneSuggestions.map(p => {
                       // Strip 55 prefix pra exibir e pra salvar (badge +55 já mostra)
                       const noBR = p.startsWith('55') ? p.slice(2) : p
