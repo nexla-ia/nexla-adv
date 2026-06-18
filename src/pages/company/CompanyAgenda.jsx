@@ -771,10 +771,14 @@ export default function CompanyAgenda() {
 
   function apptAt(day, hhmm) {
     if (!selectedAgenda) return null
-    const slotMs = new Date(`${fmtDateInput(day)}T${hhmm}:00`).getTime()
+    // Slot cobre [slotStart, slotStart + slot_minutes)
+    // Pega qualquer agendamento cujo starts_at caia dentro desse intervalo
+    const slotStart = new Date(`${fmtDateInput(day)}T${hhmm}:00`).getTime()
+    const slotEnd = slotStart + (selectedAgenda.slot_minutes || 30) * 60000
     return appointments.find(a => {
       if (a.agenda_id !== selectedAgenda.id) return false
-      return new Date(a.starts_at).getTime() === slotMs
+      const ts = new Date(a.starts_at).getTime()
+      return ts >= slotStart && ts < slotEnd
     })
   }
 
