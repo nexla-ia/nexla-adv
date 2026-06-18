@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil } from 'lucide-react'
+import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown } from 'lucide-react'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
@@ -277,6 +277,41 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [showScrollDown, setShowScrollDown] = useState(false)
   const [memberPopover, setMemberPopover] = useState(null) // { msgId, name, number }
   const [memberConfirm, setMemberConfirm] = useState(null) // { name, number }
+  const [groupMembersOpen, setGroupMembersOpen] = useState(false)
+  const [groupMembers, setGroupMembers] = useState(null) // null | { members: [], loading: bool, error: str }
+
+  async function fetchGroupMembers(idgrupo) {
+    if (!idgrupo) return
+    setGroupMembers({ members: [], loading: true, error: null })
+    try {
+      const params = new URLSearchParams({
+        instancia: instance || '',
+        apikey: apiInstancia || '',
+        idgrupo,
+      })
+      const url = `https://n8n.nexladesenvolvimento.com.br/webhook/infogrupo?${params.toString()}`
+      const res = await fetch(url, { method: 'GET' })
+      if (!res.ok) throw new Error('Webhook retornou ' + res.status)
+      const data = await res.json()
+      // Aceita varios formatos: [{...}], {participants: [...]}, {members: [...]}
+      let members = Array.isArray(data) ? data
+        : (data?.participants || data?.members || data?.integrantes || [])
+      // Normaliza: cada membro vira { numero, isAdmin, nome? }
+      members = members.map(m => {
+        const numero = (m.id || m.jid || m.number || m.numero || '').replace(/@.*/, '').replace(/\D/g, '')
+        const admin = m.admin === 'admin' || m.admin === 'superadmin' || m.isAdmin === true || m.role === 'admin'
+        return { numero, isAdmin: admin, nome: m.nome || m.name || m.pushName || null }
+      }).filter(m => m.numero)
+      setGroupMembers({ members, loading: false, error: null })
+    } catch (e) {
+      setGroupMembers({ members: [], loading: false, error: String(e.message ?? e) })
+    }
+  }
+
+  function openGroupMembers() {
+    setGroupMembersOpen(true)
+    if (selected?.isGroup) fetchGroupMembers(selected.session_id)
+  }
   const MSG_PAGE_SIZE = 35
   const [closeModal, setCloseModal]   = useState(null)
   const [reason, setReason]           = useState('')
@@ -1798,17 +1833,30 @@ export default function CompanyConversations({ mode = 'individual' }) {
                           ? <span style={{ fontWeight: 700, fontSize: 14, color: '#2563EB' }}>{headerName.charAt(0).toUpperCase()}</span>
                           : <User size={14} style={{ opacity: 0.4 }} />}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                      <div
-                        style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', cursor: saved ? 'pointer' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        onClick={() => saved && navigate(`/painel/contatos/${saved.id}`)}
-                      >
+                    <div
+                      style={{
+                        flex: 1, minWidth: 0, overflow: 'hidden',
+                        cursor: (selected.isGroup || saved) ? 'pointer' : 'default',
+                      }}
+                      onClick={() => {
+                        if (selected.isGroup) openGroupMembers()
+                        else if (saved) navigate(`/painel/contatos/${saved.id}`)
+                      }}
+                      title={selected.isGroup ? 'Ver integrantes' : (saved ? 'Abrir ficha do cliente' : '')}
+                    >
+                      <div style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {headerName || selected.phone}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                        <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                          {headerName ? selected.phone : ''}
-                        </span>
+                        {selected.isGroup ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Users size={11} /> Ver integrantes <ChevronRight size={11} />
+                          </span>
+                        ) : (
+                          <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
+                            {headerName ? selected.phone : ''}
+                          </span>
+                        )}
                         {!loadingMsgs && <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{messages.length} msg</span>}
                       </div>
                     </div>
@@ -2711,6 +2759,98 @@ export default function CompanyConversations({ mode = 'individual' }) {
           </>
         )}
       </div>
+
+      {/* Painel lateral de integrantes do grupo */}
+      {groupMembersOpen && selected?.isGroup && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99996 }}>
+          <div onClick={() => setGroupMembersOpen(false)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.4)' }} />
+          <div style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0, width: 360, maxWidth: '90vw',
+            background: '#fff', boxShadow: '-10px 0 30px rgba(0,0,0,0.18)',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Users size={16} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Integrantes</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selected.groupName || 'Grupo'}</div>
+              </div>
+              <button onClick={() => setGroupMembersOpen(false)}
+                style={{ background: 'none', border: 'none', padding: 6, cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+              {groupMembers?.loading && (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Carregando...</div>
+              )}
+              {groupMembers?.error && (
+                <div style={{ padding: 16, color: '#DC2626', fontSize: 12, background: '#FEF2F2', margin: 12, borderRadius: 8 }}>
+                  Erro: {groupMembers.error}
+                </div>
+              )}
+              {groupMembers && !groupMembers.loading && !groupMembers.error && groupMembers.members.length === 0 && (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum integrante retornado</div>
+              )}
+              {groupMembers?.members?.map((m, i) => {
+                const saved = findSaved(savedContacts, m.numero)
+                const displayName = m.nome || saved?.nome || clientesMap[`${m.numero}@s.whatsapp.net`] || clientesMap[m.numero]
+                const fmtPhone = (() => {
+                  const d = m.numero
+                  if (d.length === 13 && d.startsWith('55')) return `+55 ${d.slice(2,4)} ${d.slice(4,8)}-${d.slice(8)}`
+                  if (d.length === 12 && d.startsWith('55')) return `+55 ${d.slice(2,4)} ${d.slice(4,8)}-${d.slice(8)}`
+                  if (d.length === 11) return `${d.slice(0,2)} ${d.slice(2,7)}-${d.slice(7)}`
+                  return `+${d}`
+                })()
+                return (
+                  <button key={i}
+                    onClick={() => {
+                      setGroupMembersOpen(false)
+                      navigate(`/painel/conversas?contact=${m.numero}`)
+                    }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 16px', border: 'none', background: 'transparent',
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: '50%',
+                      background: '#EFF6FF', color: '#2563EB',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700, fontSize: 14, flexShrink: 0,
+                    }}>
+                      {(displayName || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {displayName || fmtPhone}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                        {fmtPhone}
+                      </div>
+                    </div>
+                    {m.isAdmin && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                        color: '#7C3AED', background: '#F5F3FF', border: '1px solid #DDD6FE',
+                      }}>
+                        <Crown size={10} /> Admin
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      , document.body)}
 
       {/* Mini-menu compacto ao clicar no membro do grupo */}
       {memberPopover && createPortal(
