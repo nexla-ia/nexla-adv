@@ -293,7 +293,6 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [memberConfirm, setMemberConfirm] = useState(null) // { name, number }
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
   const [groupMembers, setGroupMembers] = useState(null) // null | { members: [], loading: bool, error: str }
-  const [mentionState, setMentionState] = useState(null) // { query, atStart, caret }
   const msgInputRef = useRef(null)
 
   async function fetchGroupMembers(idgrupo) {
@@ -2818,7 +2817,6 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         !canRespond(selected) ? "Conversa está com outro atendente — você não pode responder"
                         : recordedAudio ? "Mensagem opcional para acompanhar o áudio..."
                         : attachedFile ? "Mensagem opcional para acompanhar o arquivo..."
-                        : selected?.isGroup ? "Digite @ para mencionar alguém | Shift+Enter = nova linha"
                         : "Digite uma mensagem... (Shift+Enter = nova linha)"
                       }
                       value={msgText}
@@ -2828,26 +2826,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         const el = e.target
                         el.style.height = 'auto'
                         el.style.height = Math.min(140, el.scrollHeight) + 'px'
-                        // Detecta menção @ (só em modo grupo)
-                        if (selected?.isGroup) {
-                          const caret = el.selectionStart || 0
-                          const before = val.slice(0, caret)
-                          const atMatch = before.match(/@([^\s@]*)$/)
-                          if (atMatch) {
-                            setMentionState({ query: atMatch[1].toLowerCase(), atStart: caret - atMatch[0].length, caret })
-                            // Carrega membros se ainda nao foi
-                            if (!groupMembers || (!groupMembers.loading && !groupMembers.members.length && !groupMembers.error)) {
-                              fetchGroupMembers(selected.session_id)
-                            }
-                          } else {
-                            setMentionState(null)
-                          }
-                        }
                       }}
                       onKeyDown={e => {
-                        if (mentionState && e.key === 'Escape') { setMentionState(null); return }
                         if (e.key === 'Enter' && !e.shiftKey) {
-                          if (mentionState) { e.preventDefault(); return }
                           e.preventDefault()
                           handleSend()
                         }
@@ -2856,81 +2837,6 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       disabled={sending || recording || !canRespond(selected)}
                     />
                     {/* Popover de menção (@) */}
-                    {mentionState && selected?.isGroup && (() => {
-                      const list = groupMembers?.members || []
-                      const q = mentionState.query
-                      const filtered = list.filter(m => {
-                        const saved = findSaved(savedContacts, m.numero)
-                        const nome = (m.nome || saved?.nome || clientesMap[m.numero] || '').toLowerCase()
-                        return !q || nome.includes(q) || m.numero.includes(q)
-                      }).slice(0, 8)
-                      function pickMember(m) {
-                        const before = msgText.slice(0, mentionState.atStart)
-                        const after = msgText.slice(mentionState.caret)
-                        const newText = `${before}@${m.numero} ${after}`
-                        setMsgText(newText)
-                        setMentionState(null)
-                        // Restaura foco e posiciona cursor depois da mencao
-                        requestAnimationFrame(() => {
-                          if (msgInputRef.current) {
-                            const newCaret = (before + `@${m.numero} `).length
-                            msgInputRef.current.focus()
-                            msgInputRef.current.setSelectionRange(newCaret, newCaret)
-                          }
-                        })
-                      }
-                      return (
-                        <div style={{
-                          position: 'absolute', bottom: '100%', left: 0,
-                          marginBottom: 6, background: '#fff',
-                          border: '1px solid var(--border)', borderRadius: 10,
-                          boxShadow: '0 -4px 20px rgba(0,0,0,0.10)',
-                          minWidth: 240, maxWidth: 320, maxHeight: 240, overflowY: 'auto',
-                          zIndex: 50,
-                        }}>
-                          {groupMembers?.loading && (
-                            <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>Carregando integrantes...</div>
-                          )}
-                          {!groupMembers?.loading && filtered.length === 0 && (
-                            <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>Nenhum membro</div>
-                          )}
-                          {filtered.map((m, i) => {
-                            const saved = findSaved(savedContacts, m.numero)
-                            const name = m.nome || saved?.nome || clientesMap[m.numero] || `+${m.numero}`
-                            return (
-                              <button key={i}
-                                onMouseDown={(e) => { e.preventDefault(); pickMember(m) }}
-                                style={{
-                                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                                  padding: '8px 12px', border: 'none', background: 'transparent',
-                                  cursor: 'pointer', textAlign: 'left',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                              >
-                                <div style={{
-                                  width: 28, height: 28, borderRadius: '50%',
-                                  background: '#EDE9FE', color: '#7C3AED',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontWeight: 700, fontSize: 12, flexShrink: 0,
-                                }}>{(name || '?').charAt(0).toUpperCase()}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {name}
-                                  </div>
-                                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                                    +{m.numero}
-                                  </div>
-                                </div>
-                                {m.isAdmin && (
-                                  <span style={{ fontSize: 9, fontWeight: 700, color: '#7C3AED' }}>ADMIN</span>
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
                   </div>
                   <input
                     ref={fileInputRef}
