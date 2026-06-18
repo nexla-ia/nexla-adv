@@ -1502,6 +1502,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
         } catch (e) { console.warn('[grupo] patch idgrupo:', e) }
       }
 
+      // Extrai mencoes @numero do texto pra mandar pro Evolution
+      // Pra menção funcionar (chip clicável + notif), Evolution precisa do array mentioned
+      const mentioned = []
+      const mentionRe = /@(\d{8,15})\b/g
+      let mm
+      while ((mm = mentionRe.exec(rawPayload)) !== null) {
+        if (!mentioned.includes(mm[1])) mentioned.push(mm[1])
+      }
+
       fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1522,6 +1531,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
           company: session?.company?.name,
           sender_name: session?.user?.name,
           sender_email: session?.user?.email,
+          // Pra Evolution: numeros mencionados sem o sufixo @s.whatsapp.net
+          // (n8n monta o payload final com mentioned: [...] pro sendText)
+          mentioned: mentioned.length ? mentioned : undefined,
+          is_group: !!selected?.isGroup,
         }),
       })
       .then(r => r.text())
