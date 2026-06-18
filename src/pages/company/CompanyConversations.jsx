@@ -2443,12 +2443,24 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const sameSenderAsPrev = !showDayDivider && prev && curSenderKey === prevSenderKey && gapMs < 2 * 60 * 1000
                 const showSenderLabel = !sameSenderAsPrev
                 // Em grupo: minha mensagem (atendente cujo nome bate com o user logado) vai pra direita
-                // Regra estrita: so vai pra direita se for fromMe (msg.mine) ou type=atendente
-                const isMine       = msg.mine === true || isAtendente
+                // Mine = fromMe OR type=atendente OR (em grupo) nome do remetente bate
+                // com a instancia/empresa/user da conta logada
+                const matchesMyAccount = (() => {
+                  if (!isGroupMode) return false
+                  const candidates = [
+                    session?.user?.name,
+                    session?.company?.name,
+                    session?.company?.instance,
+                  ].filter(Boolean).map(s => String(s).trim().toLowerCase())
+                  const fromPrefix = (senderFromPrefix || '').trim().toLowerCase()
+                  const fromNome = (msg.nome || '').trim().toLowerCase()
+                  return candidates.some(c => c === fromPrefix || c === fromNome)
+                })()
+                const isMine       = msg.mine === true || isAtendente || matchesMyAccount
                 const isMineInGroup = isGroupMode && isMine
                 const isLeft       = isGroupMode
-                  ? !isMineInGroup                  // grupo: minha = direita, outros = esquerda
-                  : (isCliente && !msg.mine)        // individual: cliente = esquerda, exceto se fromMe=true
+                  ? !isMineInGroup
+                  : (isCliente && !msg.mine)
                 const isImage      = isCliente && /^(esta imagem|a imagem|esse documento|este documento|essa imagem|o documento|a foto|essa foto)/i.test(msg.content.trim())
                 const labelColor   = isGroupMode ? '#2563EB' : (isCliente ? 'var(--text-muted)' : isAtendente ? '#16A34A' : '#2563EB')
                 return (
