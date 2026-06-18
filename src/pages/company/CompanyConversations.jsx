@@ -284,14 +284,18 @@ export default function CompanyConversations({ mode = 'individual' }) {
     if (!idgrupo) return
     setGroupMembers({ members: [], loading: true, error: null })
     try {
-      const params = new URLSearchParams({
+      const url = 'https://n8n.nexladesenvolvimento.com.br/webhook/infogrupoadv'
+      const body = {
         instancia: instance || '',
         apikey: apiInstancia || '',
         idgrupo,
+      }
+      console.log('[infogrupo] POST', url, body)
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       })
-      const url = `https://n8n.nexladesenvolvimento.com.br/webhook/infogrupoadv?${params.toString()}`
-      console.log('[infogrupo] GET', url)
-      const res = await fetch(url, { method: 'GET' })
       console.log('[infogrupo] status:', res.status, res.statusText)
       if (!res.ok) throw new Error('Webhook retornou ' + res.status)
       const data = await res.json()
