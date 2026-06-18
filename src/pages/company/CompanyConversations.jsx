@@ -9,14 +9,13 @@ import './Company.css'
 
 const CONV_TABLE = 'mensagens_geral'
 
-// Emojis mais usados, agrupados por categoria
+// Emojis agrupados — sem categoria "Recentes" hardcoded (vem do localStorage)
 const EMOJI_CATEGORIES = [
-  { name: 'Recentes', emojis: ['👍','❤️','😂','🙏','🔥','✅','😊','😍'] },
-  { name: 'Sorrisos', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥳','🤩','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'] },
-  { name: 'Gestos', emojis: ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤝','👏','🙌','👐','🤲','🙏','✍️','💪','🦾','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','💋','🩸'] },
-  { name: 'Coração', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'] },
-  { name: 'Objetos', emojis: ['🎉','🎊','🎂','🎁','🎈','🌹','🌸','🌻','🌷','🌼','🌺','🥀','🌿','🍀','🌟','⭐','✨','⚡','🔥','💧','💯','✅','❌','⚠️','🚀','📌','📍','📎','📝','📅','📆','💰','💵','💴','💶','💷','💸','🏆','🥇','🥈','🥉','⚽','🏀','🎮','🎯','🎲','🎵','🎶'] },
-  { name: 'Comida', emojis: ['🍎','🍌','🍇','🍓','🍑','🥭','🍕','🍔','🍟','🌭','🥪','🌮','🌯','🍜','🍝','🍣','🍱','🍤','🍦','🍩','🍪','🎂','🍫','🍬','🍭','☕','🍵','🥤','🍺','🍷','🥂'] },
+  { name: 'Sorrisos', icon: '😀', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥳','🤩','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'] },
+  { name: 'Gestos', icon: '👍', emojis: ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤝','👏','🙌','👐','🤲','🙏','✍️','💪','🦾','🦵','🦶','👂','🦻','👃','🧠','👀','👁️','👅','👄','💋'] },
+  { name: 'Coração', icon: '❤️', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'] },
+  { name: 'Objetos', icon: '🎉', emojis: ['🎉','🎊','🎂','🎁','🎈','🌹','🌸','🌻','🌷','🌼','🌺','🥀','🌿','🍀','🌟','⭐','✨','⚡','🔥','💧','💯','✅','❌','⚠️','🚀','📌','📍','📎','📝','📅','📆','💰','💵','💸','🏆','🥇','🥈','🥉','⚽','🏀','🎮','🎯','🎲','🎵','🎶'] },
+  { name: 'Comida', icon: '🍕', emojis: ['🍎','🍌','🍇','🍓','🍑','🥭','🍕','🍔','🍟','🌭','🥪','🌮','🌯','🍜','🍝','🍣','🍱','🍤','🍦','🍩','🍪','🎂','🍫','🍬','🍭','☕','🍵','🥤','🍺','🍷','🥂'] },
 ]
 
 function formatPhone(val) {
@@ -305,8 +304,21 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [groupMembers, setGroupMembers] = useState(null) // null | { members: [], loading: bool, error: str }
   const msgInputRef = useRef(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [emojiTab, setEmojiTab] = useState(null) // null = recentes (se houver) ou 1a categoria
+  const [recentEmojis, setRecentEmojis] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nx_recent_emojis') || '[]') } catch { return [] }
+  })
+
+  function bumpRecent(emoji) {
+    setRecentEmojis(prev => {
+      const next = [emoji, ...prev.filter(e => e !== emoji)].slice(0, 24)
+      try { localStorage.setItem('nx_recent_emojis', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   function insertEmoji(emoji) {
+    bumpRecent(emoji)
     const el = msgInputRef.current
     if (!el) {
       setMsgText(t => t + emoji)
@@ -2893,41 +2905,78 @@ export default function CompanyConversations({ mode = 'individual' }) {
                           }}>
                           <Smile size={16} />
                         </button>
-                        {emojiOpen && (
-                          <>
-                            <div onClick={() => setEmojiOpen(false)}
-                              style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
-                            <div style={{
-                              position: 'absolute', bottom: '100%', right: 0,
-                              marginBottom: 8, background: '#fff',
-                              border: '1px solid var(--border)', borderRadius: 10,
-                              boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
-                              width: 320, maxHeight: 320, overflowY: 'auto',
-                              padding: 8, zIndex: 50,
-                            }}>
-                              {EMOJI_CATEGORIES.map(cat => (
-                                <div key={cat.name} style={{ marginBottom: 8 }}>
-                                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    {cat.name}
+                        {emojiOpen && (() => {
+                          // Tabs: Recentes (se tem) + categorias
+                          const tabs = [
+                            ...(recentEmojis.length ? [{ name: 'Recentes', icon: '🕐', emojis: recentEmojis }] : []),
+                            ...EMOJI_CATEGORIES,
+                          ]
+                          const activeTab = tabs.find(t => t.name === emojiTab) || tabs[0]
+                          return (
+                            <>
+                              <div onClick={() => setEmojiOpen(false)}
+                                style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
+                              <div style={{
+                                position: 'absolute', bottom: '100%', right: 0,
+                                marginBottom: 8, background: '#fff',
+                                border: '1px solid var(--border)', borderRadius: 12,
+                                boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
+                                width: 332, zIndex: 50,
+                                display: 'flex', flexDirection: 'column',
+                                overflow: 'hidden',
+                              }}>
+                                {/* Tabs */}
+                                <div style={{
+                                  display: 'flex', gap: 2, padding: '6px 8px',
+                                  borderBottom: '1px solid var(--border)',
+                                  background: '#FAFAFA',
+                                }}>
+                                  {tabs.map(t => {
+                                    const isActive = activeTab.name === t.name
+                                    return (
+                                      <button key={t.name}
+                                        onClick={() => setEmojiTab(t.name)}
+                                        title={t.name}
+                                        style={{
+                                          flex: 1, padding: '6px 0', border: 'none',
+                                          background: isActive ? '#fff' : 'transparent',
+                                          borderRadius: 8, cursor: 'pointer',
+                                          fontSize: 18, lineHeight: 1,
+                                          boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                                        }}>
+                                        {t.icon}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                                {/* Grid */}
+                                <div style={{ padding: 6, maxHeight: 260, overflowY: 'auto' }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 6px 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    {activeTab.name}
                                   </div>
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2 }}>
-                                    {cat.emojis.map((em, i) => (
+                                    {activeTab.emojis.length === 0 ? (
+                                      <div style={{ gridColumn: 'span 8', padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+                                        Use um emoji pra aparecer aqui
+                                      </div>
+                                    ) : activeTab.emojis.map((em, i) => (
                                       <button key={i}
-                                        onClick={() => { insertEmoji(em); /* fechar opcional: setEmojiOpen(false) */ }}
+                                        onClick={() => insertEmoji(em)}
                                         style={{
                                           background: 'transparent', border: 'none', cursor: 'pointer',
-                                          fontSize: 22, padding: 4, borderRadius: 6, lineHeight: 1,
+                                          fontSize: 22, padding: 4, borderRadius: 8, lineHeight: 1,
+                                          transition: 'all 0.1s',
                                         }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.transform = 'scale(1.15)' }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)' }}
                                       >{em}</button>
                                     ))}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
+                              </div>
+                            </>
+                          )
+                        })()}
                       </div>
                       <button
                         onClick={() => fileInputRef.current?.click()}
