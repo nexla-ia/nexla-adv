@@ -821,11 +821,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const optIdx = msgs.findIndex(m => m._optimistic)
                 if (optIdx !== -1) {
                   const next = [...msgs]
-                  next[optIdx] = { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true }
+                  next[optIdx] = { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true, participantNumber: row.numero || null }
                   return next
                 }
               }
-              return [...msgs, { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true }]
+              return [...msgs, { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true, participantNumber: row.numero || null }]
             })
           }
         }
@@ -936,6 +936,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
             nome: r.nome || null,
             mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
             visualizada: r.visualizada === true,
+            // Pra grupos: numero do PARTICIPANTE que enviou (pra abrir conversa individual)
+            participantNumber: r.numero || null,
           })))
           setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
 
@@ -2288,7 +2290,24 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       color: labelColor,
                     }}>
                       {isGroupMode
-                        ? <><User size={10} /> {senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))}</>
+                        ? (() => {
+                            const displayName = senderFromPrefix || (msg.mine ? 'Não rastreado' : (msg.nome || 'Participante'))
+                            // Numero do participante: extrai do session_id real (numero@s.whatsapp.net)
+                            const partNum = (msg.participantNumber || '').replace(/@.*/, '').replace(/\D/g, '')
+                            const clickable = !msg.mine && partNum && !msg.participantNumber.includes('@g.us') && !msg.participantNumber.includes('@lid')
+                            if (clickable) {
+                              return (
+                                <span
+                                  onClick={() => navigate(`/painel/conversas?contact=${partNum}`)}
+                                  title="Abrir conversa individual"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                                >
+                                  <User size={10} /> {displayName}
+                                </span>
+                              )
+                            }
+                            return <><User size={10} /> {displayName}</>
+                          })()
                         : isCliente
                           ? <><User size={10} /> Cliente</>
                           : isAtendente
