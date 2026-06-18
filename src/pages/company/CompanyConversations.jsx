@@ -1137,6 +1137,46 @@ export default function CompanyConversations({ mode = 'individual' }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [selected, editingMsg, tagPopoverOpen, saveContactModal, transferModal, closeModal, contextMenu])
 
+  // Auto-transferencia: puxa pra mim uma conversa que ja esta com outro atendente
+  async function handleTakeOver(contact) {
+    if (!contact) return
+    const currentAtt = attendancesMap[contact.session_id]
+    if (!currentAtt) return  // se nao tem ninguem, usar handleAssume
+    if (currentAtt.attendant_email === session?.user?.email) return  // ja eh meu
+
+    const myName = session?.user?.name || 'Atendente'
+    const fromName = currentAtt.attendant_name || 'outro atendente'
+
+    const newAtt = {
+      numero: contact.session_id,
+      instancia: instance,
+      sector_id: userSector?.id || null,
+      sector_name: userSector?.name || null,
+      sector_color: userSector?.color || '#6B7280',
+      attendant_name: myName,
+      attendant_email: session?.user?.email,
+      assumed_at: new Date().toISOString(),
+    }
+    await supabase.from('attendances')
+      .update(newAtt)
+      .eq('numero', contact.session_id)
+      .eq('instancia', instance)
+
+    // Registra evento na conversa pra historico
+    const msg = `↩ Atendimento puxado de ${fromName} para ${myName}`
+    await supabase.rpc('send_mensagem_geral', {
+      p_instancia: instance,
+      p_numero: contact.session_id,
+      p_mensagem: msg,
+      p_type: 'atendente',
+      p_hora: new Date().toISOString(),
+    }).catch(() => {})
+
+    setAttendancesMap(prev => ({ ...prev, [contact.session_id]: newAtt }))
+    setToast({ message: `Atendimento trazido de ${fromName}`, color: '#16A34A' })
+    setTimeout(() => setToast(null), 3000)
+  }
+
   async function handleAssume(contact, e) {
     e?.stopPropagation()
     if (attendancesMap[contact.session_id] || assuming === contact.session_id) return
@@ -2336,13 +2376,24 @@ export default function CompanyConversations({ mode = 'individual' }) {
                   borderBottom: '1px solid #FDBA74',
                   padding: '10px 20px', flexShrink: 0,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400E' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400E', flex: 1 }}>
                     <Lock size={14} style={{ color: '#D97706' }} />
                     <span>
-                      Conversa em atendimento por <strong>{att.attendant_name}</strong> — você não pode responder.
-                      Peça pra ele <strong>transferir</strong> ou aguarde a conversa ser finalizada pra abrir novo ticket.
+                      Conversa em atendimento por <strong>{att.attendant_name}</strong>
                     </span>
                   </div>
+                  <button
+                    onClick={() => handleTakeOver(selected)}
+                    title="Trazer essa conversa pra mim"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#fff', color: '#92400E',
+                      border: '1.5px solid #D97706', borderRadius: 8,
+                      padding: '6px 14px', fontSize: 12, fontWeight: 700,
+                      cursor: 'pointer', flexShrink: 0,
+                    }}>
+                    <UserCheck size={13} /> Trazer pra mim
+                  </button>
                 </div>
               )
             })()}
