@@ -79,6 +79,38 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem(SESSION_KEY)
   }, [session])
 
+  // Quando o ADM muda algo na company (plano, limites, modules, etc.), o painel
+  // do usuario logado atualiza sem precisar deslogar. Dois caminhos:
+  //  1) Refetch no mount/troca de session (cobre o caso "mudou enquanto eu tava deslogado")
+  //  2) Realtime UPDATE (cobre o caso "mudou enquanto eu tava com a aba aberta")
+  useEffect(() => {
+    if (session?.role !== 'company' || !session?.company?.id) return
+    const companyId = session.company.id
+    let cancelled = false
+
+    // Refetch imediato pra puxar a versao atual do banco (sobrescreve cache do localStorage)
+    supabase.from('companies').select('*').eq('id', companyId).single()
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setSession(prev => {
+          if (!prev) return prev
+          // Só atualiza se mudou algo (evita re-render infinito)
+          const changed = JSON.stringify(prev.company) !== JSON.stringify({ ...prev.company, ...data })
+          return changed ? { ...prev, company: { ...prev.company, ...data } } : prev
+        })
+      })
+
+    const ch = supabase.channel(`auth-company-${companyId}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'companies', filter: `id=eq.${companyId}` },
+        (p) => {
+          if (!p.new) return
+          setSession(prev => prev ? { ...prev, company: { ...prev.company, ...p.new } } : prev)
+        })
+      .subscribe()
+    return () => { cancelled = true; supabase.removeChannel(ch) }
+  }, [session?.role, session?.company?.id])
+
   const loadDB = useCallback(async () => {
     setDbLoading(true)
     setDbError(null)

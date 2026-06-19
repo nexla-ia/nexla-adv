@@ -443,8 +443,63 @@ function TabLista({ tipo, transactions, categorias, openEdit, markPago, handleDe
   const totalFilt = filtered.reduce((s, t) => s + Number(t.valor || 0), 0)
   const corPrincipal = tipo === 'receita' ? COR_RECEITA : COR_DESPESA
 
+  // Sparkline: ultimos 6 meses (3 passados + atual + 2 futuros) com previsto vs realizado
+  const sparkData = useMemo(() => {
+    const meses = []
+    for (let i = -3; i <= 2; i++) meses.push(monthKey(addMonthsISO(todayISO(), i)))
+    return meses.map(mes => {
+      let previsto = 0, realizado = 0
+      transactions.forEach(t => {
+        if (t.tipo !== tipo) return
+        if (t.status === 'cancelado') return
+        if (monthKey(t.vencimento) !== mes) return
+        const v = Number(t.valor || 0)
+        previsto += v
+        if (t.status === 'pago') realizado += v
+      })
+      return { mes, mesLabel: monthLabel(mes), previsto, realizado, isAtual: mes === monthKey(todayISO()) }
+    })
+  }, [transactions, tipo])
+  const sparkHasData = sparkData.some(d => d.previsto > 0 || d.realizado > 0)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {sparkHasData && (
+        <div className="nx-card" style={{ padding: '12px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {tipo === 'receita' ? 'Receitas dos últimos 6 meses' : 'Despesas dos últimos 6 meses'}
+            </div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 10, color: 'var(--text-muted)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: corPrincipal, opacity: 0.3 }} /> Previsto
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: corPrincipal }} /> {tipo === 'receita' ? 'Recebido' : 'Pago'}
+              </span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={80}>
+            <AreaChart data={sparkData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+              <defs>
+                <linearGradient id={`grad-${tipo}-spark`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={corPrincipal} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={corPrincipal} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="mesLabel" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip
+                formatter={(v) => fmt(v)}
+                contentStyle={{ fontSize: 11, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6 }}
+                labelStyle={{ fontWeight: 700 }}
+              />
+              <Area type="monotone" dataKey="previsto" name="Previsto" stroke={corPrincipal} strokeOpacity={0.4} strokeWidth={1.5} fill={`url(#grad-${tipo}-spark)`} />
+              <Area type="monotone" dataKey="realizado" name={tipo === 'receita' ? 'Recebido' : 'Pago'} stroke={corPrincipal} strokeWidth={2.2} fill="transparent" dot={{ r: 3, fill: corPrincipal, stroke: '#fff', strokeWidth: 1.5 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       <div className="nx-card" style={{ padding: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <select className="nx-select" value={filter.mes} onChange={e => setFilter(p => ({ ...p, mes: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 130 }}>
           <option value="">Todos meses</option>

@@ -982,6 +982,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
             setUnreadCounts(prev => ({ ...prev, [sid]: (prev[sid] || 0) + 1 }))
             // Toca som de notificacao
             playNotificationSound()
+          } else if (isOpen && !isFromMe) {
+            // Chat aberto + msg nova do cliente: atualiza lastview pra nao reaparecer no reload
+            try {
+              const incomingTs = getTimestamp(row)
+              const incomingMs = incomingTs ? new Date(incomingTs).getTime() : Date.now()
+              const cur = parseInt(localStorage.getItem(`nx_lastview_${instance}_${sid}`) || '0', 10)
+              if (incomingMs > cur) localStorage.setItem(`nx_lastview_${instance}_${sid}`, String(incomingMs))
+            } catch {}
           }
 
           // Reabre ticket encerrado: remove do closed (mantém attendance se já assumido)
@@ -2074,8 +2082,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
                     delete next[c.session_id]
                     return next
                   })
-                  // Marca timestamp da ultima vista pra esse contato
-                  try { localStorage.setItem(`nx_lastview_${instance}_${c.session_id}`, String(Date.now())) } catch {}
+                  // Marca lastview = MAX(lastTs do contato, agora). Assim cobre tanto a msg
+                  // mais recente carregada quanto qq msg que ja tenha chegado em background.
+                  try {
+                    const lastTsMs = c.lastTs ? new Date(c.lastTs).getTime() : 0
+                    const view = Math.max(lastTsMs, Date.now()) + 1000  // +1s pra evitar igualdade boba
+                    localStorage.setItem(`nx_lastview_${instance}_${c.session_id}`, String(view))
+                  } catch {}
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault()

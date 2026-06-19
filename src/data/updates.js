@@ -5,6 +5,37 @@
 export const UPDATES = [
   {
     date: '2026-06-19',
+    title: 'Painel atualiza sozinho quando mudamos o plano',
+    type: 'improvement',
+    tags: ['Plataforma'],
+    items: [
+      'Antes: quando mudávamos o plano de vocês de Starter pra Pro, o card "Plano Atual" ficava preso no antigo até deslogarem.',
+      'Agora: assim que salvamos qualquer mudança na empresa (plano, limites, módulos), o painel atualiza em ~1 segundo sozinho — sem precisar deslogar.',
+      'Vale também pra ativação/desativação de módulos.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Notificações de grupo não voltam mais ao recarregar',
+    type: 'fix',
+    tags: ['Conversas'],
+    items: [
+      'Antes: quando vocês entravam num grupo e mensagens novas chegavam enquanto liam, ao recarregar a página o badge "não lido" voltava.',
+      'Agora o "última visualização" é salvo usando o timestamp da mensagem mais recente já mostrada — recarregou, continua lido.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Sparkline de receitas/despesas no Financeiro',
+    type: 'improvement',
+    tags: ['Financeiro'],
+    items: [
+      'Mini-gráfico de 6 meses no topo das abas A Receber e A Pagar (3 passados + atual + 2 futuros).',
+      'Área clara = previsto · linha forte = recebido/pago. Tendência num relance.',
+    ],
+  },
+  {
+    date: '2026-06-19',
     title: 'Módulo Financeiro completo',
     type: 'feature',
     tags: ['Financeiro', 'Gestão'],
