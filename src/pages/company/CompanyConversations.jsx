@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile, Kanban } from 'lucide-react'
+import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile, Kanban, Reply } from 'lucide-react'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
@@ -270,7 +270,7 @@ const MANUAL_REASONS = REASONS.filter(r => r.value !== 'auto_encerrado')
 
 export default function CompanyConversations({ mode = 'individual' }) {
   const isGroupMode = mode === 'grupo'
-  const { session } = useAuth()
+  const { session, setSession } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const instance     = session?.company?.instance
@@ -282,6 +282,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
   const [contacts, setContacts]         = useState([])
   const [closedMap, setClosedMap]       = useState({}) // session_id → reason
+  const [privateSectorIds, setPrivateSectorIds] = useState(new Set()) // ids dos setores privados
+  const [allSectors, setAllSectors] = useState([]) // pra auto-atribuicao do user
+  const [sectorPickerOpen, setSectorPickerOpen] = useState(false)
+  const [savingMySector, setSavingMySector] = useState(false)
   const [attendancesMap, setAttendancesMap] = useState({}) // numero → attendance record
   const [attendancesLoaded, setAttendancesLoaded] = useState(false)
   const [assuming, setAssuming]         = useState(null)
@@ -387,6 +391,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [toast, setToast]             = useState(null)
   const [msgText, setMsgText]         = useState('')
   const [editingMsg, setEditingMsg]   = useState(null) // { id, originalContent, newText }
+  const [replyingTo, setReplyingTo]   = useState(null) // { id_mensagem, content, type, numero }
+
+  // Limpa "respondendo" ao trocar de conversa
   const [savingEdit, setSavingEdit]   = useState(false)
   const [sending, setSending]         = useState(false)
   const [closedLoaded, setClosedLoaded] = useState(false)
@@ -509,6 +516,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
   useEffect(() => { selectedRef.current = selected }, [selected])
 
+  // Limpa estado de "respondendo" ao trocar de conversa
+  useEffect(() => { setReplyingTo(null); setEditingMsg(null) }, [selected?.session_id])
+
   // Carrega agendamentos futuros (próximo por contato)
   useEffect(() => {
     if (!instance) return
@@ -562,6 +572,40 @@ export default function CompanyConversations({ mode = 'individual' }) {
       .subscribe()
     return () => supabase.removeChannel(ch)
   }, [instance])
+
+  // Carrega setores (full): pra filtrar privados e pra auto-atribuicao do user
+  useEffect(() => {
+    if (!instance) return
+    const loadSectors = () => supabase.from('sectors').select('id, name, color, is_private').eq('instancia', instance).order('name')
+      .then(({ data }) => {
+        if (data) {
+          setAllSectors(data)
+          setPrivateSectorIds(new Set(data.filter(s => s.is_private).map(s => s.id)))
+        }
+      })
+    loadSectors()
+    const ch = supabase.channel(`convs-sectors-${instance}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sectors', filter: `instancia=eq.${instance}` }, loadSectors)
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [instance])
+
+  // Self-assign: usuario escolhe seu proprio setor
+  async function pickMySector(sectorId) {
+    if (!session?.user?.id) return
+    setSavingMySector(true)
+    // Remove qualquer membership atual (UNIQUE em user_id)
+    await supabase.from('sector_members').delete().eq('user_id', session.user.id)
+    let newSector = null
+    if (sectorId) {
+      await supabase.from('sector_members').insert({ sector_id: sectorId, user_id: session.user.id })
+      const s = allSectors.find(x => x.id === sectorId)
+      if (s) newSector = { id: s.id, name: s.name, color: s.color }
+    }
+    setSession(prev => ({ ...prev, user: { ...prev.user, sector: newSector } }))
+    setSavingMySector(false)
+    setSectorPickerOpen(false)
+  }
 
   // Carrega contatos salvos
   useEffect(() => {
@@ -974,11 +1018,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const optIdx = msgs.findIndex(m => m._optimistic)
                 if (optIdx !== -1) {
                   const next = [...msgs]
-                  next[optIdx] = { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true, participantNumber: row.numero || null }
+                  next[optIdx] = { id: row.id, id_mensagem: row.id_mensagem || null, quoted_id_mensagem: row.quoted_id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true, participantNumber: row.numero || null }
                   return next
                 }
               }
-              return [...msgs, { id: row.id, id_mensagem: row.id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true, participantNumber: row.numero || null }]
+              return [...msgs, { id: row.id, id_mensagem: row.id_mensagem || null, quoted_id_mensagem: row.quoted_id_mensagem || null, type, content: getMessageContent(row), base64: row.base64 || null, ts, nome: row.nome || null, mine: row.fromMe === true || row['minha?'] === true || row.minha === true, visualizada: row.visualizada === true, participantNumber: row.numero || null }]
             })
           }
         }
@@ -1056,6 +1100,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
       const novas = ordered.filter(r => !isToolMessage(r)).map(r => ({
         id: r.id,
         id_mensagem: r.id_mensagem || null,
+        quoted_id_mensagem: r.quoted_id_mensagem || null,
         type: getMessageType(r),
         content: getMessageContent(r),
         base64: r.base64 || null,
@@ -1093,6 +1138,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
           setMessages(ordered.filter(r => !isToolMessage(r)).map(r => ({
             id: r.id,
             id_mensagem: r.id_mensagem || null,
+            quoted_id_mensagem: r.quoted_id_mensagem || null,
             type: getMessageType(r),
             content: getMessageContent(r),
             base64: r.base64 || null,
@@ -1172,6 +1218,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
       // Prioridade: fecha modais abertos primeiro
       if (editingMsg)        { setEditingMsg(null); return }
+      if (replyingTo)        { setReplyingTo(null); return }
       if (tagPopoverOpen)    { setTagPopoverOpen(false); return }
       if (saveContactModal)  { setSaveContactModal(null); return }
       if (transferModal)     { setTransferModal(null); return }
@@ -1183,7 +1230,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selected, editingMsg, tagPopoverOpen, saveContactModal, transferModal, closeModal, contextMenu])
+  }, [selected, editingMsg, replyingTo, tagPopoverOpen, saveContactModal, transferModal, closeModal, contextMenu])
 
   // Auto-transferencia: puxa pra mim uma conversa que ja esta com outro atendente
   async function handleTakeOver(contact) {
@@ -1619,6 +1666,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
       setMessages(msgs => [...msgs, {
         id: optId,
         id_mensagem: null,
+        quoted_id_mensagem: replyingTo?.id_mensagem || null,
         type: 'atendente',
         content: mensagemPayload,
         base64: mediaBase64,
@@ -1638,6 +1686,35 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
       // fromMe e marcado automaticamente pela trigger do banco
       // (trg_mensagens_geral_set_frommemine) quando type='atendente'
+
+      // Se for reply, marca quoted_id_mensagem imediatamente na linha recem inserida
+      // (independente da resposta do webhook /respondermensagem)
+      if (replyingTo?.id_mensagem) {
+        try {
+          await new Promise(r => setTimeout(r, 150))
+          const { data: latest } = await supabase.from(CONV_TABLE)
+            .select('id')
+            .eq('instancia', instance)
+            .eq('numero', selected.session_id)
+            .eq('type', 'atendente')
+            .is('quoted_id_mensagem', null)
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (latest?.id) {
+            const { error: qErr } = await supabase.from(CONV_TABLE)
+              .update({ quoted_id_mensagem: replyingTo.id_mensagem })
+              .eq('id', latest.id)
+            if (qErr) console.warn('[reply] update quoted falhou:', qErr.message)
+            else {
+              console.log('[reply] quoted_id_mensagem gravado em row', latest.id)
+              setMessages(prev => prev.map(m =>
+                (m.id === latest.id || m._optimistic) ? { ...m, id: latest.id, quoted_id_mensagem: replyingTo.id_mensagem } : m
+              ))
+            }
+          }
+        } catch (e) { console.warn('[reply] patch quoted:', e) }
+      }
 
       // Se for envio pra grupo, complementa idgrupo/nomegrupo na linha recem inserida
       // (o RPC nao tem esses campos, entao patcheamos aqui)
@@ -1670,7 +1747,22 @@ export default function CompanyConversations({ mode = 'individual' }) {
         if (!mentioned.includes(mm[1])) mentioned.push(mm[1])
       }
 
-      fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
+      // Se for resposta a uma msg, manda pro webhook de "respondermensagem"
+      // (n8n monta o payload final com quoted.key/message pro sendText da Evolution)
+      const replySnapshot = replyingTo
+      setReplyingTo(null)
+      const webhookUrl = replySnapshot
+        ? 'https://n8n.nexladesenvolvimento.com.br/webhook/respondermensagem'
+        : 'https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla'
+      const quotedPayload = replySnapshot ? {
+        quoted_id: replySnapshot.id_mensagem,
+        quoted_text: replySnapshot.content,
+        // fromMe = true se a msg original foi enviada por nos (atendente/ia/bot), false se foi do cliente
+        quoted_fromMe: ['atendente', 'humano', 'ia', 'bot'].includes((replySnapshot.type || '').toLowerCase()),
+        quoted_remoteJid: replySnapshot.numero,
+      } : {}
+
+      fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1694,6 +1786,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
           // (n8n monta o payload final com mentioned: [...] pro sendText)
           mentioned: mentioned.length ? mentioned : undefined,
           is_group: !!selected?.isGroup,
+          ...quotedPayload,
         }),
       })
       .then(r => r.text())
@@ -1719,10 +1812,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
           return
         }
         const rowId = rows[0].id
-        await supabase.from('mensagens_geral').update({ id_mensagem: respIdMensagem }).eq('id', rowId)
+        const rowPatch = { id_mensagem: respIdMensagem }
+        if (replySnapshot?.id_mensagem) rowPatch.quoted_id_mensagem = replySnapshot.id_mensagem
+        const { error: updErr } = await supabase.from('mensagens_geral').update(rowPatch).eq('id', rowId)
+        if (updErr) console.warn('[envio] update id_mensagem/quoted falhou:', updErr.message, 'patch:', rowPatch)
+        else console.log('[envio] update ok, patch:', rowPatch)
         // Atualiza estado local pra edição funcionar imediatamente (inclui optimistic ainda pendente)
         setMessages(prev => prev.map(m =>
-          (m.id === rowId || m._optimistic) ? { ...m, id: rowId, id_mensagem: respIdMensagem, _optimistic: false } : m
+          (m.id === rowId || m._optimistic) ? { ...m, id: rowId, id_mensagem: respIdMensagem, quoted_id_mensagem: replySnapshot?.id_mensagem || null, _optimistic: false } : m
         ))
         console.log('[envio] id_mensagem gravado:', respIdMensagem, 'row:', rowId)
       })
@@ -1775,6 +1872,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
     if (!att) return true   // sem atendente → Recepcao
     if (att.attendant_email === session?.user?.email) return false  // ja eh minha → Meu setor
     if (isAdmin) return false   // admin ve em Meu setor (com tudo)
+    // Setor privado: nao mostra na Recepcao pra quem nao eh membro
+    if (att.sector_id && privateSectorIds.has(att.sector_id) && att.sector_id !== userSector?.id) return false
     if (!userSector) return true  // sem setor → ve outras
     return att.sector_id !== userSector.id  // outro setor → ainda na Recepcao
   })
@@ -1785,6 +1884,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
     if (isAdmin) return true
     // Conversa atribuida diretamente a mim — sempre aparece
     if (att.attendant_email === session?.user?.email) return true
+    // Setor privado: so membros do setor veem (admin ja saiu acima)
+    if (att.sector_id && privateSectorIds.has(att.sector_id)) {
+      return userSector?.id === att.sector_id
+    }
     // Mesmo setor que o meu
     if (userSector && att.sector_id === userSector.id) return true
     return false
@@ -1837,6 +1940,58 @@ export default function CompanyConversations({ mode = 'individual' }) {
               }}>
                 {contacts.length}
               </span>
+            )}
+          </div>
+        )}
+
+        {/* Auto-atribuicao de setor (nao-admin, individual) */}
+        {!isGroupMode && !isAdmin && allSectors.length > 0 && (
+          <div style={{ position: 'relative', padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
+            <button onClick={() => setSectorPickerOpen(v => !v)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: userSector ? '#F0FDF4' : '#F8FAFC',
+                border: `1px solid ${userSector ? '#BBF7D0' : 'var(--border)'}`,
+                borderRadius: 8, padding: '7px 10px', cursor: 'pointer', fontSize: 12,
+              }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-secondary)' }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: userSector?.color || '#94A3B8' }} />
+                <span>Meu setor:</span>
+                <strong style={{ color: 'var(--text-primary)' }}>{userSector?.name || 'Nenhum'}</strong>
+                {userSector && privateSectorIds.has(userSector.id) && <span title="privado">🔒</span>}
+              </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{sectorPickerOpen ? '▲' : '▼'}</span>
+            </button>
+            {sectorPickerOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 12, right: 12, zIndex: 100,
+                background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
+                boxShadow: '0 6px 20px rgba(0,0,0,0.10)', maxHeight: 260, overflowY: 'auto',
+              }}>
+                <button onClick={() => pickMySector(null)} disabled={savingMySector || !userSector}
+                  style={{ width: '100%', textAlign: 'left', padding: '9px 12px', background: 'none', border: 'none', cursor: userSector ? 'pointer' : 'not-allowed', fontSize: 12, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                  — Sair do meu setor —
+                </button>
+                {allSectors.map(s => {
+                  const mine = userSector?.id === s.id
+                  return (
+                    <button key={s.id} onClick={() => !mine && pickMySector(s.id)} disabled={savingMySector || mine}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '9px 12px', background: mine ? '#F0FDF4' : 'none', border: 'none',
+                        cursor: mine ? 'default' : 'pointer', textAlign: 'left', fontSize: 12,
+                      }}
+                      onMouseEnter={e => { if (!mine) e.currentTarget.style.background = '#F8FAFC' }}
+                      onMouseLeave={e => { if (!mine) e.currentTarget.style.background = 'none' }}
+                    >
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                      <span style={{ flex: 1 }}>{s.name}</span>
+                      {s.is_private && <span title="privado" style={{ fontSize: 10 }}>🔒</span>}
+                      {mine && <span style={{ fontSize: 10, color: '#16A34A', fontWeight: 700 }}>✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
             )}
           </div>
         )}
@@ -2743,7 +2898,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                 const isImage      = isCliente && /^(esta imagem|a imagem|esse documento|este documento|essa imagem|o documento|a foto|essa foto)/i.test(msg.content.trim())
                 const labelColor   = isGroupMode ? '#2563EB' : (isCliente ? 'var(--text-muted)' : isAtendente ? '#16A34A' : '#2563EB')
                 return (
-                  <div key={msg.id}>
+                  <div key={msg.id} data-msg-id={msg.id} data-msg-idmensagem={msg.id_mensagem || ''}>
                     {showDayDivider && (
                       <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2863,8 +3018,18 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         const isEditing = editingMsg?.id === msg.id
                         return (
                           <div className="msg-bubble" style={{ ...bubbleStyle, position: 'relative' }}
-                            onMouseEnter={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '1') }}
-                            onMouseLeave={e => { if (isAtendente && !isEditing) e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '0') }}>
+                            onMouseEnter={e => {
+                              if (!isEditing) {
+                                e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '1')
+                                e.currentTarget.querySelector('.msg-reply-btn')?.style.setProperty('opacity', '1')
+                              }
+                            }}
+                            onMouseLeave={e => {
+                              if (!isEditing) {
+                                e.currentTarget.querySelector('.msg-edit-btn')?.style.setProperty('opacity', '0')
+                                e.currentTarget.querySelector('.msg-reply-btn')?.style.setProperty('opacity', '0')
+                              }
+                            }}>
                             {isAtendente && !isEditing && !hasOnlyMedia && !msg._optimistic && (
                               <button
                                 className="msg-edit-btn"
@@ -2886,6 +3051,81 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 <Pencil size={11} />
                               </button>
                             )}
+                            {!isEditing && msg.id_mensagem && !msg._optimistic && (
+                              <button
+                                className="msg-reply-btn"
+                                onClick={() => {
+                                  const clean = displayContent.replace(/^[^\n:]{1,40}:\s+/, '')
+                                  setReplyingTo({
+                                    id_mensagem: msg.id_mensagem,
+                                    content: clean.slice(0, 200),
+                                    type: msg.type,
+                                    numero: selected.session_id,
+                                  })
+                                  msgInputRef.current?.focus()
+                                }}
+                                title="Responder"
+                                style={{
+                                  position: 'absolute', top: -10,
+                                  [isLeft ? 'right' : 'left']: -10,
+                                  width: 26, height: 26, borderRadius: '50%',
+                                  background: '#fff', border: '1px solid #16A34A',
+                                  color: '#16A34A', cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  opacity: 0, transition: 'opacity 0.15s',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)', zIndex: 2,
+                                }}>
+                                <Reply size={11} />
+                              </button>
+                            )}
+                            {msg.quoted_id_mensagem && (() => {
+                              const orig = messages.find(m => m.id_mensagem === msg.quoted_id_mensagem)
+                              const rawContent = (orig?.content || '').trim()
+                              const prefMatch = rawContent.match(/^([^\n:]{1,40}):\s+/)
+                              const stripped = prefMatch ? rawContent.slice(prefMatch[0].length).trim() : rawContent
+                              const origAuthor = orig
+                                ? (orig.type === 'cliente' ? 'Cliente' : (prefMatch?.[1]?.trim() || 'Você'))
+                                : 'Mensagem citada'
+                              const origText = stripped || (orig?.base64 ? '📎 Mídia' : '(original não carregada)')
+                              const isMineBubble = !isLeft
+                              return (
+                                <div
+                                  onClick={() => {
+                                    if (!orig) return
+                                    const el = document.querySelector(`[data-msg-id="${orig.id}"]`)
+                                    if (!el) return
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                    const bubble = el.querySelector('.msg-bubble')
+                                    if (bubble) {
+                                      const prevTransition = bubble.style.transition
+                                      const prevShadow = bubble.style.boxShadow
+                                      bubble.style.transition = 'box-shadow 0.4s, transform 0.2s'
+                                      bubble.style.boxShadow = '0 0 0 4px rgba(22,163,74,0.55)'
+                                      bubble.style.transform = 'scale(1.03)'
+                                      setTimeout(() => {
+                                        bubble.style.boxShadow = prevShadow
+                                        bubble.style.transform = ''
+                                        setTimeout(() => { bubble.style.transition = prevTransition }, 400)
+                                      }, 1100)
+                                    }
+                                  }}
+                                  title={orig ? 'Ir pra mensagem original' : ''}
+                                  style={{
+                                    borderLeft: `3px solid ${isMineBubble ? 'rgba(255,255,255,0.7)' : '#16A34A'}`,
+                                    background: isMineBubble ? 'rgba(255,255,255,0.18)' : '#F0FDF4',
+                                    borderRadius: 6, padding: '6px 10px', marginBottom: 6,
+                                    minWidth: 180, maxWidth: 320,
+                                    cursor: orig ? 'pointer' : 'default',
+                                  }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: isMineBubble ? 'rgba(255,255,255,0.95)' : '#15803D', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {origAuthor}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: isMineBubble ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {origText.slice(0, 120)}
+                                  </div>
+                                </div>
+                              )
+                            })()}
                             {media && (() => {
                               const src = `data:${media.mime};base64,${msg.base64}`
                               if (media.type === 'audio') return (
@@ -2999,6 +3239,29 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
             {!isClosed && (
               <div className="chat-input-bar" style={{ padding: '12px 18px', borderTop: '0.5px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 }}>
+                {replyingTo && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: '#F0FDF4', borderLeft: '3px solid #16A34A',
+                    borderTop: '1px solid #BBF7D0', borderRight: '1px solid #BBF7D0', borderBottom: '1px solid #BBF7D0',
+                    borderRadius: 8, padding: '8px 12px', marginBottom: 8,
+                  }}>
+                    <Reply size={14} style={{ color: '#16A34A', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Respondendo</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {replyingTo.content || '(mídia)'}
+                      </div>
+                    </div>
+                    <button onClick={() => setReplyingTo(null)} title="Cancelar resposta"
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--text-muted)',
+                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: 4,
+                      }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 {attachedFile && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 10,

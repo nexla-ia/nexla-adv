@@ -156,6 +156,7 @@ export default function CompanyAgenda() {
   useEffect(() => {
     if (!instance) return
     setLoading(true)
+    const contactsTable = session?.company?.contacts_table || 'clientes'
     Promise.all([
       supabase.from('agendas').select('*').eq('instancia', instance).order('name'),
       supabase.from('saved_contacts').select('id, nome, numero').eq('instancia', instance).order('nome'),
@@ -165,11 +166,20 @@ export default function CompanyAgenda() {
       supabase.from('procedure_prices').select('*'),
       // Pra dropdown: pega tambem numeros que ja conversaram (sem nome)
       supabase.from('mensagens_geral').select('numero, idgrupo, nome').eq('instancia', instance).limit(3000),
-    ]).then(([{ data: ag }, { data: sc }, { data: pros }, { data: procs }, { data: plans }, { data: prices }, { data: msgs }]) => {
+      // Fallback de nome auto-populado pelo n8n (mesmo que o sidebar de Conversas usa)
+      supabase.from(contactsTable).select('numero, nome').eq('instancia', instance),
+    ]).then(([{ data: ag }, { data: sc }, { data: pros }, { data: procs }, { data: plans }, { data: prices }, { data: msgs }, { data: clientes }]) => {
       if (ag) {
         setAgendas(ag)
         if (!selectedAgendaId && ag.length) setSelectedAgendaId(ag[0].id)
       }
+      // Mapa de nomes da tabela clientes: last-8 → nome
+      const clientesNomePorNum = {}
+      ;(clientes || []).forEach(c => {
+        if (!c.nome) return
+        const clean = (c.numero || '').replace(/@.*/, '').replace(/\D/g, '')
+        if (clean) clientesNomePorNum[clean.slice(-8)] = c.nome
+      })
       if (sc) setSavedContacts(sc)
       // Constroi lista combinada: saved_contacts + numeros que ja mandaram msg (nao salvos)
       // Tambem extrai grupos pra usar como destinatarios de lembrete
@@ -191,7 +201,8 @@ export default function CompanyAgenda() {
           if (savedKeys.has(num.slice(-8))) continue
           if (seen.has(num)) continue
           seen.add(num)
-          extras.push({ id: `m_${num}`, nome: m.nome || `+${num}`, numero: num })
+          const nome = m.nome || clientesNomePorNum[num.slice(-8)] || `+${num}`
+          extras.push({ id: `m_${num}`, nome, numero: num })
           if (extras.length >= 200) break
         }
         const combined = [...(sc || []), ...extras]
@@ -219,14 +230,22 @@ export default function CompanyAgenda() {
   }, [instance, weekStart])
 
   // Carrega agendamentos futuros pra checagem de lembretes
+  // Inclui appts dos ultimos 10min tambem (cobre caso de reload depois da hora marcada)
   useEffect(() => {
     if (!instance) return
+    const cutoff = new Date(Date.now() - 10 * 60_000).toISOString()
     supabase.from('appointments').select('*')
       .eq('instancia', instance)
-      .gte('starts_at', new Date().toISOString())
+      .gte('starts_at', cutoff)
       .in('status', ['agendado', 'confirmado'])
-      .eq('reminder_sent', false)
-      .then(({ data }) => { if (data) setFutureAppointments(data) })
+      .or('reminder_sent.is.null,reminder_sent.eq.false')
+      .then(({ data, error }) => {
+        if (error) console.warn('[reminder-load] erro:', error.message)
+        if (data) {
+          console.log('[reminder-load] futureAppointments:', data.length, data.map(a => ({ id: a.id, starts_at: a.starts_at, reminder_sent: a.reminder_sent })))
+          setFutureAppointments(data)
+        }
+      })
   }, [instance])
 
   // Set persistente de IDs já processados (sobrevive a re-renders)
@@ -240,6 +259,13 @@ export default function CompanyAgenda() {
     return () => clearInterval(id)
   }, [])
 
+  // Tick a cada 60s pra mover a linha do "agora" no grid
+  const [nowTick, setNowTick] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   // Dispara lembretes automáticos para agendamentos futuros
   useEffect(() => {
     if (!instance || !agendas.length || !futureAppointments.length) return
@@ -248,9 +274,6 @@ export default function CompanyAgenda() {
     const pending = []
     const debug = []
     agendas.forEach(ag => {
-      // Se a agenda nao tem reminder_hours, usa 1 hora como padrao (comportamento minimo)
-      const reminderHours = ag.reminder_hours || 1
-      const windowMs = reminderHours * 3600_000
       futureAppointments.forEach(appt => {
         if (appt.agenda_id !== ag.id) return
         if (appt.reminder_sent) {
@@ -264,11 +287,12 @@ export default function CompanyAgenda() {
         const startsAt = new Date(appt.starts_at).getTime()
         const diff = startsAt - now
         const diffMin = Math.round(diff / 60000)
-        if (diff > 0 && diff <= windowMs) {
+        // Dispara quando hora atual alcança a hora marcada (com tolerancia de 5min p/ trás)
+        if (diff <= 0 && diff >= -5 * 60_000) {
           pending.push({ appt, ag })
           debug.push({ appt: appt.id, ok: true, diffMin })
         } else {
-          debug.push({ appt: appt.id, motivo: diff <= 0 ? 'passado' : 'fora da janela', diffMin })
+          debug.push({ appt: appt.id, motivo: diff > 0 ? 'ainda nao chegou' : 'muito antigo', diffMin })
         }
       })
     })
@@ -309,6 +333,16 @@ export default function CompanyAgenda() {
         // Detecta automaticamente: termina em @g.us → grupo; tem @ → sessionId; só digito → adiciona sufixo
         const cleanId = rawId.includes('@') ? rawId : (r.type === 'group' ? `${rawId.replace(/\D/g, '')}@g.us` : rawId.replace(/\D/g, ''))
         const phoneOrId = cleanId.replace(/@.*/, '')
+        const sessionId = cleanId.includes('@') ? cleanId : `${cleanId}@s.whatsapp.net`
+        // Salva no banco pra aparecer na conversa do cliente
+        supabase.rpc('send_mensagem_geral', {
+          p_instancia: instance,
+          p_numero: sessionId,
+          p_mensagem: `${session?.user?.name || 'Sistema'}: ${msg}`,
+          p_type: 'atendente',
+          p_hora: new Date().toISOString(),
+          p_base64: null,
+        }).then(({ error: err }) => { if (err) console.warn('reminder rpc:', err.message) })
         fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -321,6 +355,8 @@ export default function CompanyAgenda() {
             ai_enabled: false,
             is_reminder: true,
             is_group: cleanId.includes('@g.us'),
+            sender_name: session?.user?.name || null,
+            sender_email: session?.user?.email || null,
           }),
         }).catch(e => console.warn('webhook reminder:', e))
       })
@@ -528,6 +564,7 @@ export default function CompanyAgenda() {
       date: fmtDateInput(d),
       time: fmtTimeInput(d),
       _prevStatus: a.status,
+      _prevStartsAt: a.starts_at,
     })
     setApptErr('')
     setPatientHistory([])
@@ -613,6 +650,12 @@ export default function CompanyAgenda() {
 
     const isNew = !apptModal.id
     const prevStatus = apptModal._prevStatus
+    // Se o horario mudou em uma edicao, reseta reminder_sent pra refirar no novo horario
+    const startsAtChanged = !isNew && apptModal._prevStartsAt && apptModal._prevStartsAt !== payload.starts_at
+    if (startsAtChanged) {
+      payload.reminder_sent = false
+      reminderSentRef.current.delete(apptModal.id)
+    }
     let apptResult
     try {
       apptResult = isNew
@@ -638,7 +681,9 @@ export default function CompanyAgenda() {
       })
       // Tambem atualiza futureAppointments pra que o dispatcher de lembrete veja
       setFutureAppointments(prev => {
-        if (apptResult.data.reminder_sent) return prev.filter(a => a.id !== apptResult.data.id)
+        if (apptResult.data.reminder_sent || reminderSentRef.current.has(apptResult.data.id)) {
+          return prev.filter(a => a.id !== apptResult.data.id)
+        }
         const ex = prev.find(a => a.id === apptResult.data.id)
         return ex ? prev.map(a => a.id === apptResult.data.id ? apptResult.data : a) : [...prev, apptResult.data]
       })
@@ -750,6 +795,16 @@ export default function CompanyAgenda() {
       const rawId = r.id || ''
       const cleanId = rawId.includes('@') ? rawId : (r.type === 'group' ? `${rawId.replace(/\D/g, '')}@g.us` : rawId.replace(/\D/g, ''))
       const phoneOrId = cleanId.replace(/@.*/, '')
+      const sessionId = cleanId.includes('@') ? cleanId : `${cleanId}@s.whatsapp.net`
+      // Salva no banco pra aparecer na conversa
+      supabase.rpc('send_mensagem_geral', {
+        p_instancia: instance,
+        p_numero: sessionId,
+        p_mensagem: `${session?.user?.name || 'Sistema'}: ${msg}`,
+        p_type: 'atendente',
+        p_hora: new Date().toISOString(),
+        p_base64: null,
+      }).then(({ error: err }) => { if (err) console.warn('[reminder-manual] rpc:', err.message) })
       const body = {
         message: msg,
         session_id: cleanId,
@@ -759,6 +814,8 @@ export default function CompanyAgenda() {
         ai_enabled: false,
         is_reminder: true,
         is_group: cleanId.includes('@g.us'),
+        sender_name: session?.user?.name || null,
+        sender_email: session?.user?.email || null,
       }
       console.log('[reminder-manual] fetch body:', body)
       fetch('https://n8n.nexladesenvolvimento.com.br/webhook/envioNexla', {
@@ -771,6 +828,9 @@ export default function CompanyAgenda() {
     })
 
     await supabase.from('appointments').update({ reminder_sent: true }).eq('id', apptModal.id)
+    // Bloqueia o dispatcher automatico de refire (in-session + remove da lista futura)
+    reminderSentRef.current.add(apptModal.id)
+    setFutureAppointments(prev => prev.filter(a => a.id !== apptModal.id))
     setToast({ message: `Lembrete enviado pra ${recipients.length} destinatario(s)`, color: '#16A34A' })
     setTimeout(() => setToast(null), 3000)
   }
@@ -1077,7 +1137,29 @@ export default function CompanyAgenda() {
 
               {/* Grid — escondido no mobile quando mobileView=lista */}
               <div className={`agenda-calendar-wrap${mobileView === 'lista' ? ' agenda-calendar-hidden' : ''}`} style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <div style={{ minWidth: 880 }}>
+                <div style={{ minWidth: 880, position: 'relative' }}>
+                  {/* Linha do "agora" — só aparece se hoje cair na semana visivel e estiver dentro do range de horas */}
+                  {(() => {
+                    if (!selectedAgenda || !slots.length) return null
+                    const todayIdx = weekDays.findIndex(d => d.toDateString() === nowTick.toDateString())
+                    if (todayIdx === -1) return null
+                    const startMin = timeToMinutes(selectedAgenda.start_time)
+                    const endMin = timeToMinutes(selectedAgenda.end_time)
+                    const nowMin = nowTick.getHours() * 60 + nowTick.getMinutes()
+                    if (nowMin < startMin || nowMin > endMin) return null
+                    const step = selectedAgenda.slot_minutes || 30
+                    const SLOT_H = 46
+                    const HEADER_H = 46 // header dos dias
+                    const slotIdx = (nowMin - startMin) / step
+                    const y = HEADER_H + slotIdx * (SLOT_H + 1)
+                    const hhmm = `${String(nowTick.getHours()).padStart(2, '0')}:${String(nowTick.getMinutes()).padStart(2, '0')}`
+                    return (
+                      <div style={{ position: 'absolute', left: 64, right: 0, top: y, height: 2, background: '#EF4444', zIndex: 3, pointerEvents: 'none', boxShadow: '0 0 0 1px rgba(239,68,68,0.25)' }}>
+                        <div style={{ position: 'absolute', left: -52, top: -9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>{hhmm}</div>
+                        <div style={{ position: 'absolute', left: -4, top: -3, width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }} />
+                      </div>
+                    )
+                  })()}
                   {/* Header dias */}
                   <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(7, 1fr)', borderBottom: '1px solid var(--border)', background: '#F8FAFC' }}>
                     <div />

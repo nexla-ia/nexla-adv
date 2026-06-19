@@ -6,6 +6,7 @@ import ConfirmModal from '../../components/ConfirmModal'
 import {
   Plus, X, Trash2, Pencil, Calendar, User as UserIcon, Flag,
   GripVertical, MoreVertical, Tag, ChevronRight, MessageSquare as MessageSquareIcon,
+  Users as UsersIcon, Filter,
 } from 'lucide-react'
 import './Company.css'
 
@@ -299,20 +300,28 @@ export default function CompanyKanban() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select className="nx-select" style={{ fontSize: 12 }}
-            value={filter.assignee} onChange={e => setFilter(p => ({ ...p, assignee: e.target.value }))}>
-            <option value="todos">Todos os atendentes</option>
-            <option value="meus">Meus cards</option>
-            <option value="sem">Sem atribuição</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-          <select className="nx-select" style={{ fontSize: 12 }}
-            value={filter.priority} onChange={e => setFilter(p => ({ ...p, priority: e.target.value }))}>
-            <option value="todas">Todas prioridades</option>
-            {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <UsersIcon size={13} style={{ position: 'absolute', left: 11, color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <select className="nx-select" style={{ fontSize: 12, width: 'auto', minWidth: 180, paddingLeft: 32, paddingRight: 32 }}
+              value={filter.assignee} onChange={e => setFilter(p => ({ ...p, assignee: e.target.value }))}>
+              <option value="todos">Todos os atendentes</option>
+              <option value="meus">Meus cards</option>
+              <option value="sem">Sem atribuição</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            <ChevronRight size={12} style={{ position: 'absolute', right: 10, transform: 'rotate(90deg)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          </div>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <Flag size={13} style={{ position: 'absolute', left: 11, color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <select className="nx-select" style={{ fontSize: 12, width: 'auto', minWidth: 160, paddingLeft: 32, paddingRight: 32 }}
+              value={filter.priority} onChange={e => setFilter(p => ({ ...p, priority: e.target.value }))}>
+              <option value="todas">Todas prioridades</option>
+              {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            <ChevronRight size={12} style={{ position: 'absolute', right: 10, transform: 'rotate(90deg)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          </div>
           {isAdmin && (
-            <button className="nx-btn-primary" onClick={openNewColumn} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '7px 14px' }}>
+            <button className="nx-btn-primary" onClick={openNewColumn} style={{ fontSize: 12 }}>
               <Plus size={13} /> Nova coluna
             </button>
           )}

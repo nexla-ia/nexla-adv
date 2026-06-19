@@ -42,9 +42,11 @@ export default function CompanyAdmin() {
   const [saving, setSaving]             = useState(false)
 
   const [sectorModal, setSectorModal]   = useState(false)
-  const [sectorForm, setSectorForm]     = useState({ name: '', color: SECTOR_COLORS[0] })
+  const [sectorForm, setSectorForm]     = useState({ name: '', color: SECTOR_COLORS[0], is_private: false })
   const [sectorErr, setSectorErr]       = useState('')
   const [assignModal, setAssignModal]   = useState(null)
+  const [editSectorModal, setEditSectorModal] = useState(null) // setor sendo editado
+  const [editSectorErr, setEditSectorErr] = useState('')
 
   // Lembretes automáticos
   const [reminderEnabled,  setReminderEnabled]  = useState(() => session?.company?.reminder_enabled ?? false)
@@ -175,13 +177,30 @@ export default function CompanyAdmin() {
     setSaving(true)
     const { data, error } = await supabase.from('sectors').insert({
       name: sectorForm.name.trim(), instancia: instance, color: sectorForm.color,
+      is_private: !!sectorForm.is_private,
     }).select().single()
     setSaving(false)
     if (error) { setSectorErr('Erro: ' + error.message); return }
     setSectors(prev => [...prev, data])
     setSectorModal(false)
-    setSectorForm({ name: '', color: SECTOR_COLORS[0] })
+    setSectorForm({ name: '', color: SECTOR_COLORS[0], is_private: false })
     setSectorErr('')
+  }
+
+  async function handleSaveSectorEdit() {
+    if (!editSectorModal) return
+    if (!editSectorModal.name?.trim()) { setEditSectorErr('Nome é obrigatório.'); return }
+    setSaving(true)
+    const { data, error } = await supabase.from('sectors').update({
+      name: editSectorModal.name.trim(),
+      color: editSectorModal.color,
+      is_private: !!editSectorModal.is_private,
+    }).eq('id', editSectorModal.id).select().single()
+    setSaving(false)
+    if (error) { setEditSectorErr('Erro: ' + error.message); return }
+    setSectors(prev => prev.map(s => s.id === data.id ? data : s))
+    setEditSectorModal(null)
+    setEditSectorErr('')
   }
 
   async function handleDeleteSector(sectorId) {
@@ -500,12 +519,20 @@ export default function CompanyAdmin() {
                 .filter(Boolean)
               return (
                 <div key={sector.id} className="nx-card" style={{ padding: '1rem 1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
                       <div style={{ width: 10, height: 10, borderRadius: '50%', background: sector.color, flexShrink: 0 }} />
-                      <span style={{ fontWeight: 700, fontSize: 14 }}>{sector.name}</span>
+                      <span style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sector.name}</span>
+                      {sector.is_private && (
+                        <span title="Setor privado — convs só aparecem para membros + admin" style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A', whiteSpace: 'nowrap' }}>
+                          🔒 PRIVADO
+                        </span>
+                      )}
                     </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button className="table-action" onClick={() => { setEditSectorModal({ ...sector }); setEditSectorErr('') }}>
+                        Editar
+                      </button>
                       <button className="table-action" onClick={() => setAssignModal(sector)}>
                         <Plus size={11} /> Atribuir
                       </button>
@@ -845,6 +872,17 @@ export default function CompanyAdmin() {
                   ))}
                 </div>
               </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: 10, background: sectorForm.is_private ? '#FEF3C7' : '#F8FAFC', border: `1px solid ${sectorForm.is_private ? '#FDE68A' : 'var(--border)'}`, borderRadius: 8 }}>
+                <input type="checkbox" checked={!!sectorForm.is_private}
+                  onChange={e => setSectorForm(p => ({ ...p, is_private: e.target.checked }))}
+                  style={{ marginTop: 2 }} />
+                <div style={{ fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>🔒 Setor privado</div>
+                  <div style={{ color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>
+                    Conversas atribuídas a este setor só aparecem pros membros dele e pra você (admin).
+                  </div>
+                </div>
+              </label>
             </div>
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
               {sectorErr && <div style={{ color: '#DC2626', fontSize: 12, marginBottom: 10 }}>{sectorErr}</div>}
@@ -852,6 +890,55 @@ export default function CompanyAdmin() {
                 <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setSectorModal(false)}>Cancelar</button>
                 <button className="nx-btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleCreateSector} disabled={saving}>
                   {saving ? 'Criando...' : 'Criar setor'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
+      {/* Modal editar setor */}
+      {editSectorModal && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
+          <div className="nx-card" style={{ width: '100%', maxWidth: 400 }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>Editar setor</div>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setEditSectorModal(null)}><X size={16} /></button>
+            </div>
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Nome</label>
+                <input className="nx-input" autoFocus
+                  value={editSectorModal.name || ''}
+                  onChange={e => setEditSectorModal(p => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div>
+                <label style={labelStyle}>Cor identificadora</label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {SECTOR_COLORS.map(c => (
+                    <button key={c} onClick={() => setEditSectorModal(p => ({ ...p, color: c }))}
+                      style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', outline: editSectorModal.color === c ? `3px solid ${c}` : 'none', outlineOffset: 2 }} />
+                  ))}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: 10, background: editSectorModal.is_private ? '#FEF3C7' : '#F8FAFC', border: `1px solid ${editSectorModal.is_private ? '#FDE68A' : 'var(--border)'}`, borderRadius: 8 }}>
+                <input type="checkbox" checked={!!editSectorModal.is_private}
+                  onChange={e => setEditSectorModal(p => ({ ...p, is_private: e.target.checked }))}
+                  style={{ marginTop: 2 }} />
+                <div style={{ fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>🔒 Setor privado</div>
+                  <div style={{ color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>
+                    Conversas atribuídas só aparecem pros membros e pra você (admin).
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
+              {editSectorErr && <div style={{ color: '#DC2626', fontSize: 12, marginBottom: 10 }}>{editSectorErr}</div>}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setEditSectorModal(null)}>Cancelar</button>
+                <button className="nx-btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleSaveSectorEdit} disabled={saving}>
+                  {saving ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </div>

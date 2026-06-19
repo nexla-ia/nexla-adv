@@ -129,6 +129,7 @@ function InstagramInbox() {
 
   const [contacts, setContacts]               = useState([])
   const [closedMap, setClosedMap]             = useState({})
+  const [privateSectorIds, setPrivateSectorIds] = useState(new Set())
   const [attendancesMap, setAttendancesMap]   = useState({})
   const [savedContacts, setSavedContacts]     = useState({})
   const [assuming, setAssuming]               = useState(null)
@@ -159,6 +160,15 @@ function InstagramInbox() {
           const map = {}; data.forEach(c => { map[c.numero] = c })
           setSavedContacts(map)
         }
+      })
+  }, [instance])
+
+  // Setores privados (pra esconder conversas atribuidas pra quem nao eh membro)
+  useEffect(() => {
+    if (!instance) return
+    supabase.from('sectors').select('id, is_private').eq('instancia', instance)
+      .then(({ data }) => {
+        if (data) setPrivateSectorIds(new Set(data.filter(s => s.is_private).map(s => s.id)))
       })
   }, [instance])
 
@@ -488,8 +498,16 @@ function InstagramInbox() {
 
   const closed = new Set(Object.keys(closedMap))
   const recepcao    = contacts.filter(c => !closed.has(c.session_id) && !attendancesMap[c.session_id])
-  const meuSetor    = contacts.filter(c => !closed.has(c.session_id) && attendancesMap[c.session_id] &&
-    (isAdmin || !userSector || attendancesMap[c.session_id].sector_id === userSector.id))
+  const meuSetor    = contacts.filter(c => {
+    if (closed.has(c.session_id)) return false
+    const att = attendancesMap[c.session_id]
+    if (!att) return false
+    if (isAdmin) return true
+    // Setor privado: so membros veem
+    if (att.sector_id && privateSectorIds.has(att.sector_id)) return userSector?.id === att.sector_id
+    if (!userSector) return true
+    return att.sector_id === userSector.id
+  })
   const finalizados = contacts.filter(c => closed.has(c.session_id))
 
   const tabList = [

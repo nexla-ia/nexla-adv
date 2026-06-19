@@ -4,6 +4,53 @@
 
 export const UPDATES = [
   {
+    date: '2026-06-19',
+    title: 'Responder mensagem citando (igual WhatsApp)',
+    type: 'feature',
+    tags: ['Conversas'],
+    items: [
+      'Passou o mouse em qualquer mensagem aparece um botão verde de seta no canto — clica e a mensagem vai pro modo "respondendo".',
+      'Em cima do campo de digitar aparece um bloco verde com o trechinho da mensagem original. Cancela com X ou ESC.',
+      'Quando vocês enviam, o cliente recebe no WhatsApp como resposta citada (com a mensagem original em cima da resposta).',
+      'No painel a citação também aparece dentro da bolha — clica nela e a tela rola até a mensagem original, ela pisca verde por 1 segundo pra você identificar.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Setor privado por usuário',
+    type: 'feature',
+    tags: ['Administração', 'Conversas'],
+    items: [
+      'Em Administração → Setores agora tem checkbox "🔒 Setor privado" ao criar ou editar.',
+      'Conversas atribuídas a um setor privado só aparecem pros membros dele e pro admin. Outros atendentes nem veem na Recepção.',
+      'O atendente pode escolher o próprio setor pelo topo da tela de Conversas — botão "Meu setor: ..." abre dropdown com todos os setores disponíveis.',
+      'Permite ter atendentes específicos pra cada tipo de demanda sem expor as conversas pra equipe inteira.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Linha do horário atual na agenda + lembrete na hora marcada',
+    type: 'improvement',
+    tags: ['Agenda'],
+    items: [
+      'Linha vermelha cruzando o grid da agenda mostra a hora atual em tempo real (atualiza a cada minuto).',
+      'O lembrete automático agora dispara EXATAMENTE na hora marcada do agendamento (com tolerância de 5min pra trás se você abriu a página depois).',
+      'Quando dispara, a mensagem do lembrete fica salva também na conversa do cliente — assim você vê no histórico que a mensagem foi enviada.',
+      'Mensagem aparece com o nome de quem agendou (ex: "Akira: Olá Nexla, lembrando do seu agendamento...") em vez de genérico.',
+      'Edita o horário de um agendamento já enviado e o lembrete vai disparar de novo no novo horário.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Busca de contatos na agenda agora encontra todo mundo',
+    type: 'fix',
+    tags: ['Agenda', 'Contatos'],
+    items: [
+      'Ao digitar o nome do cliente em "Novo agendamento", a busca agora encontra também contatos que aparecem nas Conversas mesmo sem estar salvos como contato — usando a mesma fonte de nomes que o sidebar de Conversas.',
+      'Antes aparecia só "+55..." quando o contato não estava salvo manualmente. Agora puxa o nome automaticamente.',
+    ],
+  },
+  {
     date: '2026-04-30',
     title: 'Tela de Segurança & Privacidade',
     type: 'feature',
