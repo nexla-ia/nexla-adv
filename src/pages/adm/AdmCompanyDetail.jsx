@@ -103,6 +103,7 @@ export default function AdmCompanyDetail() {
       instagramEnabled: company.instagram_enabled === true,
       instagramWebhookPath: company.instagram_webhook_path || '',
       evolutionUrl: company.evolution_url || '',
+      financeiroEnabled: (company.modules || {}).financeiro !== false,
     })
     setCompanyErr('')
     setCompanyModal(true)
@@ -132,6 +133,7 @@ export default function AdmCompanyDetail() {
         ? (companyForm.instagramWebhookPath?.trim().replace(/^\/+|\/+$/g, '') || null)
         : null,
       evolution_url: companyForm.evolutionUrl?.trim().replace(/\/+$/, '') || null,
+      modules: { ...(company.modules || {}), financeiro: !!companyForm.financeiroEnabled },
     }
     const { error } = await supabase.from('companies').update(updates).eq('id', company.id)
     setSaving(false)
@@ -661,6 +663,28 @@ export default function AdmCompanyDetail() {
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                       Quando desativada, todas as mensagens do cliente vão direto para a Recepção.
+                    </div>
+                  </div>
+                </label>
+              </div>
+              <div>
+                <label style={labelStyle}>Módulo Financeiro</label>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
+                  border: `1.5px solid ${companyForm.financeiroEnabled ? '#BBF7D0' : 'var(--border)'}`,
+                  background: companyForm.financeiroEnabled ? '#F0FDF4' : 'var(--bg-surface)',
+                  transition: 'all 0.15s',
+                }}>
+                  <input type="checkbox" checked={!!companyForm.financeiroEnabled}
+                    onChange={e => setCompanyForm(p => ({ ...p, financeiroEnabled: e.target.checked }))}
+                    style={{ width: 16, height: 16 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: companyForm.financeiroEnabled ? '#15803D' : 'var(--text-primary)' }}>
+                      {companyForm.financeiroEnabled ? 'Financeiro liberado' : 'Financeiro bloqueado pra essa empresa'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      Bloqueando, a aba Financeiro mostra mensagem de "desativado" e oculta os dados.
                     </div>
                   </div>
                 </label>

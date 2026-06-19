@@ -392,6 +392,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [msgText, setMsgText]         = useState('')
   const [editingMsg, setEditingMsg]   = useState(null) // { id, originalContent, newText }
   const [replyingTo, setReplyingTo]   = useState(null) // { id_mensagem, content, type, numero }
+  const [expandedMsgs, setExpandedMsgs] = useState(new Set()) // ids de msgs com "Ler mais" aberto
 
   // Limpa "respondendo" ao trocar de conversa
   const [savingEdit, setSavingEdit]   = useState(false)
@@ -3198,11 +3199,42 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                   </button>
                                 </div>
                               </div>
-                            ) : displayContent && (
-                              <span style={{ whiteSpace: 'pre-wrap' }}>{renderRichText(displayContent, {
-                                onMentionClick: (num) => navigate(`/painel/conversas?contact=${num}`)
-                              })}</span>
-                            )}
+                            ) : displayContent && (() => {
+                              // Trunca msg longa com "Ler mais" (~ 653 chars)
+                              const MAX = 653
+                              const isLong = displayContent.length > MAX
+                              const isExpanded = expandedMsgs.has(msg.id)
+                              const shownText = (isLong && !isExpanded)
+                                ? displayContent.slice(0, MAX).replace(/\s+\S*$/, '') + '…'
+                                : displayContent
+                              const linkColor = !isLeft ? 'rgba(255,255,255,0.95)' : '#2563EB'
+                              return (
+                                <>
+                                  <span style={{ whiteSpace: 'pre-wrap' }}>{renderRichText(shownText, {
+                                    onMentionClick: (num) => navigate(`/painel/conversas?contact=${num}`)
+                                  })}</span>
+                                  {isLong && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setExpandedMsgs(prev => {
+                                          const next = new Set(prev)
+                                          if (isExpanded) next.delete(msg.id); else next.add(msg.id)
+                                          return next
+                                        })
+                                      }}
+                                      style={{
+                                        display: 'block', marginTop: 4,
+                                        background: 'none', border: 'none', padding: 0,
+                                        color: linkColor, fontWeight: 700, fontSize: 12,
+                                        cursor: 'pointer', textDecoration: 'underline',
+                                      }}>
+                                      {isExpanded ? 'Ler menos' : 'Ler mais'}
+                                    </button>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </div>
                         )
                       })()}

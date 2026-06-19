@@ -22,6 +22,7 @@ import CompanyContacts from './pages/company/CompanyContacts'
 import CompanyPatientDetail from './pages/company/CompanyPatientDetail'
 import CompanyAgenda from './pages/company/CompanyAgenda'
 import CompanyKanban from './pages/company/CompanyKanban'
+import CompanyFinanceiro from './pages/company/CompanyFinanceiro'
 import CompanyCatalog from './pages/company/CompanyCatalog'
 import CompanyTutorial from './pages/company/CompanyTutorial'
 import CompanyInstagram from './pages/company/CompanyInstagram'
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="contatos/:id" element={<CompanyPatientDetail />} />
             <Route path="agenda" element={<CompanyAgenda />} />
             <Route path="atividades" element={<CompanyKanban />} />
+            <Route path="financeiro" element={<CompanyFinanceiro />} />
             <Route path="catalogo" element={<CompanyCatalog />} />
             <Route path="tutorial" element={<CompanyTutorial />} />
             <Route path="instagram" element={<CompanyInstagram />} />

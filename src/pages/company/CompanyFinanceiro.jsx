@@ -1,0 +1,1152 @@
+import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabase'
+import {
+  Wallet, Plus, X, Trash2, Pencil, Calendar, FileText,
+  TrendingUp, ArrowUpCircle, ArrowDownCircle, AlertCircle, CheckCircle2,
+  ChevronLeft, ChevronRight, PieChart as PieIcon, BarChart3,
+  FileBarChart, Scale, Repeat,
+} from 'lucide-react'
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  ComposedChart, Bar, Line, BarChart, PieChart, Pie, Cell,
+} from 'recharts'
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+const fmt = (n) => (typeof n === 'number' ? n : 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const fmtCompact = (n) => {
+  const v = Number(n) || 0
+  if (Math.abs(v) >= 1000) return 'R$ ' + (v / 1000).toFixed(1).replace('.', ',') + 'k'
+  return fmt(v)
+}
+const fmtDate = (d) => {
+  if (!d) return ''
+  const dt = typeof d === 'string' ? new Date(d + (d.length === 10 ? 'T00:00:00' : '')) : d
+  return dt.toLocaleDateString('pt-BR')
+}
+const todayISO = () => new Date().toISOString().slice(0, 10)
+const monthKey = (d) => (d || '').slice(0, 7)
+const addMonthsISO = (dateStr, n) => {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setMonth(d.getMonth() + n)
+  return d.toISOString().slice(0, 10)
+}
+const monthLabel = (key) => {
+  const [y, m] = key.split('-')
+  const names = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+  return `${names[parseInt(m) - 1]}/${y.slice(2)}`
+}
+const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 5 }
+
+const FORMAS_PAGAMENTO = ['PIX', 'Dinheiro', 'Cartão Débito', 'Cartão Crédito', 'Boleto', 'Convênio', 'Transferência', 'Cheque']
+const STATUS_COLORS = {
+  pendente:  { bg: '#EFF6FF', color: '#1D4ED8', label: 'Pendente' },
+  pago:      { bg: '#F0FDF4', color: '#15803D', label: 'Pago' },
+  cancelado: { bg: '#F1F5F9', color: '#64748B', label: 'Cancelado' },
+}
+const COR_RECEITA = '#16A34A'
+const COR_DESPESA = '#DC2626'
+const COR_SALDO_POS = '#2563EB'
+const COR_SALDO_NEG = '#DC2626'
+
+// Mascara CNJ: 20 dígitos → 0000000-00.0000.0.00.0000
+function formatCNJ(raw) {
+  const d = (raw || '').replace(/\D/g, '').slice(0, 20)
+  let out = d
+  if (d.length > 7)  out = `${d.slice(0,7)}-${d.slice(7)}`
+  if (d.length > 9)  out = `${d.slice(0,7)}-${d.slice(7,9)}.${d.slice(9)}`
+  if (d.length > 13) out = `${d.slice(0,7)}-${d.slice(7,9)}.${d.slice(9,13)}.${d.slice(13)}`
+  if (d.length > 14) out = `${d.slice(0,7)}-${d.slice(7,9)}.${d.slice(9,13)}.${d.slice(13,14)}.${d.slice(14)}`
+  if (d.length > 16) out = `${d.slice(0,7)}-${d.slice(7,9)}.${d.slice(9,13)}.${d.slice(13,14)}.${d.slice(14,16)}.${d.slice(16)}`
+  return out
+}
+
+// MoneyInput: digita só dígitos → centavos primeiro
+function MoneyInput({ value, onChange, autoFocus, placeholder = 'R$ 0,00', style }) {
+  const cents = Math.round(Number(value || 0) * 100)
+  const display = (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return (
+    <input
+      className="nx-input" type="text" inputMode="numeric"
+      autoFocus={autoFocus} placeholder={placeholder}
+      value={cents === 0 ? '' : display}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, '')
+        const num = digits ? Number(digits) / 100 : 0
+        onChange(num)
+      }}
+      style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', ...style }}
+    />
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PÁGINA PRINCIPAL
+// ════════════════════════════════════════════════════════════════════════════
+export default function CompanyFinanceiro() {
+  const { session } = useAuth()
+  const instance = session?.company?.instance
+  const isAdmin = session?.user?.role === 'admin'
+  const modules = session?.company?.modules || {}
+  const moduleEnabled = modules.financeiro !== false
+  const [tab, setTab] = useState('a-receber')
+  const [loading, setLoading] = useState(true)
+  const [categorias, setCategorias] = useState([])
+  const [transactions, setTransactions] = useState([])
+  const [modal, setModal] = useState(null)
+  const [deleteModal, setDeleteModal] = useState(null) // { t, groupSize, groupKey, groupType }
+  const [toast, setToast] = useState(null)
+
+  function showToast(msg, color = '#16A34A') {
+    setToast({ msg, color })
+    setTimeout(() => setToast(null), 2500)
+  }
+
+  useEffect(() => {
+    if (!instance) return
+    setLoading(true)
+    Promise.all([
+      supabase.from('financial_categories').select('*').or(`instancia.eq.${instance},instancia.eq._default_`).order('nome'),
+      supabase.from('financial_transactions').select('*').eq('instancia', instance).order('vencimento', { ascending: false }).limit(5000),
+    ]).then(([c, t]) => {
+      if (c.data) setCategorias(c.data)
+      if (t.data) setTransactions(t.data)
+      setLoading(false)
+    })
+  }, [instance])
+
+  if (!isAdmin) return <Blocked icon={Wallet} msg="Módulo Financeiro disponível apenas pra administradores." />
+  if (!moduleEnabled) return <Blocked icon={Wallet} msg="Módulo Financeiro desativado pra essa empresa. Contate o suporte pra liberar." />
+
+  function openNew(tipo = 'receita') {
+    setModal({
+      id: null, tipo, descricao: '', valor: 0, vencimento: todayISO(),
+      categoria_id: '', forma_pagamento: '', contato_nome: '', centro_custo: '',
+      processo_numero: '', parcela_total: 1, recorrente: false,
+      recorrencia_meses: 12, status: 'pendente', observacoes: '',
+    })
+  }
+  function openEdit(t) {
+    setModal({ ...t, valor: Number(t.valor) || 0 })
+  }
+
+  async function handleSave(m) {
+    if (!m.descricao?.trim()) return showToast('Descrição obrigatória', '#DC2626')
+    if (!m.valor || m.valor <= 0) return showToast('Valor inválido', '#DC2626')
+    if (!m.vencimento) return showToast('Vencimento obrigatório', '#DC2626')
+
+    const base = {
+      instancia: instance, tipo: m.tipo,
+      descricao: m.descricao.trim(),
+      valor: Number(m.valor),
+      vencimento: m.vencimento,
+      categoria_id: m.categoria_id || null,
+      forma_pagamento: m.forma_pagamento || null,
+      contato_nome: m.contato_nome?.trim() || null,
+      centro_custo: m.centro_custo?.trim() || null,
+      processo_numero: m.processo_numero?.trim() || null,
+      status: m.status || 'pendente',
+      pago_em: m.status === 'pago' ? (m.pago_em || todayISO()) : null,
+      observacoes: m.observacoes?.trim() || null,
+      criado_por_email: session?.user?.email,
+    }
+
+    if (m.id) {
+      const { data, error } = await supabase.from('financial_transactions').update(base).eq('id', m.id).select().single()
+      if (error) return showToast(error.message, '#DC2626')
+      setTransactions(prev => prev.map(t => t.id === data.id ? data : t))
+      showToast('Atualizado')
+      setModal(null)
+      return
+    }
+
+    const parcelaTotal = Math.max(1, parseInt(m.parcela_total) || 1)
+    if (parcelaTotal > 1 && !m.recorrente) {
+      const grupoParc = crypto.randomUUID()
+      const rows = []
+      const valorParc = Number(m.valor) / parcelaTotal
+      for (let i = 1; i <= parcelaTotal; i++) {
+        rows.push({
+          ...base, valor: valorParc,
+          vencimento: addMonthsISO(base.vencimento, i - 1),
+          descricao: `${base.descricao} (${i}/${parcelaTotal})`,
+          grupo_parcelas: grupoParc, parcela_num: i, parcela_total: parcelaTotal,
+        })
+      }
+      const { data, error } = await supabase.from('financial_transactions').insert(rows).select()
+      if (error) return showToast(error.message, '#DC2626')
+      setTransactions(prev => [...(data || []), ...prev])
+      showToast(`${parcelaTotal} parcelas criadas`)
+      setModal(null)
+      return
+    }
+
+    if (m.recorrente) {
+      const grupoRec = crypto.randomUUID()
+      const meses = Math.max(1, parseInt(m.recorrencia_meses) || 12)
+      const rows = []
+      for (let i = 0; i < meses; i++) {
+        rows.push({
+          ...base, vencimento: addMonthsISO(base.vencimento, i),
+          recorrente: true, recorrencia_tipo: 'mensal', grupo_recorrencia: grupoRec,
+        })
+      }
+      const { data, error } = await supabase.from('financial_transactions').insert(rows).select()
+      if (error) return showToast(error.message, '#DC2626')
+      setTransactions(prev => [...(data || []), ...prev])
+      showToast(`${meses} lançamentos recorrentes criados`)
+      setModal(null)
+      return
+    }
+
+    const { data, error } = await supabase.from('financial_transactions').insert(base).select().single()
+    if (error) return showToast(error.message, '#DC2626')
+    setTransactions(prev => [data, ...prev])
+    showToast('Lançamento criado')
+    setModal(null)
+  }
+
+  async function markPago(t) {
+    const { data, error } = await supabase.from('financial_transactions')
+      .update({ status: 'pago', pago_em: todayISO() }).eq('id', t.id).select().single()
+    if (error) return showToast(error.message, '#DC2626')
+    setTransactions(prev => prev.map(x => x.id === data.id ? data : x))
+    showToast(t.tipo === 'receita' ? 'Recebido' : 'Pago')
+  }
+
+  function handleDelete(t) {
+    // Se faz parte de uma serie (parcelado ou recorrente), oferece escolha
+    if (t.grupo_recorrencia) {
+      const irmaos = transactions.filter(x => x.grupo_recorrencia === t.grupo_recorrencia)
+      setDeleteModal({ t, groupKey: 'grupo_recorrencia', groupId: t.grupo_recorrencia, groupSize: irmaos.length, groupType: 'recorrente' })
+      return
+    }
+    if (t.grupo_parcelas) {
+      const irmaos = transactions.filter(x => x.grupo_parcelas === t.grupo_parcelas)
+      setDeleteModal({ t, groupKey: 'grupo_parcelas', groupId: t.grupo_parcelas, groupSize: irmaos.length, groupType: 'parcelas' })
+      return
+    }
+    // Sem grupo: confirm simples
+    if (!confirm('Excluir esse lançamento?')) return
+    deleteSingle(t)
+  }
+  async function deleteSingle(t) {
+    const { error } = await supabase.from('financial_transactions').delete().eq('id', t.id)
+    if (error) return showToast('Erro: ' + error.message, '#DC2626')
+    setTransactions(prev => prev.filter(x => x.id !== t.id))
+    showToast('Excluído')
+    setDeleteModal(null)
+  }
+  async function deleteGroup(groupKey, groupId) {
+    const { error } = await supabase.from('financial_transactions').delete().eq(groupKey, groupId)
+    if (error) return showToast('Erro: ' + error.message, '#DC2626')
+    setTransactions(prev => prev.filter(x => x[groupKey] !== groupId))
+    showToast('Série excluída')
+    setDeleteModal(null)
+  }
+
+  const mesAtual = monthKey(todayISO())
+  const resumo = useMemo(() => {
+    let aReceber = 0, aPagar = 0, recebido = 0, pago = 0
+    transactions.forEach(t => {
+      if (monthKey(t.vencimento) !== mesAtual) return
+      if (t.status === 'cancelado') return
+      const v = Number(t.valor || 0)
+      if (t.tipo === 'receita') {
+        if (t.status === 'pago') recebido += v
+        else aReceber += v
+      } else {
+        if (t.status === 'pago') pago += v
+        else aPagar += v
+      }
+    })
+    return { aReceber, aPagar, recebido, pago, saldo: recebido - pago }
+  }, [transactions, mesAtual])
+
+  const sharedProps = { instance, session, categorias, transactions, setTransactions, showToast, openEdit, markPago, handleDelete }
+
+  // Contadores de pendentes pra mostrar badge nas tabs
+  const pendingReceitas = transactions.filter(t => t.tipo === 'receita' && t.status === 'pendente').length
+  const pendingDespesas = transactions.filter(t => t.tipo === 'despesa' && t.status === 'pendente').length
+
+  const TABS = [
+    { id: 'a-receber',     label: 'A Receber',     icon: ArrowUpCircle,   color: COR_RECEITA, count: pendingReceitas },
+    { id: 'a-pagar',       label: 'A Pagar',       icon: ArrowDownCircle, color: COR_DESPESA, count: pendingDespesas },
+    { id: 'fluxo',         label: 'Fluxo de Caixa',icon: TrendingUp,      color: '#2563EB' },
+    { id: 'dre',           label: 'DRE',           icon: FileBarChart,    color: '#7C3AED' },
+    { id: 'inadimplencia', label: 'Inadimplência', icon: AlertCircle,     color: '#D97706' },
+    { id: 'por-categoria', label: 'Por Categoria', icon: PieIcon,         color: '#0891B2' },
+  ]
+
+  return (
+    <div style={{ padding: '1.5rem', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#16A34A22', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Wallet size={18} />
+          </div>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem' }}>Financeiro</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Honorários, despesas e fluxo do escritório</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => openNew('receita')} className="nx-btn-primary" style={{ fontSize: 12, background: COR_RECEITA, borderColor: COR_RECEITA }}>
+            <ArrowUpCircle size={13} /> Receita
+          </button>
+          <button onClick={() => openNew('despesa')} className="nx-btn-primary" style={{ fontSize: 12, background: COR_DESPESA, borderColor: COR_DESPESA }}>
+            <ArrowDownCircle size={13} /> Despesa
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 16 }}>
+        <KPI title="A receber (mês)" value={resumo.aReceber} color={COR_RECEITA} icon={ArrowUpCircle} />
+        <KPI title="A pagar (mês)"   value={resumo.aPagar}   color={COR_DESPESA} icon={ArrowDownCircle} />
+        <KPI title="Recebido"        value={resumo.recebido} color="#15803D" icon={CheckCircle2} />
+        <KPI title="Saldo do mês"    value={resumo.saldo}    color={resumo.saldo >= 0 ? COR_SALDO_POS : COR_SALDO_NEG} icon={TrendingUp} />
+      </div>
+
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16, overflowX: 'auto' }}>
+        {TABS.map(t => {
+          const Icon = t.icon
+          const active = tab === t.id
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '10px 16px', fontSize: 13, fontWeight: 600,
+                color: active ? t.color : 'var(--text-secondary)',
+                borderBottom: active ? `2px solid ${t.color}` : '2px solid transparent',
+                display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
+              }}>
+              <Icon size={14} /> {t.label}
+              {typeof t.count === 'number' && t.count > 0 && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, minWidth: 18, height: 18,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 20, padding: '0 6px',
+                  background: active ? t.color : '#E2E8F0',
+                  color: active ? '#fff' : 'var(--text-muted)',
+                }}>{t.count}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {loading ? (
+        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Carregando…</div>
+      ) : (
+        <>
+          {tab === 'a-receber' && <TabLista tipo="receita" {...sharedProps} />}
+          {tab === 'a-pagar' && <TabLista tipo="despesa" {...sharedProps} />}
+          {tab === 'fluxo' && <TabFluxo {...sharedProps} />}
+          {tab === 'dre' && <TabDRE {...sharedProps} />}
+          {tab === 'inadimplencia' && <TabInadimplencia {...sharedProps} />}
+          {tab === 'por-categoria' && <TabPorCategoria {...sharedProps} />}
+        </>
+      )}
+
+      {modal && <ModalLancamento modal={modal} setModal={setModal} categorias={categorias} onSave={handleSave} />}
+
+      {deleteModal && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
+          <div className="nx-card" style={{ width: '100%', maxWidth: 460 }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={16} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                  Excluir {deleteModal.groupType === 'parcelas' ? 'parcela' : 'ocorrência'}?
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {deleteModal.t.descricao} · {fmtDate(deleteModal.t.vencimento)}
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '1.25rem 1.5rem', fontSize: 13, color: 'var(--text-secondary)' }}>
+              Esse lançamento faz parte de uma <strong>série {deleteModal.groupType === 'parcelas' ? 'parcelada' : 'recorrente'}</strong> com <strong>{deleteModal.groupSize}</strong> {deleteModal.groupType === 'parcelas' ? 'parcelas' : 'ocorrências'} no total. O que você quer fazer?
+            </div>
+            <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => deleteSingle(deleteModal.t)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#2563EB'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Só essa</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Apaga só este lançamento, mantém o resto da série.</div>
+                </div>
+                <ChevronRight size={16} style={{ color: '#94A3B8' }} />
+              </button>
+              <button onClick={() => deleteGroup(deleteModal.groupKey, deleteModal.groupId)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#FEE2E2'}
+                onMouseLeave={e => e.currentTarget.style.background = '#FEF2F2'}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>Toda a série ({deleteModal.groupSize})</div>
+                  <div style={{ fontSize: 11, color: '#DC2626' }}>Apaga essa e todas as outras {deleteModal.groupType === 'parcelas' ? 'parcelas' : 'ocorrências'} de uma vez.</div>
+                </div>
+                <ChevronRight size={16} style={{ color: '#DC2626' }} />
+              </button>
+            </div>
+            <div style={{ padding: '0 1.5rem 1.25rem' }}>
+              <button className="nx-btn-ghost" style={{ width: '100%' }} onClick={() => setDeleteModal(null)}>Cancelar</button>
+            </div>
+          </div>
+        </div>, document.body)}
+
+      {toast && createPortal(
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: toast.color, color: '#fff', padding: '10px 18px', borderRadius: 8,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 99999, fontSize: 13, fontWeight: 600,
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+        }}>
+          <CheckCircle2 size={14} /> {toast.msg}
+        </div>, document.body)}
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB: A RECEBER / A PAGAR
+// ════════════════════════════════════════════════════════════════════════════
+function TabLista({ tipo, transactions, categorias, openEdit, markPago, handleDelete }) {
+  // Default "Todos meses" + "Pendente" pra mostrar de cara tudo que ainda precisa ser quitado
+  const [filter, setFilter] = useState({ mes: '', status: 'pendente', forma: '', search: '' })
+
+  const filtered = useMemo(() => transactions.filter(t => {
+    if (t.tipo !== tipo) return false
+    if (filter.mes && monthKey(t.vencimento) !== filter.mes) return false
+    if (filter.status !== 'todos' && t.status !== filter.status) return false
+    if (filter.forma && t.forma_pagamento !== filter.forma) return false
+    if (filter.search) {
+      const q = filter.search.toLowerCase()
+      if (!t.descricao?.toLowerCase().includes(q)
+        && !t.contato_nome?.toLowerCase().includes(q)
+        && !t.processo_numero?.toLowerCase().includes(q)) return false
+    }
+    return true
+  }).sort((a, b) => a.vencimento.localeCompare(b.vencimento)), [transactions, tipo, filter])
+
+  const monthsAvail = useMemo(() => {
+    const set = new Set()
+    transactions.forEach(t => set.add(monthKey(t.vencimento)))
+    set.add(monthKey(todayISO()))
+    return Array.from(set).sort().reverse()
+  }, [transactions])
+
+  const catMap = useMemo(() => Object.fromEntries(categorias.map(c => [c.id, c])), [categorias])
+  const totalFilt = filtered.reduce((s, t) => s + Number(t.valor || 0), 0)
+  const corPrincipal = tipo === 'receita' ? COR_RECEITA : COR_DESPESA
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="nx-card" style={{ padding: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select className="nx-select" value={filter.mes} onChange={e => setFilter(p => ({ ...p, mes: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 130 }}>
+          <option value="">Todos meses</option>
+          {monthsAvail.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
+        <select className="nx-select" value={filter.status} onChange={e => setFilter(p => ({ ...p, status: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 110 }}>
+          <option value="todos">Todos status</option>
+          <option value="pendente">Pendente</option>
+          <option value="pago">{tipo === 'receita' ? 'Recebido' : 'Pago'}</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <select className="nx-select" value={filter.forma} onChange={e => setFilter(p => ({ ...p, forma: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 130 }}>
+          <option value="">Todas formas</option>
+          {FORMAS_PAGAMENTO.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <input className="nx-input" placeholder="Buscar descrição, contato, processo..."
+          value={filter.search} onChange={e => setFilter(p => ({ ...p, search: e.target.value }))}
+          style={{ flex: 1, minWidth: 200, fontSize: 12 }} />
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          <strong style={{ color: corPrincipal, fontSize: 14 }}>{fmt(totalFilt)}</strong> em {filtered.length} lançamento{filtered.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      <div className="nx-card" style={{ overflowX: 'auto' }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum lançamento neste filtro.</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>
+              <tr>
+                <th style={th}>Descrição</th>
+                <th style={th}>Contato</th>
+                <th style={th}>Categoria</th>
+                <th style={th}>Forma</th>
+                <th style={th}>Vencimento</th>
+                <th style={th}>Valor</th>
+                <th style={th}>Status</th>
+                <th style={th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(t => {
+                const cat = catMap[t.categoria_id]
+                const vencido = t.status === 'pendente' && t.vencimento < todayISO()
+                return (
+                  <tr key={t.id} style={{ borderBottom: '1px solid #F1F5F9', background: vencido ? '#FFF7ED' : 'transparent' }}>
+                    <td style={td}>
+                      <div style={{ fontWeight: 600 }}>{t.descricao}</div>
+                      {t.processo_numero && <div style={{ fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}><Scale size={9} /> {t.processo_numero}</div>}
+                      {(t.recorrente || t.grupo_recorrencia) && <span style={{ fontSize: 9, color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2 }}><Repeat size={9}/> recorrente</span>}
+                    </td>
+                    <td style={td}>{t.contato_nome || '—'}</td>
+                    <td style={td}>{cat ? <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: (cat.cor || '#94A3B8') + '22', color: cat.cor || '#475569', fontWeight: 600 }}>{cat.nome}</span> : '—'}</td>
+                    <td style={td}>{t.forma_pagamento || '—'}</td>
+                    <td style={td}>
+                      <div style={{ color: vencido ? '#D97706' : 'inherit', fontWeight: vencido ? 700 : 400 }}>{fmtDate(t.vencimento)}</div>
+                      {vencido && <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: '#D97706', padding: '1px 6px', borderRadius: 3 }}>VENCIDO</span>}
+                    </td>
+                    <td style={{ ...td, fontWeight: 700, color: corPrincipal }}>{fmt(Number(t.valor))}</td>
+                    <td style={td}><StatusBadge status={t.status} tipo={t.tipo} /></td>
+                    <td style={{ ...td, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      {t.status === 'pendente' && (
+                        <button onClick={() => markPago(t)} title={tipo === 'receita' ? 'Marcar como recebido' : 'Marcar como pago'}
+                          style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>✓</button>
+                      )}
+                      <button onClick={() => openEdit(t)} title="Editar"
+                        style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: 4, cursor: 'pointer', color: 'var(--text-secondary)', marginRight: 4 }}>
+                        <Pencil size={11} />
+                      </button>
+                      <button onClick={() => handleDelete(t)} title="Excluir"
+                        style={{ background: 'none', border: '1px solid #FECACA', borderRadius: 6, padding: 4, cursor: 'pointer', color: '#DC2626' }}>
+                        <Trash2 size={11} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB: FLUXO DE CAIXA
+// ════════════════════════════════════════════════════════════════════════════
+function TabFluxo({ transactions }) {
+  const data = useMemo(() => {
+    const today = todayISO()
+    const meses = []
+    for (let i = -6; i <= 3; i++) meses.push(monthKey(addMonthsISO(today, i)))
+    return meses.map(mes => {
+      let receitaPrev = 0, despesaPrev = 0, receitaReal = 0, despesaReal = 0
+      transactions.forEach(t => {
+        if (monthKey(t.vencimento) !== mes) return
+        if (t.status === 'cancelado') return
+        const v = Number(t.valor || 0)
+        if (t.tipo === 'receita') { receitaPrev += v; if (t.status === 'pago') receitaReal += v }
+        else { despesaPrev += v; if (t.status === 'pago') despesaReal += v }
+      })
+      return {
+        mes, mesLabel: monthLabel(mes),
+        receitaPrev, despesaPrev, saldoPrev: receitaPrev - despesaPrev,
+        receitaReal, despesaReal, saldoReal: receitaReal - despesaReal,
+        isAtual: mes === monthKey(todayISO()),
+      }
+    })
+  }, [transactions])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="nx-card" style={{ padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <TrendingUp size={16} style={{ color: '#2563EB' }} />
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Fluxo de caixa — 10 meses</div>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>6 passados · atual · 3 futuros</span>
+        </div>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+            <XAxis dataKey="mesLabel" tick={{ fontSize: 11 }} />
+            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Area type="monotone" dataKey="receitaPrev" name="Receita prevista" stroke={COR_RECEITA} fill={COR_RECEITA} fillOpacity={0.15} />
+            <Area type="monotone" dataKey="despesaPrev" name="Despesa prevista" stroke={COR_DESPESA} fill={COR_DESPESA} fillOpacity={0.15} />
+            <Area type="monotone" dataKey="saldoPrev" name="Saldo previsto" stroke="#2563EB" fill="#2563EB" fillOpacity={0.25} strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="nx-card" style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead style={{ background: '#F8FAFC' }}>
+            <tr>
+              <th style={th}>Mês</th>
+              <th style={th}>Rec. Prevista</th>
+              <th style={th}>Desp. Prevista</th>
+              <th style={th}>Saldo Previsto</th>
+              <th style={th}>Rec. Recebida</th>
+              <th style={th}>Desp. Paga</th>
+              <th style={th}>Saldo Real</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map(d => (
+              <tr key={d.mes} style={{ borderBottom: '1px solid #F1F5F9', background: d.isAtual ? '#EFF6FF' : 'transparent' }}>
+                <td style={{ ...td, fontWeight: d.isAtual ? 700 : 600, color: d.isAtual ? '#2563EB' : 'inherit' }}>{d.mesLabel}{d.isAtual ? ' · atual' : ''}</td>
+                <td style={{ ...td, color: COR_RECEITA }}>{fmt(d.receitaPrev)}</td>
+                <td style={{ ...td, color: COR_DESPESA }}>{fmt(d.despesaPrev)}</td>
+                <td style={{ ...td, fontWeight: 700, color: d.saldoPrev >= 0 ? COR_SALDO_POS : COR_SALDO_NEG }}>{fmt(d.saldoPrev)}</td>
+                <td style={{ ...td, color: '#15803D' }}>{fmt(d.receitaReal)}</td>
+                <td style={{ ...td, color: '#B91C1C' }}>{fmt(d.despesaReal)}</td>
+                <td style={{ ...td, fontWeight: 700, color: d.saldoReal >= 0 ? COR_SALDO_POS : COR_SALDO_NEG }}>{fmt(d.saldoReal)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB: DRE
+// ════════════════════════════════════════════════════════════════════════════
+function TabDRE({ transactions, categorias }) {
+  const [ano, setAno] = useState(new Date().getFullYear())
+
+  const noAno = useMemo(() =>
+    transactions.filter(t => t.vencimento.startsWith(String(ano)) && t.status !== 'cancelado'),
+    [transactions, ano])
+
+  const totais = useMemo(() => {
+    let r = 0, d = 0
+    noAno.forEach(t => {
+      const v = Number(t.valor || 0)
+      if (t.tipo === 'receita') r += v; else d += v
+    })
+    const res = r - d
+    return { receitas: r, despesas: d, resultado: res, margem: r > 0 ? (res / r) * 100 : 0 }
+  }, [noAno])
+
+  const mensal = useMemo(() => {
+    const arr = []
+    for (let m = 1; m <= 12; m++) {
+      const key = `${ano}-${String(m).padStart(2, '0')}`
+      let r = 0, d = 0
+      noAno.forEach(t => {
+        if (!t.vencimento.startsWith(key)) return
+        const v = Number(t.valor || 0)
+        if (t.tipo === 'receita') r += v; else d += v
+      })
+      arr.push({ mes: key, mesLabel: monthLabel(key), receita: r, despesa: d, resultado: r - d, margem: r > 0 ? ((r - d) / r) * 100 : 0 })
+    }
+    return arr
+  }, [noAno, ano])
+
+  const porCategoria = useMemo(() => {
+    const map = {}
+    noAno.forEach(t => {
+      const cat = categorias.find(c => c.id === t.categoria_id)
+      const k = cat?.id || '_sem_'
+      if (!map[k]) map[k] = { nome: cat?.nome || 'Sem categoria', tipo: t.tipo, cor: cat?.cor || '#94A3B8', total: 0 }
+      map[k].total += Number(t.valor || 0)
+    })
+    return Object.values(map)
+  }, [noAno, categorias])
+
+  const totalReceitas = porCategoria.filter(c => c.tipo === 'receita').reduce((s, c) => s + c.total, 0)
+  const totalDespesas = porCategoria.filter(c => c.tipo === 'despesa').reduce((s, c) => s + c.total, 0)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="nx-card" style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button onClick={() => setAno(a => a - 1)} className="nx-btn-ghost" style={{ fontSize: 12 }}>
+          <ChevronLeft size={14} /> {ano - 1}
+        </button>
+        <div style={{ fontWeight: 700, fontSize: 18 }}>{ano}</div>
+        <button onClick={() => setAno(a => a + 1)} className="nx-btn-ghost" style={{ fontSize: 12 }}>
+          {ano + 1} <ChevronRight size={14} />
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+        <KPI title="Receitas do ano" value={totais.receitas} color={COR_RECEITA} icon={ArrowUpCircle} />
+        <KPI title="Despesas do ano" value={totais.despesas} color={COR_DESPESA} icon={ArrowDownCircle} />
+        <KPI title="Resultado" value={totais.resultado} color={totais.resultado >= 0 ? COR_SALDO_POS : COR_SALDO_NEG} icon={TrendingUp} />
+        <div className="nx-card" style={{ padding: 14 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Margem</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: totais.margem >= 0 ? COR_SALDO_POS : COR_SALDO_NEG, marginTop: 4 }}>
+            {totais.margem.toFixed(1)}%
+          </div>
+        </div>
+      </div>
+
+      <div className="nx-card" style={{ padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <BarChart3 size={16} style={{ color: '#7C3AED' }} />
+          <div style={{ fontWeight: 700, fontSize: 14 }}>DRE — {ano}</div>
+        </div>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={mensal}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+            <XAxis dataKey="mesLabel" tick={{ fontSize: 11 }} />
+            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="receita" name="Receita" fill={COR_RECEITA} />
+            <Bar dataKey="despesa" name="Despesa" fill={COR_DESPESA} />
+            <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 14 }}>
+        <CategoriaPanel title="Receitas por categoria" data={porCategoria.filter(c => c.tipo === 'receita').sort((a, b) => b.total - a.total)} total={totalReceitas} corPadrao={COR_RECEITA} />
+        <CategoriaPanel title="Despesas por categoria" data={porCategoria.filter(c => c.tipo === 'despesa').sort((a, b) => b.total - a.total)} total={totalDespesas} corPadrao={COR_DESPESA} />
+      </div>
+
+      <div className="nx-card" style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead style={{ background: '#F8FAFC' }}>
+            <tr>
+              <th style={th}>Mês</th>
+              <th style={th}>Receita</th>
+              <th style={th}>Despesa</th>
+              <th style={th}>Resultado</th>
+              <th style={th}>Margem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mensal.map(m => (
+              <tr key={m.mes} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                <td style={td}>{m.mesLabel}</td>
+                <td style={{ ...td, color: COR_RECEITA }}>{fmt(m.receita)}</td>
+                <td style={{ ...td, color: COR_DESPESA }}>{fmt(m.despesa)}</td>
+                <td style={{ ...td, fontWeight: 700, color: m.resultado >= 0 ? COR_SALDO_POS : COR_SALDO_NEG }}>{fmt(m.resultado)}</td>
+                <td style={{ ...td, color: m.margem >= 0 ? COR_SALDO_POS : COR_SALDO_NEG }}>{m.margem.toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+function CategoriaPanel({ title, data, total, corPadrao }) {
+  return (
+    <div className="nx-card" style={{ padding: 16 }}>
+      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12 }}>{title}</div>
+      {data.length === 0 ? (
+        <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Sem dados.</div>
+      ) : data.map(c => {
+        const pct = total > 0 ? (c.total / total) * 100 : 0
+        return (
+          <div key={c.nome} style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+              <span style={{ fontWeight: 600 }}>{c.nome}</span>
+              <span style={{ fontWeight: 700, color: c.cor || corPadrao }}>{fmt(c.total)} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· {pct.toFixed(1)}%</span></span>
+            </div>
+            <div style={{ height: 6, background: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: c.cor || corPadrao, transition: 'width 0.3s' }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB: INADIMPLENCIA
+// ════════════════════════════════════════════════════════════════════════════
+function TabInadimplencia({ transactions, markPago, openEdit }) {
+  const today = todayISO()
+  const buckets = useMemo(() => {
+    const b = {
+      '1-30':  { label: '1–30 dias',  total: 0, items: [], cor: '#FBBF24' },
+      '31-60': { label: '31–60 dias', total: 0, items: [], cor: '#F97316' },
+      '61-90': { label: '61–90 dias', total: 0, items: [], cor: '#DC2626' },
+      '90+':   { label: '+90 dias',   total: 0, items: [], cor: '#7C2D12' },
+    }
+    transactions.forEach(t => {
+      if (t.tipo !== 'receita' || t.status !== 'pendente') return
+      const dias = Math.floor((new Date(today).getTime() - new Date(t.vencimento).getTime()) / 86400000)
+      if (dias <= 0) return
+      const v = Number(t.valor || 0)
+      const item = { ...t, dias }
+      let k
+      if (dias <= 30) k = '1-30'
+      else if (dias <= 60) k = '31-60'
+      else if (dias <= 90) k = '61-90'
+      else k = '90+'
+      b[k].total += v
+      b[k].items.push(item)
+    })
+    return b
+  }, [transactions, today])
+
+  const total = Object.values(buckets).reduce((s, b) => s + b.total, 0)
+  const totalItems = Object.values(buckets).reduce((s, b) => s + b.items.length, 0)
+  const chartData = Object.values(buckets).map(b => ({ label: b.label, total: b.total, cor: b.cor }))
+
+  if (total === 0) {
+    return (
+      <div className="nx-card" style={{ padding: 40, textAlign: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+        <CheckCircle2 size={36} style={{ color: '#16A34A', marginBottom: 10 }} />
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#15803D' }}>Sem inadimplência! 🎉</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Nenhuma receita vencida no momento.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+        <KPI title="Total em atraso" value={total} color={COR_DESPESA} icon={AlertCircle} />
+        <KPI title="Qtd lançamentos" value={totalItems} color="#D97706" raw />
+      </div>
+
+      <div className="nx-card" style={{ padding: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Inadimplência por faixa de atraso</div>
+        <ResponsiveContainer width="100%" height={Math.max(180, chartData.filter(d => d.total > 0).length * 50 + 60)}>
+          <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 30 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
+            <XAxis type="number" tickFormatter={fmtCompact} tick={{ fontSize: 11 }} />
+            <YAxis dataKey="label" type="category" tick={{ fontSize: 12 }} width={100} />
+            <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
+            <Bar dataKey="total" radius={[0, 6, 6, 0]}>
+              {chartData.map((d, i) => <Cell key={i} fill={d.cor} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {Object.entries(buckets).filter(([_, b]) => b.items.length > 0).map(([k, b]) => (
+        <div key={k} className="nx-card" style={{ padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.cor }} />
+              <strong style={{ fontSize: 13 }}>{b.label}</strong>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {b.items.length} lançamentos</span>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: b.cor }}>{fmt(b.total)}</div>
+          </div>
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <tbody>
+              {b.items.map(t => (
+                <tr key={t.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                  <td style={{ padding: '6px 8px' }}>
+                    <div style={{ fontWeight: 600 }}>{t.descricao}</div>
+                    {t.contato_nome && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.contato_nome}</div>}
+                  </td>
+                  <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDate(t.vencimento)}</td>
+                  <td style={{ padding: '6px 8px', fontWeight: 700, color: b.cor, whiteSpace: 'nowrap' }}>{t.dias}d atraso</td>
+                  <td style={{ padding: '6px 8px', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(Number(t.valor))}</td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>
+                    <button onClick={() => markPago(t)}
+                      style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>
+                      ✓ Recebido
+                    </button>
+                    <button onClick={() => openEdit(t)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: 3, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <Pencil size={10} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB: POR CATEGORIA
+// ════════════════════════════════════════════════════════════════════════════
+function TabPorCategoria({ transactions, categorias }) {
+  const [mes, setMes] = useState(monthKey(todayISO()))
+  const [tipo, setTipo] = useState('receita')
+
+  const dados = useMemo(() => {
+    const map = {}
+    transactions.forEach(t => {
+      if (t.tipo !== tipo) return
+      if (t.status === 'cancelado') return
+      if (mes && monthKey(t.vencimento) !== mes) return
+      const cat = categorias.find(c => c.id === t.categoria_id)
+      const k = cat?.id || '_sem_'
+      if (!map[k]) map[k] = { nome: cat?.nome || 'Sem categoria', cor: cat?.cor || '#94A3B8', total: 0, count: 0 }
+      map[k].total += Number(t.valor || 0)
+      map[k].count += 1
+    })
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [transactions, categorias, tipo, mes])
+
+  const total = dados.reduce((s, c) => s + c.total, 0)
+
+  const monthsAvail = useMemo(() => {
+    const set = new Set()
+    transactions.forEach(t => set.add(monthKey(t.vencimento)))
+    set.add(monthKey(todayISO()))
+    return Array.from(set).sort().reverse()
+  }, [transactions])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="nx-card" style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+        <select className="nx-select" value={mes} onChange={e => setMes(e.target.value)} style={{ fontSize: 12, width: 'auto' }}>
+          <option value="">Todos meses</option>
+          {monthsAvail.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
+        <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+          {['receita', 'despesa'].map(t => (
+            <button key={t} onClick={() => setTipo(t)}
+              style={{
+                background: tipo === t ? (t === 'receita' ? COR_RECEITA : COR_DESPESA) : '#fff',
+                color: tipo === t ? '#fff' : 'var(--text-secondary)',
+                border: `1px solid ${tipo === t ? (t === 'receita' ? COR_RECEITA : COR_DESPESA) : 'var(--border)'}`,
+                borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
+              }}>
+              {t === 'receita' ? '↑ Receitas' : '↓ Despesas'}
+            </button>
+          ))}
+        </div>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
+          Total: <strong style={{ color: tipo === 'receita' ? COR_RECEITA : COR_DESPESA, fontSize: 14 }}>{fmt(total)}</strong>
+        </div>
+      </div>
+
+      {dados.length === 0 ? (
+        <div className="nx-card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+          Sem lançamentos nesse filtro.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+          <div className="nx-card" style={{ padding: 16 }}>
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie data={dados} dataKey="total" nameKey="nome" cx="50%" cy="50%" innerRadius={70} outerRadius={120} paddingAngle={2}>
+                  {dados.map((d, i) => <Cell key={i} fill={d.cor} />)}
+                </Pie>
+                <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="nx-card" style={{ padding: 16, maxHeight: 360, overflowY: 'auto' }}>
+            {dados.map(c => {
+              const pct = total > 0 ? (c.total / total) * 100 : 0
+              return (
+                <div key={c.nome} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13 }}>
+                      <span style={{ width: 12, height: 12, borderRadius: 3, background: c.cor }} />
+                      <span style={{ fontWeight: 600 }}>{c.nome}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {c.count}</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: c.cor }}>{fmt(c.total)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{pct.toFixed(1)}%</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 5, background: '#F1F5F9', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: c.cor, transition: 'width 0.3s' }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL DE LANÇAMENTO
+// ════════════════════════════════════════════════════════════════════════════
+function ModalLancamento({ modal, setModal, categorias, onSave }) {
+  const catsFiltered = categorias.filter(c => c.tipo === modal.tipo)
+  const isReceita = modal.tipo === 'receita'
+  const isEdit = !!modal.id
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
+      <div className="nx-card" style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {isReceita ? <ArrowUpCircle size={18} style={{ color: COR_RECEITA }} /> : <ArrowDownCircle size={18} style={{ color: COR_DESPESA }} />}
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{isEdit ? 'Editar' : 'Nova'} {isReceita ? 'receita' : 'despesa'}</div>
+          </div>
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setModal(null)}><X size={16} /></button>
+        </div>
+        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {!isEdit && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['receita', 'despesa'].map(t => (
+                <button key={t} onClick={() => setModal(p => ({ ...p, tipo: t, categoria_id: '' }))}
+                  style={{
+                    flex: 1, padding: '8px', border: '2px solid',
+                    borderColor: modal.tipo === t ? (t === 'receita' ? COR_RECEITA : COR_DESPESA) : 'var(--border)',
+                    background: modal.tipo === t ? (t === 'receita' ? '#F0FDF4' : '#FEF2F2') : '#fff',
+                    color: modal.tipo === t ? (t === 'receita' ? COR_RECEITA : COR_DESPESA) : 'var(--text-secondary)',
+                    borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>
+                  {t === 'receita' ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+          <div>
+            <label style={labelStyle}>Descrição *</label>
+            <input className="nx-input" autoFocus value={modal.descricao}
+              onChange={e => setModal(p => ({ ...p, descricao: e.target.value }))}
+              placeholder={isReceita ? 'Honorário inicial - cliente X' : 'Aluguel do escritório'} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>Valor *</label>
+              <MoneyInput value={modal.valor} onChange={v => setModal(p => ({ ...p, valor: v }))} />
+            </div>
+            <div>
+              <label style={labelStyle}>Vencimento *</label>
+              <input className="nx-input" type="date" value={modal.vencimento}
+                onChange={e => setModal(p => ({ ...p, vencimento: e.target.value }))} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>Categoria</label>
+              <select className="nx-select" value={modal.categoria_id || ''}
+                onChange={e => setModal(p => ({ ...p, categoria_id: e.target.value }))}>
+                <option value="">— sem categoria —</option>
+                {catsFiltered.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Forma de pagamento</label>
+              <select className="nx-select" value={modal.forma_pagamento || ''}
+                onChange={e => setModal(p => ({ ...p, forma_pagamento: e.target.value }))}>
+                <option value="">— —</option>
+                {FORMAS_PAGAMENTO.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>{isReceita ? 'Cliente' : 'Fornecedor'}</label>
+              <input className="nx-input" value={modal.contato_nome || ''}
+                onChange={e => setModal(p => ({ ...p, contato_nome: e.target.value }))}
+                placeholder="Nome livre" />
+            </div>
+            <div>
+              <label style={labelStyle}>Centro de custo</label>
+              <input className="nx-input" value={modal.centro_custo || ''}
+                onChange={e => setModal(p => ({ ...p, centro_custo: e.target.value }))}
+                placeholder="Ex: Trabalhista, Sócio X" />
+            </div>
+          </div>
+          {isReceita && (
+            <div>
+              <label style={labelStyle}>Nº do processo (CNJ)</label>
+              <input className="nx-input" value={modal.processo_numero || ''}
+                onChange={e => setModal(p => ({ ...p, processo_numero: formatCNJ(e.target.value) }))}
+                placeholder="0000000-00.0000.0.00.0000"
+                maxLength={25} />
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                20 dígitos, formato CNJ. Opcional.
+              </div>
+            </div>
+          )}
+          {!isEdit && (
+            <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={labelStyle}>Parcelado em</label>
+                <input className="nx-input" type="number" min="1" max="60"
+                  value={modal.parcela_total || 1}
+                  onChange={e => setModal(p => ({ ...p, parcela_total: e.target.value, recorrente: false }))}
+                  disabled={modal.recorrente} />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>1 = à vista. Gera (1/N), (2/N)…</div>
+              </div>
+              <div>
+                <label style={labelStyle}>Recorrência (mensal)</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={!!modal.recorrente}
+                    onChange={e => setModal(p => ({ ...p, recorrente: e.target.checked, parcela_total: 1 }))} />
+                  <span style={{ fontSize: 12 }}>Recorrente todo mês</span>
+                </label>
+                {modal.recorrente && (
+                  <input className="nx-input" type="number" min="1" max="60"
+                    value={modal.recorrencia_meses || 12}
+                    onChange={e => setModal(p => ({ ...p, recorrencia_meses: e.target.value }))}
+                    placeholder="Quantos meses?" style={{ marginTop: 6 }} />
+                )}
+              </div>
+            </div>
+          )}
+          {isEdit && (
+            <div>
+              <label style={labelStyle}>Status</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {['pendente', 'pago', 'cancelado'].map(s => (
+                  <button key={s} onClick={() => setModal(p => ({ ...p, status: s, pago_em: s === 'pago' && !p.pago_em ? todayISO() : p.pago_em }))}
+                    style={{
+                      border: '1px solid', borderColor: modal.status === s ? '#2563EB' : 'var(--border)',
+                      background: modal.status === s ? '#EFF6FF' : '#fff',
+                      color: modal.status === s ? '#2563EB' : 'var(--text-secondary)',
+                      borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
+                    }}>
+                    {STATUS_COLORS[s].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <label style={labelStyle}>Observações</label>
+            <textarea className="nx-input" rows={2} value={modal.observacoes || ''}
+              onChange={e => setModal(p => ({ ...p, observacoes: e.target.value }))} />
+          </div>
+        </div>
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
+          <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setModal(null)}>Cancelar</button>
+          <button className="nx-btn-primary" style={{ flex: 1 }} onClick={() => onSave(modal)}>Salvar</button>
+        </div>
+      </div>
+    </div>, document.body)
+}
+
+// ─── Helpers de render ──────────────────────────────────────────────────────
+function KPI({ title, value, color, icon: Icon, raw }) {
+  return (
+    <div className="nx-card" style={{ padding: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{title}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color, marginTop: 4 }}>{raw ? value : fmt(value)}</div>
+        </div>
+        {Icon && <div style={{ color, opacity: 0.7 }}><Icon size={18} /></div>}
+      </div>
+    </div>
+  )
+}
+function StatusBadge({ status, tipo }) {
+  const s = STATUS_COLORS[status] || STATUS_COLORS.pendente
+  const label = (status === 'pago' && tipo === 'receita') ? 'Recebido' : s.label
+  return <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: s.bg, color: s.color }}>{label}</span>
+}
+function Blocked({ icon: Icon, msg }) {
+  return (
+    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+      <Icon size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
+      <div>{msg}</div>
+    </div>
+  )
+}
+
+const th = { padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }
+const td = { padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)' }

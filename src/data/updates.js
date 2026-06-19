@@ -5,6 +5,45 @@
 export const UPDATES = [
   {
     date: '2026-06-19',
+    title: 'Módulo Financeiro completo',
+    type: 'feature',
+    tags: ['Financeiro', 'Gestão'],
+    items: [
+      'Nova aba "Financeiro" no menu (apenas pra admins) com 6 visões: A Receber, A Pagar, Fluxo de Caixa, DRE, Inadimplência e Por Categoria.',
+      'Lançamentos com receitas e despesas, suporte a parcelamento (1 a 60x) ou recorrência mensal automática (gera as cópias todas de uma vez).',
+      'Campo "Nº do processo (CNJ)" com máscara automática nas receitas — vincula honorário ao processo certo.',
+      'Categorias padrão já vêm prontas pra escritório jurídico: Honorários contratuais, Honorários de êxito, Sucumbência, Custas processuais, OAB, etc.',
+      'Fluxo de caixa com gráfico de 10 meses (6 passados, atual, 3 futuros) mostrando previsto vs realizado.',
+      'DRE anual com navegação por ano, gráfico de barras (receita/despesa) + linha de resultado, breakdown por categoria.',
+      'Inadimplência com aging visual (1-30, 31-60, 61-90, 90+ dias) e botão pra marcar como recebido direto da lista.',
+      'Excluir lançamento recorrente/parcelado dá a opção: "Só essa" ou "Toda a série" — sem precisar apagar 11 vezes.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Rastreamento de campanhas Meta Ads (Click-to-WhatsApp)',
+    type: 'feature',
+    tags: ['Métricas', 'Marketing'],
+    items: [
+      'Quando um cliente clica num anúncio do Facebook/Instagram e cai no WhatsApp de vocês, a plataforma agora identifica de qual criativo veio.',
+      'Em Métricas → Leads aparece uma seção nova "Campanhas Meta Ads" com cada criativo separado: thumbnail, título, texto do anúncio, leads gerados, quantos agendaram, taxa de conversão e receita atribuída.',
+      'Na tabela de Origens, leads vindos de ads aparecem como "Facebook Ads" / "Instagram Ads" (não somem mais em "WhatsApp sem rastreio").',
+      'Clica em qualquer canal de Origens → abre modal com os leads daquele canal. Clica num lead → entra direto na conversa.',
+    ],
+  },
+  {
+    date: '2026-06-19',
+    title: 'Mensagens longas com "Ler mais" no chat',
+    type: 'improvement',
+    tags: ['Conversas'],
+    items: [
+      'Mensagens com mais de 650 caracteres aparecem truncadas com um botão "Ler mais" no fim — igual WhatsApp e Telegram.',
+      'Click em "Ler mais" expande pra ver tudo, click em "Ler menos" recolhe. Cada mensagem expande independente.',
+      'Conversa fica mais limpa e a rolagem mais rápida quando tem texto enorme colado no meio.',
+    ],
+  },
+  {
+    date: '2026-06-19',
     title: 'Responder mensagem citando (igual WhatsApp)',
     type: 'feature',
     tags: ['Conversas'],

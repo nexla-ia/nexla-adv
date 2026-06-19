@@ -1,4 +1,6 @@
 ﻿import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import LimitReachedModal from '../../components/LimitReachedModal'
@@ -6,7 +8,7 @@ import { getEffectiveLimits, upgradeMessage } from '../../lib/planLimits'
 import {
   Users, MessageSquare, TrendingUp, Clock, Inbox, BarChart2, RefreshCw,
   Calendar, BellRing, Kanban, Headset, CheckCircle2, XCircle, AlertCircle,
-  Phone, Bot, ListChecks, Flag, ChevronRight, Layers, DollarSign, Scale, Lock,
+  Phone, Bot, ListChecks, Flag, ChevronRight, Layers, DollarSign, Scale, Lock, X,
 } from 'lucide-react'
 import './Company.css'
 
@@ -1057,6 +1059,8 @@ function cleanPhone(p) {
 
 function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable }) {
   const { from, to } = range
+  const navigate = useNavigate()
+  const [origemModal, setOrigemModal] = useState(null) // { name, leads: [] }
   if (!contactsTable) {
     return <div className="nx-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Tabela de contatos não configurada.</div>
   }
@@ -1118,11 +1122,39 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
   }, [filtered, msgs])
 
   // Origem com conversão (agrupada por valor canônico — case/variações fundem)
+  // Se o lead vem de Meta Ads (ad_platform setado), classifica pela plataforma
+  // do anuncio (FB Ads, IG Ads, etc.) — vence inferencia de texto.
   const origens = useMemo(() => {
     const map = {}
     leadsWithAppt.forEach(l => {
-      const k = normalizeOrigem(l.origem)
-      if (!map[k]) map[k] = { name: k, total: 0, agendaram: 0, concluidas: 0, receita: 0 }
+      const k = l.ad_platform
+        ? (l.ad_platform === 'FB_Ads' ? 'Facebook Ads'
+          : l.ad_platform === 'IG_Ads' ? 'Instagram Ads'
+          : `${l.ad_platform.replace(/_/g, ' ')}`)
+        : normalizeOrigem(l.origem)
+      if (!map[k]) map[k] = { name: k, total: 0, agendaram: 0, concluidas: 0, receita: 0, isAd: !!l.ad_platform }
+      map[k].total++
+      if (l.appts.length > 0) map[k].agendaram++
+      map[k].concluidas += l.concluded
+      map[k].receita += l.revenue
+    })
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [leadsWithAppt])
+
+  // Campanhas Meta Ads — agrupa por ad_title (cada criativo). So leads com ad_title.
+  const campanhas = useMemo(() => {
+    const map = {}
+    leadsWithAppt.forEach(l => {
+      if (!l.ad_title) return
+      const k = l.ad_title
+      if (!map[k]) map[k] = {
+        title: l.ad_title,
+        body: l.ad_body,
+        thumb: l.ad_thumbnail_url,
+        platform: l.ad_platform,
+        sourceUrl: l.ad_source_url,
+        total: 0, agendaram: 0, concluidas: 0, receita: 0,
+      }
       map[k].total++
       if (l.appts.length > 0) map[k].agendaram++
       map[k].concluidas += l.concluded
@@ -1276,6 +1308,51 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
         )}
       </div>
 
+      {/* Campanhas Meta Ads */}
+      {campanhas.length > 0 && (
+        <div className="nx-card" style={{ padding: '1.25rem', marginBottom: 14 }}>
+          <SectionTitle icon={Flag} text="Campanhas Meta Ads (CTWA)" right={`${campanhas.length} criativo${campanhas.length !== 1 ? 's' : ''}`} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+            {campanhas.map((c, i) => {
+              const conv = c.total ? (c.agendaram / c.total * 100) : 0
+              const ticket = c.concluidas ? (c.receita / c.concluidas) : 0
+              return (
+                <div key={c.title + i} style={{ display: 'flex', gap: 12, padding: 12, background: '#FAFAFF', border: '1px solid #E2E8F0', borderRadius: 10 }}>
+                  {c.thumb ? (
+                    <img src={c.thumb} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid #E2E8F0' }} />
+                  ) : (
+                    <div style={{ width: 64, height: 64, borderRadius: 8, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#2563EB' }}>
+                      <Flag size={22} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      {c.platform && (
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                          background: c.platform === 'IG_Ads' ? '#FDF2F8' : '#EFF6FF',
+                          color: c.platform === 'IG_Ads' ? '#BE185D' : '#1D4ED8',
+                          border: c.platform === 'IG_Ads' ? '1px solid #FBCFE8' : '1px solid #BFDBFE',
+                        }}>{c.platform === 'IG_Ads' ? 'IG ADS' : c.platform === 'FB_Ads' ? 'FB ADS' : c.platform}</span>
+                      )}
+                      <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.title}</div>
+                      {c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#2563EB', textDecoration: 'none', whiteSpace: 'nowrap' }}>ver post ↗</a>}
+                    </div>
+                    {c.body && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.body}</div>}
+                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11 }}>
+                      <span><strong>{c.total}</strong> leads</span>
+                      <span style={{ color: '#7C3AED' }}><strong>{c.agendaram}</strong> agendou</span>
+                      <span><strong style={{ color: conv >= 30 ? '#16A34A' : conv >= 15 ? '#D97706' : '#DC2626' }}>{conv.toFixed(0)}%</strong> conv.</span>
+                      <span style={{ color: '#059669' }}><strong>{fmtMoney(c.receita)}</strong> receita</span>
+                      {c.concluidas > 0 && <span style={{ color: 'var(--text-muted)' }}>ticket {fmtMoney(ticket)}</span>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Origem com conversão (tabela rica) */}
       <div className="nx-card" style={{ padding: '1.25rem', marginBottom: 14 }}>
         <SectionTitle icon={BarChart2} text="Origens — qual canal mais converte?" right={`${origens.length} canais`} />
@@ -1292,8 +1369,22 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
             {origens.map((o, i) => {
               const conv = o.total ? (o.agendaram / o.total * 100) : 0
               const color = ORIGEM_COLORS[i % ORIGEM_COLORS.length]
+              const leadsDoCanal = leadsWithAppt.filter(l => {
+                const k = l.ad_platform
+                  ? (l.ad_platform === 'FB_Ads' ? 'Facebook Ads'
+                    : l.ad_platform === 'IG_Ads' ? 'Instagram Ads'
+                    : `${l.ad_platform.replace(/_/g, ' ')}`)
+                  : normalizeOrigem(l.origem)
+                return k === o.name
+              })
               return (
-                <div key={o.name} style={{ display: 'grid', gridTemplateColumns: '1.5fr 80px 100px 100px 120px 1fr', gap: 8, padding: '10px 12px', alignItems: 'center', borderBottom: '1px solid #F8FAFC', fontSize: 12.5 }}>
+                <div key={o.name}
+                  onClick={() => setOrigemModal({ name: o.name, color, leads: leadsDoCanal })}
+                  style={{ display: 'grid', gridTemplateColumns: '1.5fr 80px 100px 100px 120px 1fr', gap: 8, padding: '10px 12px', alignItems: 'center', borderBottom: '1px solid #F8FAFC', fontSize: 12.5, cursor: 'pointer', transition: 'background 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  title={`Ver ${o.total} lead${o.total !== 1 ? 's' : ''} desse canal`}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
                     {o.name}
@@ -1389,6 +1480,64 @@ function LeadsTab({ leads, appts, msgs, range, period, loading, contactsTable })
           )}
         </div>
       </div>
+
+      {/* Modal: leads de um canal */}
+      {origemModal && createPortal(
+        <div onClick={() => setOrigemModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            className="nx-card" style={{ width: '100%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '1.1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: origemModal.color }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{origemModal.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {origemModal.leads.length} lead{origemModal.leads.length !== 1 ? 's' : ''} · clique pra abrir a conversa
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setOrigemModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {origemModal.leads.length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum lead nesse canal.</div>
+              ) : origemModal.leads.map(l => {
+                const nome = l.nome || l.name || `+${cleanPhone(l.numero)}`
+                const phone = cleanPhone(l.numero)
+                const agendou = l.appts?.length > 0
+                const compareceu = l.concluded > 0
+                return (
+                  <div key={l.id || phone}
+                    onClick={() => {
+                      navigate(`/painel/conversas?contact=${phone}`)
+                      setOrigemModal(null)
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                      {nome.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</div>
+                      <div style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'monospace' }}>{phone}</span>
+                        {l.created_at && <span>· {new Date(l.created_at).toLocaleDateString('pt-BR')}</span>}
+                        {compareceu && <span style={{ color: '#16A34A', fontWeight: 700 }}>· ✓ atendido</span>}
+                        {!compareceu && agendou && <span style={{ color: '#7C3AED', fontWeight: 700 }}>· agendado</span>}
+                        {l.revenue > 0 && <span style={{ color: '#059669', fontWeight: 700 }}>· {fmtMoney(l.revenue)}</span>}
+                      </div>
+                    </div>
+                    <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>, document.body)}
     </div>
   )
 }
