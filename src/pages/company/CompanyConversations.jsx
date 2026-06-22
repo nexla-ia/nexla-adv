@@ -183,13 +183,48 @@ function toImgSrc(raw) {
 
 function detectMedia(b64) {
   if (!b64 || b64.length < 10) return null
-  if (b64.startsWith('T2dn')) return { type: 'audio', mime: 'audio/ogg' }
-  if (b64.startsWith('//uQ') || b64.startsWith('SUQz')) return { type: 'audio', mime: 'audio/mpeg' }
-  if (b64.startsWith('GkXf')) return { type: 'audio', mime: 'audio/webm' }
+  // Aceita "data:xxx;base64,..." ja vindo do banco — strip o prefixo e extrai o mime
+  if (typeof b64 === 'string' && b64.startsWith('data:')) {
+    const m = /^data:([^;]+);base64,(.*)$/.exec(b64)
+    if (m) {
+      const mime = m[1]
+      const type = mime.startsWith('image/') ? 'image'
+        : mime.startsWith('audio/') ? 'audio'
+        : mime.startsWith('video/') ? 'video'
+        : mime === 'application/pdf' ? 'pdf'
+        : null
+      if (type) return { type, mime }
+    }
+  }
+  // Imagens
   if (b64.startsWith('/9j/')) return { type: 'image', mime: 'image/jpeg' }
   if (b64.startsWith('iVBOR')) return { type: 'image', mime: 'image/png' }
   if (b64.startsWith('UklGR')) return { type: 'image', mime: 'image/webp' }
   if (b64.startsWith('R0lGOD')) return { type: 'image', mime: 'image/gif' }
+  // Audio
+  if (b64.startsWith('T2dn')) return { type: 'audio', mime: 'audio/ogg' }       // OGG (WhatsApp PTT)
+  if (b64.startsWith('//uQ') || b64.startsWith('//s') || b64.startsWith('SUQz') || b64.startsWith('//u') || b64.startsWith('//N')) return { type: 'audio', mime: 'audio/mpeg' } // MP3
+  if (b64.startsWith('GkXf') || b64.startsWith('GkXfo')) return { type: 'audio', mime: 'audio/webm' }
+  if (b64.startsWith('RIFF') || b64.startsWith('UklGRi')) return { type: 'audio', mime: 'audio/wav' }
+  // MP4/M4A/MOV — magic bytes "...ftyp..." na posicao 4. Em base64 isso aparece como variantes que comecam com AAAA
+  // Distingue audio (M4A/mp4a) vs video (mp4/MOV) olhando ftyp brand
+  if (b64.startsWith('AAAA') && b64.length > 20) {
+    // Decodifica os primeiros 32 bytes pra ler o ftyp brand
+    try {
+      const raw = atob(b64.slice(0, 64))
+      const ftypIdx = raw.indexOf('ftyp')
+      if (ftypIdx >= 0) {
+        const brand = raw.slice(ftypIdx + 4, ftypIdx + 8)
+        // brands de audio: M4A, M4B, M4P, isom (raro)
+        if (/^M4[ABPR]/.test(brand) || brand === 'mp42' && raw.includes('mp4a')) {
+          return { type: 'audio', mime: 'audio/mp4' }
+        }
+        // brands de video: mp4*, isom, qt, MSNV, etc
+        return { type: 'video', mime: 'video/mp4' }
+      }
+    } catch {}
+  }
+  // PDF
   if (b64.startsWith('JVBERi')) return { type: 'pdf', mime: 'application/pdf' }
   return null
 }
@@ -3141,9 +3176,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
                               )
                             })()}
                             {media && (() => {
-                              const src = `data:${media.mime};base64,${msg.base64}`
+                              // Se msg.base64 ja vem com prefixo data:, usa direto. Senao monta.
+                              const src = (typeof msg.base64 === 'string' && msg.base64.startsWith('data:'))
+                                ? msg.base64
+                                : `data:${media.mime};base64,${msg.base64}`
                               if (media.type === 'audio') return (
                                 <audio controls src={src} style={{ width: 280, maxWidth: '100%', display: 'block', marginBottom: hasOnlyMedia ? 0 : 6 }} />
+                              )
+                              if (media.type === 'video') return (
+                                <video controls src={src} style={{ maxWidth: 320, width: '100%', borderRadius: 8, display: 'block', marginBottom: hasOnlyMedia ? 0 : 6 }} />
                               )
                               if (media.type === 'image') return (
                                 <img src={src} alt="mídia" style={{ maxWidth: 280, width: '100%', borderRadius: 8, display: 'block', marginBottom: hasOnlyMedia ? 0 : 6, cursor: 'zoom-in' }}
@@ -3174,6 +3215,23 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 )
                               }
                               return null
+                            })()}
+                            {/* Fallback: msg tem base64 mas detectMedia falhou — mostra placeholder em vez de bolha vazia */}
+                            {!media && msg.base64 && msg.base64.length > 100 && (() => {
+                              const src = (typeof msg.base64 === 'string' && msg.base64.startsWith('data:'))
+                                ? msg.base64 : `data:application/octet-stream;base64,${msg.base64}`
+                              return (
+                                <a href={src} download="midia" style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                                  fontSize: 12, color: !isLeft ? '#fff' : '#2563EB',
+                                  background: !isLeft ? 'rgba(255,255,255,0.15)' : '#EFF6FF',
+                                  border: '1px solid ' + (!isLeft ? 'rgba(255,255,255,0.3)' : '#BFDBFE'),
+                                  borderRadius: 8, padding: '8px 12px',
+                                  textDecoration: 'none', marginBottom: hasOnlyMedia ? 0 : 6,
+                                }}>
+                                  📎 Baixar mídia
+                                </a>
+                              )
                             })()}
                             {isImage && !msg.base64 && (
                               <div style={{
