@@ -5,6 +5,19 @@
 export const UPDATES = [
   {
     date: '2026-06-19',
+    title: 'Player de áudio, vídeo e imagem novos no chat',
+    type: 'feature',
+    tags: ['Conversas'],
+    items: [
+      'Áudio: visual estilo WhatsApp com avatar do remetente (com microfone verde), botão de play arredondado, waveform (barras) clicável pra avançar, tempo atual/total, botão de velocidade que cicla 1× → 1.5× → 2×.',
+      'Áudio: botão "📝 Transcrever" embaixo que só revela a transcrição quando vocês clicam (antes vinha aberta atrapalhando a leitura).',
+      'Vídeo: thumbnail com botão de play centralizado + badge com duração no canto. Só baixa o vídeo inteiro quando vocês clicarem em play.',
+      'Imagem: sombra sutil que cresce no hover + ícone de zoom no canto. Clique segue abrindo o lightbox em tela cheia.',
+      'Mídias com formato não reconhecido agora viram um botão "📎 Baixar mídia" em vez de ficar como bolha vazia.',
+    ],
+  },
+  {
+    date: '2026-06-19',
     title: 'Painel atualiza sozinho quando mudamos o plano',
     type: 'improvement',
     tags: ['Plataforma'],

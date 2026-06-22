@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile, Kanban, Reply } from 'lucide-react'
+import { MessageSquare, Bot, User, Users, PhoneCall, CheckCircle2, X, Send, Headset, Sparkles, Inbox, UserCheck, Archive, Mic, Square, Trash2, Paperclip, FileText, Image as ImageIcon, Calendar, UserPlus, BookUser, Lock, ArrowRightLeft, MoreVertical, Tag, Plus, Pencil, ChevronRight, Crown, Smile, Kanban, Reply, Play, Pause, Video as VideoIcon, Maximize2 } from 'lucide-react'
 import { TagBadge, tagColor } from '../../components/TagBadge'
 import './Company.css'
 
@@ -229,78 +229,295 @@ function detectMedia(b64) {
   return null
 }
 
-// Audio player com controles de velocidade + botao "Transcrever"
-function AudioWithTranscript({ src, transcript, isMine }) {
+// Audio player estilo WhatsApp — avatar com mic, waveform clicavel, speed cycle, transcribe
+function AudioWithTranscript({ src, transcript, isMine, avatarSrc, avatarLabel }) {
   const audioRef = useRef(null)
+  const [playing, setPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const [rate, setRate] = useState(1)
   const [showTr, setShowTr] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
   const hasTranscript = !!(transcript && transcript.trim())
 
-  function changeRate(r) {
-    setRate(r)
-    if (audioRef.current) audioRef.current.playbackRate = r
-  }
+  // Barras estaveis baseadas no src (PRNG seedado → mesma forma sempre pro mesmo audio)
+  const bars = useMemo(() => {
+    const seed = src ? src.length + src.charCodeAt(0) + (src.charCodeAt(src.length - 1) || 0) : 42
+    const arr = []; let s = seed
+    for (let i = 0; i < 34; i++) {
+      s = (s * 9301 + 49297) % 233280
+      arr.push(0.22 + (s / 233280) * 0.78)
+    }
+    return arr
+  }, [src])
 
+  function togglePlay() {
+    if (!audioRef.current) return
+    if (playing) audioRef.current.pause()
+    else audioRef.current.play()
+  }
+  function cycleRate() {
+    const next = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1
+    setRate(next)
+    if (audioRef.current) audioRef.current.playbackRate = next
+  }
+  function handleSeek(e) {
+    if (!audioRef.current || !duration) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    audioRef.current.currentTime = pct * duration
+  }
   function toggleTranscript() {
     if (showTr) { setShowTr(false); return }
     if (!hasTranscript) return
     setLoadingTr(true)
-    // Simula carregamento curto pra dar feedback visual mesmo com texto ja salvo
     setTimeout(() => { setLoadingTr(false); setShowTr(true) }, 350)
   }
-
-  const btnBase = {
-    background: 'none', border: 'none', cursor: 'pointer',
-    padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-    transition: 'all 0.15s',
+  function fmt(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0
+    const m = Math.floor(sec / 60); const s = Math.floor(sec % 60)
+    return `${m}:${String(s).padStart(2, '0')}`
   }
-  const rateBtnStyle = (r) => ({
-    ...btnBase,
-    background: rate === r ? (isMine ? 'rgba(255,255,255,0.25)' : '#2563EB') : 'transparent',
-    color: rate === r ? '#fff' : (isMine ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)'),
-    border: rate === r ? 'none' : `1px solid ${isMine ? 'rgba(255,255,255,0.3)' : 'var(--border)'}`,
-  })
+
+  const progress = duration > 0 ? currentTime / duration : 0
+  const activeBars = Math.floor(progress * bars.length)
+
+  const t = isMine ? {
+    bg: 'rgba(255,255,255,0.16)', border: 'rgba(255,255,255,0.22)',
+    barOff: 'rgba(255,255,255,0.38)', barOn: '#fff',
+    textMuted: 'rgba(255,255,255,0.72)',
+    playBg: '#fff', playColor: '#2563EB',
+    micBg: '#fff', micColor: '#2563EB', micRing: 'transparent',
+    speedBgOn: '#fff', speedColorOn: '#2563EB', speedColorOff: 'rgba(255,255,255,0.85)',
+    avBg: 'rgba(255,255,255,0.25)', avColor: '#fff',
+  } : {
+    bg: '#F0F9F0', border: '#D7EBD7',
+    barOff: '#B8C7B8', barOn: '#25D366',
+    textMuted: '#6B7280',
+    playBg: '#25D366', playColor: '#fff',
+    micBg: '#25D366', micColor: '#fff', micRing: '#fff',
+    speedBgOn: '#25D366', speedColorOn: '#fff', speedColorOff: '#6B7280',
+    avBg: '#E5E7EB', avColor: '#6B7280',
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
-      <audio ref={audioRef} controls src={src}
-        onLoadedMetadata={(e) => { e.currentTarget.playbackRate = rate }}
-        style={{ width: 280, maxWidth: '100%', display: 'block' }} />
-      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 10, color: isMine ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', marginRight: 2 }}>vel:</span>
-        {[1, 1.5, 2].map(r => (
-          <button key={r} onClick={() => changeRate(r)} style={rateBtnStyle(r)}>
-            {r}×
-          </button>
-        ))}
-        {hasTranscript && (
-          <button onClick={toggleTranscript} disabled={loadingTr} style={{
-            ...btnBase, marginLeft: 'auto',
-            background: showTr ? (isMine ? 'rgba(255,255,255,0.25)' : '#EFF6FF') : 'transparent',
-            color: isMine ? '#fff' : '#2563EB',
-            border: `1px solid ${isMine ? 'rgba(255,255,255,0.3)' : '#BFDBFE'}`,
-            display: 'inline-flex', alignItems: 'center', gap: 4,
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: t.bg, border: `1px solid ${t.border}`,
+        borderRadius: 16, padding: '8px 12px 8px 8px',
+        minWidth: 280, maxWidth: 340,
+      }}>
+        {/* Avatar + mic */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: '50%',
+            background: avatarSrc ? '#fff' : t.avBg, color: t.avColor,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', fontSize: 14, fontWeight: 700,
           }}>
-            {loadingTr
-              ? <><span className="audio-spin" style={{ width: 10, height: 10, border: `1.5px solid ${isMine ? 'rgba(255,255,255,0.4)' : '#BFDBFE'}`, borderTopColor: isMine ? '#fff' : '#2563EB', borderRadius: '50%', display: 'inline-block', animation: 'audio-spin 0.6s linear infinite' }} /> Transcrevendo</>
-              : (showTr ? 'Esconder' : '📝 Transcrever')
-            }
-          </button>
-        )}
+            {avatarSrc
+              ? <img src={avatarSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (avatarLabel || '?').toString().charAt(0).toUpperCase()}
+          </div>
+          <div style={{
+            position: 'absolute', bottom: -2, right: -3,
+            width: 17, height: 17, borderRadius: '50%',
+            background: t.micBg, color: t.micColor,
+            border: `2px solid ${t.micRing}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+          }}>
+            <Mic size={9} strokeWidth={2.6} />
+          </div>
+        </div>
+
+        {/* Play/pause */}
+        <button onClick={togglePlay} aria-label={playing ? 'Pausar' : 'Tocar'}
+          style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: t.playBg, color: t.playColor,
+            border: 'none', cursor: 'pointer', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: isMine ? 'none' : '0 1px 3px rgba(37,211,102,0.35)',
+            transition: 'transform 0.08s',
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+          {playing
+            ? <Pause size={14} strokeWidth={2.5} fill="currentColor" />
+            : <Play size={14} strokeWidth={2.5} fill="currentColor" style={{ marginLeft: 2 }} />}
+        </button>
+
+        {/* Waveform + tempo */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div onClick={handleSeek}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 2,
+              height: 26, cursor: 'pointer', position: 'relative',
+            }}>
+            {bars.map((h, i) => (
+              <div key={i} style={{
+                flex: 1, minWidth: 2,
+                height: `${h * 100}%`,
+                background: i < activeBars ? t.barOn : t.barOff,
+                borderRadius: 2,
+                transition: 'background 0.08s',
+              }} />
+            ))}
+            {duration > 0 && (
+              <div style={{
+                position: 'absolute', left: `${progress * 100}%`, top: '50%',
+                width: 10, height: 10, borderRadius: '50%',
+                background: t.barOn, transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+              }} />
+            )}
+          </div>
+          <div style={{
+            fontSize: 10.5, color: t.textMuted,
+            fontVariantNumeric: 'tabular-nums', marginTop: 3,
+            display: 'flex', justifyContent: 'space-between',
+          }}>
+            <span>{fmt(currentTime)}</span>
+            <span style={{ opacity: 0.55 }}>{fmt(duration)}</span>
+          </div>
+        </div>
+
+        {/* Speed cycle */}
+        <button onClick={cycleRate} title={`Velocidade: ${rate}×`}
+          style={{
+            flexShrink: 0,
+            background: rate === 1 ? 'transparent' : t.speedBgOn,
+            color: rate === 1 ? t.speedColorOff : t.speedColorOn,
+            border: `1px solid ${rate === 1 ? t.border : t.speedBgOn}`,
+            borderRadius: 12, padding: '3px 8px',
+            fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
+            fontVariantNumeric: 'tabular-nums', minWidth: 32, lineHeight: 1.2,
+            transition: 'all 0.15s',
+          }}>
+          {rate === 1 ? '1×' : rate === 1.5 ? '1.5×' : '2×'}
+        </button>
       </div>
+
+      <audio ref={audioRef} src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={e => { setDuration(e.currentTarget.duration); e.currentTarget.playbackRate = rate }}
+        onDurationChange={e => setDuration(e.currentTarget.duration)}
+        style={{ display: 'none' }} />
+
+      {hasTranscript && (
+        <button onClick={toggleTranscript} disabled={loadingTr}
+          style={{
+            alignSelf: 'flex-start',
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '2px 4px 0', fontSize: 11, fontWeight: 600,
+            color: isMine ? 'rgba(255,255,255,0.85)' : '#2563EB',
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+          }}>
+          {loadingTr
+            ? <>
+                <span style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  border: `1.5px solid ${isMine ? 'rgba(255,255,255,0.4)' : '#BFDBFE'}`,
+                  borderTopColor: isMine ? '#fff' : '#2563EB',
+                  animation: 'aw-spin 0.6s linear infinite', display: 'inline-block',
+                }} /> Transcrevendo…
+              </>
+            : <><FileText size={11} /> {showTr ? 'Esconder transcrição' : 'Transcrever'}</>
+          }
+        </button>
+      )}
+
       {showTr && hasTranscript && (
         <div style={{
-          fontSize: 12, lineHeight: 1.4,
-          color: isMine ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)',
-          background: isMine ? 'rgba(255,255,255,0.1)' : '#F8FAFC',
-          borderLeft: `2px solid ${isMine ? 'rgba(255,255,255,0.4)' : '#94A3B8'}`,
-          borderRadius: 4, padding: '6px 9px', marginTop: 2, whiteSpace: 'pre-wrap',
+          fontSize: 13, lineHeight: 1.45,
+          color: isMine ? 'rgba(255,255,255,0.92)' : 'var(--text-secondary)',
+          background: isMine ? 'rgba(255,255,255,0.12)' : '#F8FAFC',
+          borderLeft: `3px solid ${isMine ? 'rgba(255,255,255,0.5)' : '#94A3B8'}`,
+          borderRadius: 6, padding: '7px 10px', marginTop: 2, whiteSpace: 'pre-wrap',
         }}>
           {transcript}
         </div>
       )}
-      <style>{`@keyframes audio-spin { to { transform: rotate(360deg); } }`}</style>
+
+      <style>{`@keyframes aw-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+// Video player com poster + play overlay + badge de duracao + native controls apos play
+function VideoPlayer({ src, onExpand }) {
+  const videoRef = useRef(null)
+  const [started, setStarted] = useState(false)
+  const [duration, setDuration] = useState(0)
+
+  function play() {
+    setStarted(true)
+    requestAnimationFrame(() => videoRef.current?.play().catch(() => {}))
+  }
+  function fmt(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0
+    const m = Math.floor(sec / 60); const s = Math.floor(sec % 60)
+    return `${m}:${String(s).padStart(2, '0')}`
+  }
+
+  return (
+    <div style={{
+      position: 'relative', maxWidth: 320, width: '100%',
+      borderRadius: 12, overflow: 'hidden',
+      background: '#000', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+      marginBottom: 6,
+    }}>
+      <video
+        ref={videoRef}
+        src={src}
+        controls={started}
+        preload="metadata"
+        playsInline
+        onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+        style={{ display: 'block', width: '100%', maxHeight: 460, background: '#000' }}
+      />
+      {!started && (
+        <>
+          {/* Play overlay */}
+          <button onClick={play} aria-label="Tocar vídeo"
+            style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%)',
+              border: 'none', cursor: 'pointer', padding: 0,
+            }}>
+            <div style={{
+              width: 60, height: 60, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.95)', color: '#111',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+              transition: 'transform 0.12s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+              <Play size={26} strokeWidth={2.4} fill="currentColor" style={{ marginLeft: 3 }} />
+            </div>
+          </button>
+          {/* Badge de duracao */}
+          {duration > 0 && (
+            <div style={{
+              position: 'absolute', top: 8, right: 8,
+              background: 'rgba(0,0,0,0.65)', color: '#fff',
+              padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              <VideoIcon size={10} /> {fmt(duration)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -3256,15 +3473,66 @@ export default function CompanyConversations({ mode = 'individual' }) {
                               const src = (typeof msg.base64 === 'string' && msg.base64.startsWith('data:'))
                                 ? msg.base64
                                 : `data:${media.mime};base64,${msg.base64}`
-                              if (media.type === 'audio') return (
-                                <AudioWithTranscript src={src} transcript={displayContent} isMine={!isLeft} />
-                              )
-                              if (media.type === 'video') return (
-                                <video controls src={src} style={{ maxWidth: 320, width: '100%', borderRadius: 8, display: 'block', marginBottom: hasOnlyMedia ? 0 : 6 }} />
-                              )
+                              if (media.type === 'audio') {
+                                // Avatar do remetente
+                                let audioAvSrc = null
+                                let audioAvLabel = '?'
+                                if (!isLeft) {
+                                  // Msg minha: foto/nome do user logado
+                                  audioAvLabel = session?.user?.name || 'V'
+                                } else if (isGroupMode && msg.participantNumber) {
+                                  // Grupo: foto/nome do participante que enviou
+                                  const partNum = (msg.participantNumber || '').replace(/@.*/, '').replace(/\D/g, '')
+                                  const partSaved = findSaved(savedContacts, partNum)
+                                  const partFoto = clientesFotoMap[`${partNum}@s.whatsapp.net`] || clientesFotoMap[partNum]
+                                  audioAvSrc = partSaved?.photo || (partFoto ? toImgSrc(partFoto) : null)
+                                  audioAvLabel = partSaved?.nome || msg.nome || senderFromPrefix || '?'
+                                } else {
+                                  // 1-on-1: foto/nome do contato selecionado
+                                  const cleanSel = (selected?.session_id || '').replace(/@.*/, '').replace(/\D/g, '')
+                                  const selSaved = findSaved(savedContacts, cleanSel)
+                                  const selFoto = clientesFotoMap[selected?.session_id] || clientesFotoMap[cleanSel]
+                                  audioAvSrc = selSaved?.photo || (selFoto ? toImgSrc(selFoto) : null)
+                                  audioAvLabel = selSaved?.nome || clientesMap[selected?.session_id] || selected?.phone || '?'
+                                }
+                                return (
+                                  <AudioWithTranscript
+                                    src={src}
+                                    transcript={displayContent}
+                                    isMine={!isLeft}
+                                    avatarSrc={audioAvSrc}
+                                    avatarLabel={audioAvLabel}
+                                  />
+                                )
+                              }
+                              if (media.type === 'video') return <VideoPlayer src={src} />
                               if (media.type === 'image') return (
-                                <img src={src} alt="mídia" style={{ maxWidth: 280, width: '100%', borderRadius: 8, display: 'block', marginBottom: hasOnlyMedia ? 0 : 6, cursor: 'zoom-in' }}
-                                  onClick={() => setLightbox(src)} />
+                                <div style={{
+                                  position: 'relative', maxWidth: 280, width: '100%',
+                                  borderRadius: 10, overflow: 'hidden', marginBottom: hasOnlyMedia ? 0 : 6,
+                                  cursor: 'zoom-in', boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                  transition: 'transform 0.15s, box-shadow 0.15s',
+                                }}
+                                  onClick={() => setLightbox(src)}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.18)'
+                                    e.currentTarget.querySelector('.img-zoom-icon').style.opacity = '1'
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)'
+                                    e.currentTarget.querySelector('.img-zoom-icon').style.opacity = '0'
+                                  }}>
+                                  <img src={src} alt="mídia" style={{ width: '100%', display: 'block' }} />
+                                  <div className="img-zoom-icon" style={{
+                                    position: 'absolute', top: 8, right: 8,
+                                    background: 'rgba(0,0,0,0.55)', color: '#fff',
+                                    borderRadius: '50%', width: 28, height: 28,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    opacity: 0, transition: 'opacity 0.15s', pointerEvents: 'none',
+                                  }}>
+                                    <Maximize2 size={13} />
+                                  </div>
+                                </div>
                               )
                               if (media.type === 'pdf') {
                                 const fileName = (fileLine || '').replace(/^📄\s*/, '').trim() || 'documento.pdf'
