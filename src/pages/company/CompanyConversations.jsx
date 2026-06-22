@@ -229,6 +229,82 @@ function detectMedia(b64) {
   return null
 }
 
+// Audio player com controles de velocidade + botao "Transcrever"
+function AudioWithTranscript({ src, transcript, isMine }) {
+  const audioRef = useRef(null)
+  const [rate, setRate] = useState(1)
+  const [showTr, setShowTr] = useState(false)
+  const [loadingTr, setLoadingTr] = useState(false)
+  const hasTranscript = !!(transcript && transcript.trim())
+
+  function changeRate(r) {
+    setRate(r)
+    if (audioRef.current) audioRef.current.playbackRate = r
+  }
+
+  function toggleTranscript() {
+    if (showTr) { setShowTr(false); return }
+    if (!hasTranscript) return
+    setLoadingTr(true)
+    // Simula carregamento curto pra dar feedback visual mesmo com texto ja salvo
+    setTimeout(() => { setLoadingTr(false); setShowTr(true) }, 350)
+  }
+
+  const btnBase = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 700,
+    transition: 'all 0.15s',
+  }
+  const rateBtnStyle = (r) => ({
+    ...btnBase,
+    background: rate === r ? (isMine ? 'rgba(255,255,255,0.25)' : '#2563EB') : 'transparent',
+    color: rate === r ? '#fff' : (isMine ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)'),
+    border: rate === r ? 'none' : `1px solid ${isMine ? 'rgba(255,255,255,0.3)' : 'var(--border)'}`,
+  })
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
+      <audio ref={audioRef} controls src={src}
+        onLoadedMetadata={(e) => { e.currentTarget.playbackRate = rate }}
+        style={{ width: 280, maxWidth: '100%', display: 'block' }} />
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 10, color: isMine ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', marginRight: 2 }}>vel:</span>
+        {[1, 1.5, 2].map(r => (
+          <button key={r} onClick={() => changeRate(r)} style={rateBtnStyle(r)}>
+            {r}×
+          </button>
+        ))}
+        {hasTranscript && (
+          <button onClick={toggleTranscript} disabled={loadingTr} style={{
+            ...btnBase, marginLeft: 'auto',
+            background: showTr ? (isMine ? 'rgba(255,255,255,0.25)' : '#EFF6FF') : 'transparent',
+            color: isMine ? '#fff' : '#2563EB',
+            border: `1px solid ${isMine ? 'rgba(255,255,255,0.3)' : '#BFDBFE'}`,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}>
+            {loadingTr
+              ? <><span className="audio-spin" style={{ width: 10, height: 10, border: `1.5px solid ${isMine ? 'rgba(255,255,255,0.4)' : '#BFDBFE'}`, borderTopColor: isMine ? '#fff' : '#2563EB', borderRadius: '50%', display: 'inline-block', animation: 'audio-spin 0.6s linear infinite' }} /> Transcrevendo</>
+              : (showTr ? 'Esconder' : '📝 Transcrever')
+            }
+          </button>
+        )}
+      </div>
+      {showTr && hasTranscript && (
+        <div style={{
+          fontSize: 12, lineHeight: 1.4,
+          color: isMine ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)',
+          background: isMine ? 'rgba(255,255,255,0.1)' : '#F8FAFC',
+          borderLeft: `2px solid ${isMine ? 'rgba(255,255,255,0.4)' : '#94A3B8'}`,
+          borderRadius: 4, padding: '6px 9px', marginTop: 2, whiteSpace: 'pre-wrap',
+        }}>
+          {transcript}
+        </div>
+      )}
+      <style>{`@keyframes audio-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 function isToolMessage(row) {
   const type = getMessageType(row)
   const content = row.mensagem || ''
@@ -3181,7 +3257,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 ? msg.base64
                                 : `data:${media.mime};base64,${msg.base64}`
                               if (media.type === 'audio') return (
-                                <audio controls src={src} style={{ width: 280, maxWidth: '100%', display: 'block', marginBottom: hasOnlyMedia ? 0 : 6 }} />
+                                <AudioWithTranscript src={src} transcript={displayContent} isMine={!isLeft} />
                               )
                               if (media.type === 'video') return (
                                 <video controls src={src} style={{ maxWidth: 320, width: '100%', borderRadius: 8, display: 'block', marginBottom: hasOnlyMedia ? 0 : 6 }} />
@@ -3270,8 +3346,9 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                   </button>
                                 </div>
                               </div>
-                            ) : displayContent && (() => {
+                            ) : displayContent && media?.type !== 'audio' && (() => {
                               // Trunca msg longa com "Ler mais" (~ 653 chars)
+                              // Pra audio o texto eh transcricao, ja renderizada dentro do AudioWithTranscript
                               const MAX = 653
                               const isLong = displayContent.length > MAX
                               const isExpanded = expandedMsgs.has(msg.id)
