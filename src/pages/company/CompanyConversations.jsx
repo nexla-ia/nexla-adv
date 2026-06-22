@@ -1114,29 +1114,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
     return s
   }, [messages])
 
-  // Fields LEVES — tudo menos o base64 (que pode ter 2-5 MB por msg em audio/imagem)
-  // Carregamos primeiro sem base64 pra render instantaneo, depois puxamos base64 em background.
-  const LIGHT_FIELDS = 'id,numero,idgrupo,nomegrupo,nome,type,mensagem,created_at,"horaLastMessage",aplicativo,id_mensagem,quoted_id_mensagem,fromMe,"minha?",minha,visualizada,recipient_id'
-
   // Helper: monta filtro base de mensagens da conversa selecionada
-  function buildMessagesQuery(includeBase64 = false) {
-    let q = supabase.from(CONV_TABLE).select(includeBase64 ? '*' : LIGHT_FIELDS).eq('instancia', instance)
+  function buildMessagesQuery() {
+    let q = supabase.from(CONV_TABLE).select('*').eq('instancia', instance)
     if (selected.isGroup) {
       q = q.or(`idgrupo.eq.${selected.session_id},numero.eq.${selected.session_id}`)
     } else {
       q = q.eq('numero', selected.session_id).is('idgrupo', null)
     }
     return q
-  }
-
-  // Hidrata base64 em background pras msgs ja renderizadas (audio/imagem/video)
-  async function hydrateBase64(ids) {
-    if (!ids.length) return
-    const { data, error } = await supabase.from(CONV_TABLE)
-      .select('id,base64').in('id', ids).not('base64', 'is', null)
-    if (error || !data?.length) return
-    const map = Object.fromEntries(data.map(r => [r.id, r.base64]))
-    setMessages(prev => prev.map(m => map[m.id] ? { ...m, base64: map[m.id] } : m))
   }
 
   // Carrega mais mensagens antigas (paginacao) preservando a posicao do scroll
@@ -1161,7 +1147,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
         quoted_id_mensagem: r.quoted_id_mensagem || null,
         type: getMessageType(r),
         content: getMessageContent(r),
-        base64: null, // carregado depois em background
+        base64: r.base64 || null,
         ts: getTimestamp(r),
         nome: r.nome || null,
         mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
@@ -1170,7 +1156,6 @@ export default function CompanyConversations({ mode = 'individual' }) {
       isPrependingRef.current = true   // sinaliza pra useEffect nao rolar pro fundo
       setMessages(prev => [...novas, ...prev])
       setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
-      hydrateBase64(novas.map(r => r.id))
       // Restaura posicao do scroll: novo scrollTop = (nova altura - antiga) + antigo scrollTop
       requestAnimationFrame(() => {
         if (body) {
@@ -1194,14 +1179,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
       .then(({ data, error }) => {
         if (!error && data) {
           const ordered = [...data].reverse()  // volta pra ordem antigas→novas
-          const filtered = ordered.filter(r => !isToolMessage(r))
-          setMessages(filtered.map(r => ({
+          setMessages(ordered.filter(r => !isToolMessage(r)).map(r => ({
             id: r.id,
             id_mensagem: r.id_mensagem || null,
             quoted_id_mensagem: r.quoted_id_mensagem || null,
             type: getMessageType(r),
             content: getMessageContent(r),
-            base64: null, // carregado depois em background
+            base64: r.base64 || null,
             ts: getTimestamp(r),
             nome: r.nome || null,
             mine: r.fromMe === true || r['minha?'] === true || r.minha === true,
@@ -1210,9 +1194,6 @@ export default function CompanyConversations({ mode = 'individual' }) {
             participantNumber: r.numero || null,
           })))
           setHasMoreMsgs(data.length === MSG_PAGE_SIZE)
-          // Hidrata base64 das msgs com midia em segundo plano (audio/imagem/video/pdf)
-          // Filtra so msgs que provavelmente tem midia pelo padrao no texto
-          hydrateBase64(filtered.map(r => r.id))
 
           // Dispara webhook de presença: só dispara se a ultima msg do contato
           // for diferente da ultima ja "vista" por esse atendente (evita rajada
