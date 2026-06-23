@@ -15,7 +15,11 @@
 
 .company-root {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  /* dvh evita o "salto" no mobile quando a barra do navegador some, e
+     garante que os filhos flex:1 ocupem a altura real visivel (sem sobrar
+     espaco no zoom 100% por causa de min-height) */
+  height: 100dvh;
 }
 
 .company-main-wrap {
@@ -48,12 +52,18 @@
 
 .company-main {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .contacts-root {
   display: flex;
-  height: calc(100vh - 50px);
+  flex: 1;
+  min-height: 0;
+  /* fallback caso a pagina nao use o flex tree completo */
+  height: 100%;
 }
 
 .contacts-list {
