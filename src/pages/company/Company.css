@@ -54,16 +54,13 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .contacts-root {
   display: flex;
-  flex: 1;
-  min-height: 0;
-  /* fallback caso a pagina nao use o flex tree completo */
+  /* Preenche a area visivel real da .company-main (que ja considera topbar + banner via flex) */
   height: 100%;
+  min-height: 100%;
 }
 
 .contacts-list {
