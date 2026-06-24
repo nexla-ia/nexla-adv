@@ -1097,20 +1097,37 @@ function TabInadimplencia({ transactions, markPago, openEdit }) {
 
       {/* 4 cards limpos */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {Object.entries(buckets).map(([k, b]) => (
-          <div key={k} className="nx-card" style={{ padding: '16px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: b.total > 0 ? b.cor : '#CBD5E1' }} />
-              {b.label.replace(/–/g, '–').toUpperCase()} DIAS
+        {Object.entries(buckets).map(([k, b]) => {
+          const active = b.total > 0
+          return (
+            <div key={k} className="nx-card" style={{ padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
+              {/* Faixa de cor no topo quando ativo */}
+              {active && (
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+                  background: b.cor,
+                }} />
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: active ? b.cor : '#CBD5E1' }} />
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {b.label.toUpperCase()}
+                </span>
+              </div>
+              <div style={{
+                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
+                color: active ? b.cor : 'var(--text-muted)',
+                letterSpacing: '-0.015em', lineHeight: 1,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {fmt(b.total)}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                {b.items.length} {b.items.length === 1 ? 'lançamento' : 'lançamentos'}
+              </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: b.total > 0 ? b.cor : 'var(--text-muted)', letterSpacing: '-0.015em', lineHeight: 1 }}>
-              {fmt(b.total)}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-              {b.items.length} lançamento(s)
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Estado vazio simples */}
