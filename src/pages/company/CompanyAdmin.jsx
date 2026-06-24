@@ -608,6 +608,150 @@ export default function CompanyAdmin() {
         </div>, document.body
       )}
 
+      {/* ── Lembretes automáticos ───────────────────────────────────────── */}
+      <div className="page-body" style={{ marginTop: 0 }}>
+        <div className="section-header">
+          <div className="section-title">Lembretes automáticos</div>
+        </div>
+        <div className="nx-card" style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Header do card com icone + titulo + descricao + toggle */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <BellRing size={18} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Enviar lembrete antes de cada compromisso</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+                  O sistema envia automaticamente uma mensagem no WhatsApp pra cada cliente agendado, na antecedência que você escolher.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setReminderEnabled(v => !v)}
+              style={{
+                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: reminderEnabled ? '#2563EB' : '#CBD5E1',
+                position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+              }}>
+              <span style={{
+                position: 'absolute', top: 3, left: reminderEnabled ? 23 : 3,
+                width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
+
+          {reminderEnabled && (
+            <>
+              {/* Antecedência em pilulas */}
+              <div>
+                <label style={labelStyle}>Avisar com antecedência de</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {[
+                    { v: 30,    l: '30 minutos antes' },
+                    { v: 60,    l: '1 hora antes' },
+                    { v: 1440,  l: '24 horas antes' },
+                    { v: 2880,  l: '48 horas antes' },
+                    { v: 10080, l: '7 dias antes' },
+                  ].map(o => {
+                    const active = Number(reminderOffset) === o.v
+                    return (
+                      <button key={o.v} onClick={() => setReminderOffset(o.v)}
+                        style={{
+                          padding: '8px 16px', fontSize: 12, fontWeight: 600,
+                          border: '1px solid', borderColor: active ? '#2563EB' : 'var(--border)',
+                          background: active ? '#EFF6FF' : '#fff',
+                          color: active ? '#1D4ED8' : 'var(--text-secondary)',
+                          borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
+                        }}>
+                        {o.l}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Grupo (opcional) */}
+              <div>
+                <label style={labelStyle}>Enviar cópia do lembrete para um grupo (opcional)</label>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
+                  Além do lembrete individual para o cliente, o sistema pode avisar também um grupo do WhatsApp.
+                </div>
+                <select className="nx-select" value={reminderGroupId || ''}
+                  onChange={e => setReminderGroupId(e.target.value || null)}
+                  style={{ maxWidth: 320 }}>
+                  <option value="">— Não enviar para grupo —</option>
+                  {(reminderGroups || []).map(g => (
+                    <option key={g.idgrupo} value={g.idgrupo}>{g.nomegrupo || g.idgrupo}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Prévia */}
+              <div>
+                <label style={labelStyle}>Como a mensagem chega no cliente</label>
+                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
+                    Olá <strong>Maria</strong>! 📅 Passando pra lembrar do seu compromisso no dia <strong>15/05</strong> às <strong>14:30</strong> com <strong>Dr. Camila</strong>. Até lá! 🚀
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Os campos em <strong>negrito</strong> vêm do agendamento (nome, data, hora e profissional).
+                </div>
+              </div>
+
+              {/* Fuso horário */}
+              <div>
+                <label style={labelStyle}>Fuso horário do escritório</label>
+                <select
+                  className="nx-select"
+                  value={companyTimezone}
+                  onChange={e => setCompanyTimezone(e.target.value)}
+                  style={{ maxWidth: 420 }}>
+                  <optgroup label="Brasil">
+                    <option value="America/Sao_Paulo">Brasília / São Paulo / Rio (GMT-3)</option>
+                    <option value="America/Bahia">Bahia (GMT-3)</option>
+                    <option value="America/Fortaleza">Fortaleza / CE / PI / RN / PB / AL / SE (GMT-3)</option>
+                    <option value="America/Recife">Recife / PE (GMT-3)</option>
+                    <option value="America/Belem">Belém / PA / MA (GMT-3)</option>
+                    <option value="America/Manaus">Manaus / AM / MT / MS (GMT-4)</option>
+                    <option value="America/Cuiaba">Cuiabá (GMT-4)</option>
+                    <option value="America/Porto_Velho">Porto Velho / RO (GMT-4)</option>
+                    <option value="America/Boa_Vista">Boa Vista / RR (GMT-4)</option>
+                    <option value="America/Rio_Branco">Rio Branco / AC (GMT-5)</option>
+                    <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
+                  </optgroup>
+                  <optgroup label="Internacional">
+                    <option value="UTC">UTC (GMT+0)</option>
+                    <option value="Europe/Lisbon">Lisboa / Portugal (GMT+1)</option>
+                    <option value="America/New_York">Nova York / EUA Leste (GMT-5)</option>
+                    <option value="America/Chicago">Chicago / EUA Central (GMT-6)</option>
+                    <option value="America/Los_Angeles">Los Angeles / EUA Oeste (GMT-8)</option>
+                  </optgroup>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Salvar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
+            <button
+              className="nx-btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 140, justifyContent: 'center' }}
+              onClick={handleSaveReminder}
+              disabled={savingReminder}>
+              {reminderSaved
+                ? <><Check size={14} /> Salvo!</>
+                : savingReminder
+                  ? 'Salvando...'
+                  : <><Bell size={14} /> Salvar configuração</>}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Setores */}
       <div className="page-body">
         <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -834,150 +978,6 @@ export default function CompanyAdmin() {
               })}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* ── Lembretes automáticos ───────────────────────────────────────── */}
-      <div className="page-body" style={{ marginTop: 0 }}>
-        <div className="section-header">
-          <div className="section-title">Lembretes automáticos</div>
-        </div>
-        <div className="nx-card" style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Header do card com icone + titulo + descricao + toggle */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <BellRing size={18} />
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Enviar lembrete antes de cada compromisso</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
-                  O sistema envia automaticamente uma mensagem no WhatsApp pra cada cliente agendado, na antecedência que você escolher.
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setReminderEnabled(v => !v)}
-              style={{
-                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: reminderEnabled ? '#2563EB' : '#CBD5E1',
-                position: 'relative', flexShrink: 0, transition: 'background 0.2s',
-              }}>
-              <span style={{
-                position: 'absolute', top: 3, left: reminderEnabled ? 23 : 3,
-                width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-              }} />
-            </button>
-          </div>
-
-          {reminderEnabled && (
-            <>
-              {/* Antecedência em pilulas */}
-              <div>
-                <label style={labelStyle}>Avisar com antecedência de</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {[
-                    { v: 30,    l: '30 minutos antes' },
-                    { v: 60,    l: '1 hora antes' },
-                    { v: 1440,  l: '24 horas antes' },
-                    { v: 2880,  l: '48 horas antes' },
-                    { v: 10080, l: '7 dias antes' },
-                  ].map(o => {
-                    const active = Number(reminderOffset) === o.v
-                    return (
-                      <button key={o.v} onClick={() => setReminderOffset(o.v)}
-                        style={{
-                          padding: '8px 16px', fontSize: 12, fontWeight: 600,
-                          border: '1px solid', borderColor: active ? '#2563EB' : 'var(--border)',
-                          background: active ? '#EFF6FF' : '#fff',
-                          color: active ? '#1D4ED8' : 'var(--text-secondary)',
-                          borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
-                        }}>
-                        {o.l}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Grupo (opcional) */}
-              <div>
-                <label style={labelStyle}>Enviar cópia do lembrete para um grupo (opcional)</label>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
-                  Além do lembrete individual para o cliente, o sistema pode avisar também um grupo do WhatsApp.
-                </div>
-                <select className="nx-select" value={reminderGroupId || ''}
-                  onChange={e => setReminderGroupId(e.target.value || null)}
-                  style={{ maxWidth: 320 }}>
-                  <option value="">— Não enviar para grupo —</option>
-                  {(reminderGroups || []).map(g => (
-                    <option key={g.idgrupo} value={g.idgrupo}>{g.nomegrupo || g.idgrupo}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Prévia */}
-              <div>
-                <label style={labelStyle}>Como a mensagem chega no cliente</label>
-                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
-                    Olá <strong>Maria</strong>! 📅 Passando pra lembrar do seu compromisso no dia <strong>15/05</strong> às <strong>14:30</strong> com <strong>Dr. Camila</strong>. Até lá! 🚀
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                  Os campos em <strong>negrito</strong> vêm do agendamento (nome, data, hora e profissional).
-                </div>
-              </div>
-
-              {/* Fuso horário */}
-              <div>
-                <label style={labelStyle}>Fuso horário do escritório</label>
-                <select
-                  className="nx-select"
-                  value={companyTimezone}
-                  onChange={e => setCompanyTimezone(e.target.value)}
-                  style={{ maxWidth: 420 }}>
-                  <optgroup label="Brasil">
-                    <option value="America/Sao_Paulo">Brasília / São Paulo / Rio (GMT-3)</option>
-                    <option value="America/Bahia">Bahia (GMT-3)</option>
-                    <option value="America/Fortaleza">Fortaleza / CE / PI / RN / PB / AL / SE (GMT-3)</option>
-                    <option value="America/Recife">Recife / PE (GMT-3)</option>
-                    <option value="America/Belem">Belém / PA / MA (GMT-3)</option>
-                    <option value="America/Manaus">Manaus / AM / MT / MS (GMT-4)</option>
-                    <option value="America/Cuiaba">Cuiabá (GMT-4)</option>
-                    <option value="America/Porto_Velho">Porto Velho / RO (GMT-4)</option>
-                    <option value="America/Boa_Vista">Boa Vista / RR (GMT-4)</option>
-                    <option value="America/Rio_Branco">Rio Branco / AC (GMT-5)</option>
-                    <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
-                  </optgroup>
-                  <optgroup label="Internacional">
-                    <option value="UTC">UTC (GMT+0)</option>
-                    <option value="Europe/Lisbon">Lisboa / Portugal (GMT+1)</option>
-                    <option value="America/New_York">Nova York / EUA Leste (GMT-5)</option>
-                    <option value="America/Chicago">Chicago / EUA Central (GMT-6)</option>
-                    <option value="America/Los_Angeles">Los Angeles / EUA Oeste (GMT-8)</option>
-                  </optgroup>
-                </select>
-              </div>
-            </>
-          )}
-
-          {/* Salvar */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
-            <button
-              className="nx-btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 140, justifyContent: 'center' }}
-              onClick={handleSaveReminder}
-              disabled={savingReminder}>
-              {reminderSaved
-                ? <><Check size={14} /> Salvo!</>
-                : savingReminder
-                  ? 'Salvando...'
-                  : <><Bell size={14} /> Salvar configuração</>}
-            </button>
-          </div>
         </div>
       </div>
 
