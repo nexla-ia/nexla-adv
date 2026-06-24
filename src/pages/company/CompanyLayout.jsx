@@ -226,10 +226,10 @@ function WhatsAppDisconnectedToast({ session }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 13, color: '#B91C1C', marginBottom: 2 }}>
-          WhatsApp desconectado
+          Você está desconectado
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45, marginBottom: 8 }}>
-          A instância <strong>{instance}</strong> não está recebendo mensagens. Reconecte pra voltar a operar.
+          Seu WhatsApp parou de receber mensagens. Reconecte pra voltar a atender.
         </div>
         <button onClick={() => navigate('/painel/admin')}
           style={{
