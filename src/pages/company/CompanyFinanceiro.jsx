@@ -1199,29 +1199,40 @@ function TabPorCategoria({ transactions, categorias }) {
     return Array.from(set).sort().reverse()
   }, [transactions])
 
+  const corAtiva = tipo === 'receita' ? COR_RECEITA : COR_DESPESA
+  const totalCount = dados.reduce((s, c) => s + c.count, 0)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="nx-card" style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
-        <select className="nx-select" value={mes} onChange={e => setMes(e.target.value)} style={{ fontSize: 12, width: 'auto' }}>
-          <option value="">Todos meses</option>
-          {monthsAvail.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-        </select>
-        <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
-          {['receita', 'despesa'].map(t => (
-            <button key={t} onClick={() => setTipo(t)}
-              style={{
-                background: tipo === t ? (t === 'receita' ? COR_RECEITA : COR_DESPESA) : '#fff',
-                color: tipo === t ? '#fff' : 'var(--text-secondary)',
-                border: `1px solid ${tipo === t ? (t === 'receita' ? COR_RECEITA : COR_DESPESA) : 'var(--border)'}`,
-                borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-              }}>
-              {t === 'receita' ? '↑ Receitas' : '↓ Despesas'}
-            </button>
-          ))}
-        </div>
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
-          Total: <strong style={{ color: tipo === 'receita' ? COR_RECEITA : COR_DESPESA, fontSize: 14 }}>{fmt(total)}</strong>
+      {/* Filtro mes + toggle Receitas/Despesas */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <FilterPill icon={Calendar} value={mes ? monthLabel(mes) : 'Todos meses'}>
+          <select value={mes} onChange={e => setMes(e.target.value)} style={hiddenSelect}>
+            <option value="">Todos meses</option>
+            {monthsAvail.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
+        </FilterPill>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={() => setTipo('receita')}
+            style={{
+              background: tipo === 'receita' ? COR_RECEITA : '#fff',
+              color: tipo === 'receita' ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${tipo === 'receita' ? COR_RECEITA : 'var(--border)'}`,
+              borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+            <ArrowUpCircle size={12} /> Receitas
+          </button>
+          <button onClick={() => setTipo('despesa')}
+            style={{
+              background: tipo === 'despesa' ? COR_DESPESA : '#fff',
+              color: tipo === 'despesa' ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${tipo === 'despesa' ? COR_DESPESA : 'var(--border)'}`,
+              borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+            <ArrowDownCircle size={12} /> Despesas
+          </button>
         </div>
       </div>
 
@@ -1230,39 +1241,71 @@ function TabPorCategoria({ transactions, categorias }) {
           Sem lançamentos nesse filtro.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
-          <div className="nx-card" style={{ padding: 16 }}>
-            <ResponsiveContainer width="100%" height={320}>
-              <PieChart>
-                <Pie data={dados} dataKey="total" nameKey="nome" cx="50%" cy="50%" innerRadius={70} outerRadius={120} paddingAngle={2}>
-                  {dados.map((d, i) => <Cell key={i} fill={d.cor} />)}
-                </Pie>
-                <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: 14 }}>
+          {/* Donut com Total centralizado */}
+          <div className="nx-card" style={{ padding: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Distribuição</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>{mes ? monthLabel(mes) : 'Todos meses'}</div>
+            <div style={{ position: 'relative', width: '100%', height: 240 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={dados} dataKey="total" nameKey="nome" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
+                    {dados.map((d, i) => <Cell key={i} fill={d.cor} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex',
+                flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: corAtiva, fontFamily: 'var(--font-display)' }}>{fmt(total)}</div>
+              </div>
+            </div>
           </div>
-          <div className="nx-card" style={{ padding: 16, maxHeight: 360, overflowY: 'auto' }}>
-            {dados.map(c => {
-              const pct = total > 0 ? (c.total / total) * 100 : 0
-              return (
-                <div key={c.nome} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13 }}>
-                      <span style={{ width: 12, height: 12, borderRadius: 3, background: c.cor }} />
-                      <span style={{ fontWeight: 600 }}>{c.nome}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {c.count}</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: c.cor }}>{fmt(c.total)}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{pct.toFixed(1)}%</div>
-                    </div>
-                  </div>
-                  <div style={{ height: 5, background: '#F1F5F9', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', background: c.cor, transition: 'width 0.3s' }} />
-                  </div>
-                </div>
-              )
-            })}
+
+          {/* Tabela com CATEGORIA / QTD / TOTAL / % */}
+          <div className="nx-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ ...th, padding: '12px 16px' }}>Categoria</th>
+                  <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>Qtd</th>
+                  <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>Total</th>
+                  <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dados.map(c => {
+                  const pct = total > 0 ? (c.total / total) * 100 : 0
+                  return (
+                    <tr key={c.nome} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                      <td style={{ padding: '12px 16px', position: 'relative' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.cor, flexShrink: 0 }} />
+                          <span style={{ fontWeight: 600 }}>{c.nome}</span>
+                        </div>
+                        {/* barra de progresso no fundo da row */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, height: 2, width: `${pct}%`, background: c.cor, opacity: 0.7 }} />
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>{c.count}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: c.cor }}>{fmt(c.total)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pct.toFixed(1)}%</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr style={{ background: '#F8FAFC', borderTop: '2px solid var(--border)' }}>
+                  <td style={{ padding: '12px 16px', fontWeight: 700 }}>Total</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>{totalCount}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: corAtiva }}>{fmt(total)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>100%</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       )}
