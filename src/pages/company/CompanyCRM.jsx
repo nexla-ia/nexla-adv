@@ -289,28 +289,31 @@ export default function CompanyCRM() {
 
   return (
     <div style={{ padding: '1.25rem', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header em barra unica — tudo compacto numa linha */}
-      <div className="nx-card" style={{ padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'nowrap', overflowX: 'auto' }}>
+      {/* Header em barra unica — sem card border, plano no fundo */}
+      <div style={{ padding: '4px 0 16px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         {/* Logo + titulo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#0F172A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Briefcase size={16} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#0F172A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
+            <Briefcase size={18} />
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--text-primary)', lineHeight: 1 }}>CRM</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Pipeline de clientes</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.01em' }}>CRM</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Pipeline de clientes</div>
           </div>
         </div>
 
-        {/* Counters inline compactos */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
+        {/* Counters inline */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0, marginLeft: 8 }}>
           <Counter icon="📋" color="#2563EB" value={counters.leads} label="leads" />
           <Counter icon="🔥" color="#DC2626" value={counters.quentes} label="quentes" />
           <Counter icon="⚠️" color="#D97706" value={counters.parados} label="parados" />
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3, marginLeft: 'auto', flexShrink: 0 }}>
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Tabs (segmented) */}
+        <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3, flexShrink: 0 }}>
           {TABS.map(t => {
             const Icon = t.icon
             const active = tab === t.id
@@ -318,11 +321,12 @@ export default function CompanyCRM() {
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '5px 11px', border: 'none', cursor: 'pointer',
+                  padding: '6px 14px', border: 'none', cursor: 'pointer',
                   background: active ? '#fff' : 'transparent',
                   color: active ? 'var(--text-primary)' : 'var(--text-muted)',
                   borderRadius: 6, fontSize: 12, fontWeight: 600,
                   boxShadow: active ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.12s',
                 }}>
                 <Icon size={12} /> {t.label}
                 {typeof t.count === 'number' && t.count > 0 && (
@@ -334,33 +338,42 @@ export default function CompanyCRM() {
         </div>
 
         {/* Search */}
-        <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
-          <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 11 }}>🔍</span>
-          <input className="nx-input" value={search} onChange={e => setSearch(e.target.value)}
+        <div style={{ position: 'relative', width: 200, flexShrink: 0 }}>
+          <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12 }}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar lead…"
-            style={{ paddingLeft: 26, fontSize: 12, height: 32 }} />
+            style={{
+              width: '100%', paddingLeft: 32, paddingRight: 12,
+              height: 34, fontSize: 12, borderRadius: 8,
+              border: '1px solid var(--border)', background: '#fff', outline: 'none',
+            }} />
         </div>
 
         {/* Filtro temperatura */}
-        <select className="nx-select" value={tempoFilter} onChange={e => setTempoFilter(e.target.value)}
-          style={{ fontSize: 12, width: 90, height: 32, flexShrink: 0 }}>
+        <select value={tempoFilter} onChange={e => setTempoFilter(e.target.value)}
+          style={{ fontSize: 12, width: 100, height: 34, padding: '0 28px 0 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', flexShrink: 0 }}>
           <option value="todos">Todos</option>
           {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
 
-        {/* Etapas (icon-only pra economizar espaco) */}
+        {/* Etapas (discreto, so icone) */}
         <button onClick={() => setStagesModal(true)} title="Editar etapas"
-          style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text-secondary)', height: 32, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0 }}>
-          <Layers size={12} /> Etapas
+          style={{
+            background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
+            width: 34, height: 34, cursor: 'pointer', color: 'var(--text-secondary)',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+          <Layers size={14} />
         </button>
 
         {/* Novo Lead */}
         <button onClick={openNewContact}
           style={{
             background: '#0F172A', color: '#fff', border: 'none',
-            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700,
-            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
-            boxShadow: '0 1px 3px rgba(15,23,42,0.2)', flexShrink: 0,
+            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+            boxShadow: '0 2px 8px rgba(15,23,42,0.2)', flexShrink: 0,
+            height: 34,
           }}>
           <Plus size={13} /> Novo Lead
         </button>
