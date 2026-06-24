@@ -289,135 +289,91 @@ export default function CompanyCRM() {
 
   return (
     <div style={{ padding: '1.25rem', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header em DUAS linhas elegantes */}
-      <div style={{ padding: '4px 0 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* Linha 1: Identidade + counters + Novo Lead */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 11,
-              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-              color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px -2px rgba(15,23,42,0.25)',
-            }}>
-              <Briefcase size={18} strokeWidth={2.2} />
-            </div>
-            <div>
-              <div style={{
-                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19,
-                color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.02em',
-              }}>CRM</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.01em' }}>
-                Pipeline de clientes
-              </div>
-            </div>
+      {/* Header em UMA linha — simples e compacto igual ref */}
+      <div style={{ padding: '4px 0 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        {/* Logo + titulo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: '#0F172A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Briefcase size={16} />
           </div>
-
-          {/* Counters com divisores sutis */}
-          <div style={{
-            display: 'flex', alignItems: 'center', flexShrink: 0,
-            background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
-            padding: '6px 4px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-          }}>
-            {[
-              { icon: '📋', color: '#2563EB', value: counters.leads,   label: 'leads' },
-              { icon: '🔥', color: '#DC2626', value: counters.quentes, label: 'quentes' },
-              { icon: '⚠️', color: '#D97706', value: counters.parados, label: 'parados' },
-            ].map((c, i, arr) => (
-              <div key={c.label} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 14px' }}>
-                  <span style={{ fontSize: 12 }}>{c.icon}</span>
-                  <span style={{
-                    fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800,
-                    color: c.color, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em',
-                  }}>{c.value}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{c.label}</span>
-                </div>
-                {i < arr.length - 1 && <span style={{ width: 1, height: 22, background: 'var(--border)' }} />}
-              </div>
-            ))}
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--text-primary)', lineHeight: 1 }}>CRM</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>Pipeline de clientes</div>
           </div>
-
-          <div style={{ flex: 1 }} />
-
-          {/* CTA primario */}
-          <button onClick={openNewContact}
-            style={{
-              background: 'linear-gradient(180deg, #1E293B 0%, #0F172A 100%)',
-              color: '#fff', border: 'none',
-              borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7,
-              boxShadow: '0 4px 14px -2px rgba(15,23,42,0.35), inset 0 1px 0 rgba(255,255,255,0.1)',
-              flexShrink: 0, transition: 'transform 0.1s',
-            }}
-            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
-            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-            <Plus size={14} strokeWidth={2.5} /> Novo Lead
-          </button>
         </div>
 
-        {/* Linha 2: Tabs + Search + Filtros + Etapas (controls bar) */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          padding: '8px 12px', background: '#fff',
-          border: '1px solid var(--border)', borderRadius: 12,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-        }}>
-          {/* Tabs segmented */}
-          <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3, flexShrink: 0 }}>
-            {TABS.map(t => {
-              const Icon = t.icon
-              const active = tab === t.id
-              return (
-                <button key={t.id} onClick={() => setTab(t.id)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '6px 14px', border: 'none', cursor: 'pointer',
-                    background: active ? '#fff' : 'transparent',
-                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
-                    borderRadius: 6, fontSize: 12, fontWeight: 600,
-                    boxShadow: active ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.12s',
-                  }}>
-                  <Icon size={12} /> {t.label}
-                  {typeof t.count === 'number' && t.count > 0 && (
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 10, background: '#FEE2E2', color: '#B91C1C', marginLeft: 2 }}>{t.count}</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+        {/* Counters compactos */}
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexShrink: 0, marginLeft: 4 }}>
+          <Counter icon="📋" color="#2563EB" value={counters.leads} label="leads" />
+          <Counter icon="🔥" color="#DC2626" value={counters.quentes} label="quentes" />
+          <Counter icon="⚠️" color="#D97706" value={counters.parados} label="parados" />
+        </div>
 
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12 }}>🔍</span>
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar lead, telefone, processo…"
+        <div style={{ flex: 1 }} />
+
+        {/* Tabs segmented */}
+        <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3, flexShrink: 0 }}>
+          {TABS.map(t => {
+            const Icon = t.icon
+            const active = tab === t.id
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
                 style={{
-                  width: '100%', paddingLeft: 32, paddingRight: 12,
-                  height: 32, fontSize: 12, borderRadius: 8,
-                  border: '1px solid var(--border)', background: '#F8FAFC', outline: 'none',
-                }} />
-            </div>
-          </div>
-
-          <select value={tempoFilter} onChange={e => setTempoFilter(e.target.value)}
-            style={{ fontSize: 12, height: 32, padding: '0 28px 0 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', flexShrink: 0 }}>
-            <option value="todos">🌡 Todos</option>
-            {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-
-          <button onClick={() => setStagesModal(true)} title="Editar etapas"
-            style={{
-              background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
-              padding: '7px 12px', cursor: 'pointer', color: 'var(--text-secondary)',
-              display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-              fontSize: 12, fontWeight: 600, height: 32,
-            }}>
-            <Layers size={12} /> Etapas
-          </button>
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '5px 11px', border: 'none', cursor: 'pointer',
+                  background: active ? '#fff' : 'transparent',
+                  color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                  borderRadius: 6, fontSize: 12, fontWeight: 600,
+                  boxShadow: active ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                }}>
+                <Icon size={12} /> {t.label}
+                {typeof t.count === 'number' && t.count > 0 && (
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 10, background: '#FEE2E2', color: '#B91C1C', marginLeft: 2 }}>{t.count}</span>
+                )}
+              </button>
+            )
+          })}
         </div>
+
+        {/* Search */}
+        <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
+          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 11 }}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar lead…"
+            style={{
+              width: '100%', paddingLeft: 30, paddingRight: 12,
+              height: 32, fontSize: 12, borderRadius: 8,
+              border: '1px solid var(--border)', background: '#fff', outline: 'none',
+            }} />
+        </div>
+
+        {/* Filtro temperatura */}
+        <select value={tempoFilter} onChange={e => setTempoFilter(e.target.value)}
+          style={{ fontSize: 12, height: 32, padding: '0 28px 0 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', flexShrink: 0, minWidth: 90 }}>
+          <option value="todos">Todos</option>
+          {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+
+        {/* Etapas icon-only */}
+        <button onClick={() => setStagesModal(true)} title="Editar etapas"
+          style={{
+            background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
+            width: 32, height: 32, cursor: 'pointer', color: 'var(--text-secondary)',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+          <Layers size={13} />
+        </button>
+
+        {/* Novo Lead */}
+        <button onClick={openNewContact}
+          style={{
+            background: '#0F172A', color: '#fff', border: 'none',
+            borderRadius: 8, padding: '0 16px', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+            boxShadow: '0 2px 6px rgba(15,23,42,0.18)', flexShrink: 0, height: 32,
+          }}>
+          <Plus size={13} /> Novo Lead
+        </button>
       </div>
 
       {/* Funil selector quando >1 (dedupe ja aplicado) */}

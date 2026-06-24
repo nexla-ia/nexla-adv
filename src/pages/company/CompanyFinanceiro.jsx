@@ -1089,46 +1089,46 @@ function TabInadimplencia({ transactions, markPago, openEdit }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Titulo + subtitulo */}
+      {/* Titulo + subtitulo simples */}
       <div>
         <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>Aging — Contas a Receber Vencidas</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>Distribuição de inadimplência por tempo de vencimento</div>
       </div>
 
-      {/* 4 cards de bucket inline */}
+      {/* 4 cards limpos */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         {Object.entries(buckets).map(([k, b]) => (
-          <div key={k} className="nx-card" style={{ padding: '14px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          <div key={k} className="nx-card" style={{ padding: '16px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: b.total > 0 ? b.cor : '#CBD5E1' }} />
-              {b.label.replace('–', '–').replace('+', '+').toUpperCase()}
+              {b.label.replace(/–/g, '–').toUpperCase()} DIAS
             </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: b.total > 0 ? b.cor : 'var(--text-muted)', letterSpacing: '-0.01em' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: b.total > 0 ? b.cor : 'var(--text-muted)', letterSpacing: '-0.015em', lineHeight: 1 }}>
               {fmt(b.total)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-              {b.items.length} lançamento{b.items.length !== 1 ? 's' : ''}
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+              {b.items.length} lançamento(s)
             </div>
           </div>
         ))}
       </div>
 
-      {/* Estado vazio (verde) OU lista de items */}
+      {/* Estado vazio simples */}
       {!hasInadimp ? (
         <div style={{
-          background: 'linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%)',
+          background: '#F0FDF4',
           border: '1px solid #BBF7D0', borderRadius: 12,
-          padding: '40px 24px', textAlign: 'center',
+          padding: '44px 24px', textAlign: 'center',
         }}>
           <div style={{
-            width: 48, height: 48, borderRadius: '50%', background: '#fff',
-            border: '2px solid #BBF7D0',
+            width: 44, height: 44, borderRadius: '50%', background: '#fff',
+            border: '1px solid #BBF7D0',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: 14,
           }}>
-            <CheckCircle2 size={24} style={{ color: '#16A34A' }} />
+            <CheckCircle2 size={22} style={{ color: '#16A34A' }} strokeWidth={2.2} />
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#15803D', marginBottom: 4 }}>Sem inadimplência</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#15803D', marginBottom: 4 }}>Sem inadimplência</div>
           <div style={{ fontSize: 13, color: '#16A34A' }}>Todas as contas a receber estão em dia.</div>
         </div>
       ) : (
