@@ -1085,77 +1085,90 @@ function TabInadimplencia({ transactions, markPago, openEdit }) {
   }, [transactions, today])
 
   const total = Object.values(buckets).reduce((s, b) => s + b.total, 0)
-  const totalItems = Object.values(buckets).reduce((s, b) => s + b.items.length, 0)
-  const chartData = Object.values(buckets).map(b => ({ label: b.label, total: b.total, cor: b.cor }))
-
-  if (total === 0) {
-    return (
-      <div className="nx-card" style={{ padding: 40, textAlign: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-        <CheckCircle2 size={36} style={{ color: '#16A34A', marginBottom: 10 }} />
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#15803D' }}>Sem inadimplência! 🎉</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Nenhuma receita vencida no momento.</div>
-      </div>
-    )
-  }
+  const hasInadimp = total > 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-        <KPI title="Total em atraso" value={total} color={COR_DESPESA} icon={AlertCircle} />
-        <KPI title="Qtd lançamentos" value={totalItems} color="#D97706" raw />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Titulo + subtitulo */}
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>Aging — Contas a Receber Vencidas</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>Distribuição de inadimplência por tempo de vencimento</div>
       </div>
 
-      <div className="nx-card" style={{ padding: 16 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Inadimplência por faixa de atraso</div>
-        <ResponsiveContainer width="100%" height={Math.max(180, chartData.filter(d => d.total > 0).length * 50 + 60)}>
-          <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 30 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
-            <XAxis type="number" tickFormatter={fmtCompact} tick={{ fontSize: 11 }} />
-            <YAxis dataKey="label" type="category" tick={{ fontSize: 12 }} width={100} />
-            <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
-            <Bar dataKey="total" radius={[0, 6, 6, 0]}>
-              {chartData.map((d, i) => <Cell key={i} fill={d.cor} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {Object.entries(buckets).filter(([_, b]) => b.items.length > 0).map(([k, b]) => (
-        <div key={k} className="nx-card" style={{ padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.cor }} />
-              <strong style={{ fontSize: 13 }}>{b.label}</strong>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {b.items.length} lançamentos</span>
+      {/* 4 cards de bucket inline */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+        {Object.entries(buckets).map(([k, b]) => (
+          <div key={k} className="nx-card" style={{ padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: b.total > 0 ? b.cor : '#CBD5E1' }} />
+              {b.label.replace('–', '–').replace('+', '+').toUpperCase()}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: b.cor }}>{fmt(b.total)}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: b.total > 0 ? b.cor : 'var(--text-muted)', letterSpacing: '-0.01em' }}>
+              {fmt(b.total)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              {b.items.length} lançamento{b.items.length !== 1 ? 's' : ''}
+            </div>
           </div>
-          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-            <tbody>
-              {b.items.map(t => (
-                <tr key={t.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                  <td style={{ padding: '6px 8px' }}>
-                    <div style={{ fontWeight: 600 }}>{t.descricao}</div>
-                    {t.contato_nome && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.contato_nome}</div>}
-                  </td>
-                  <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDate(t.vencimento)}</td>
-                  <td style={{ padding: '6px 8px', fontWeight: 700, color: b.cor, whiteSpace: 'nowrap' }}>{t.dias}d atraso</td>
-                  <td style={{ padding: '6px 8px', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(Number(t.valor))}</td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>
-                    <button onClick={() => markPago(t)}
-                      style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>
-                      ✓ Recebido
-                    </button>
-                    <button onClick={() => openEdit(t)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: 3, cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                      <Pencil size={10} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        ))}
+      </div>
+
+      {/* Estado vazio (verde) OU lista de items */}
+      {!hasInadimp ? (
+        <div style={{
+          background: 'linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%)',
+          border: '1px solid #BBF7D0', borderRadius: 12,
+          padding: '40px 24px', textAlign: 'center',
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%', background: '#fff',
+            border: '2px solid #BBF7D0',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 14,
+          }}>
+            <CheckCircle2 size={24} style={{ color: '#16A34A' }} />
+          </div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#15803D', marginBottom: 4 }}>Sem inadimplência</div>
+          <div style={{ fontSize: 13, color: '#16A34A' }}>Todas as contas a receber estão em dia.</div>
         </div>
-      ))}
+      ) : (
+        Object.entries(buckets).filter(([_, b]) => b.items.length > 0).map(([k, b]) => (
+          <div key={k} className="nx-card" style={{ padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.cor }} />
+                <strong style={{ fontSize: 13 }}>{b.label}</strong>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {b.items.length} lançamentos</span>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: b.cor }}>{fmt(b.total)}</div>
+            </div>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <tbody>
+                {b.items.map(t => (
+                  <tr key={t.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '6px 8px' }}>
+                      <div style={{ fontWeight: 600 }}>{t.descricao}</div>
+                      {t.contato_nome && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.contato_nome}</div>}
+                    </td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDate(t.vencimento)}</td>
+                    <td style={{ padding: '6px 8px', fontWeight: 700, color: b.cor, whiteSpace: 'nowrap' }}>{t.dias}d atraso</td>
+                    <td style={{ padding: '6px 8px', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(Number(t.valor))}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>
+                      <button onClick={() => markPago(t)}
+                        style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>
+                        ✓ Recebido
+                      </button>
+                      <button onClick={() => openEdit(t)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: 3, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                        <Pencil size={10} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))
+      )}
     </div>
   )
 }
