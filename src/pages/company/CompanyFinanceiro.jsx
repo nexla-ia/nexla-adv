@@ -90,7 +90,7 @@ export default function CompanyFinanceiro() {
   const isAdmin = session?.user?.role === 'admin'
   const modules = session?.company?.modules || {}
   const moduleEnabled = modules.financeiro !== false
-  const [tab, setTab] = useState('a-receber')
+  const [tab, setTab] = useState('visao')
   const [loading, setLoading] = useState(true)
   const [categorias, setCategorias] = useState([])
   const [transactions, setTransactions] = useState([])
@@ -271,6 +271,7 @@ export default function CompanyFinanceiro() {
   const pendingDespesas = transactions.filter(t => t.tipo === 'despesa' && t.status === 'pendente').length
 
   const TABS = [
+    { id: 'visao',         label: 'Visão Geral',   icon: BarChart3,       color: '#0F172A' },
     { id: 'a-receber',     label: 'A Receber',     icon: ArrowUpCircle,   color: COR_RECEITA, count: pendingReceitas },
     { id: 'a-pagar',       label: 'A Pagar',       icon: ArrowDownCircle, color: COR_DESPESA, count: pendingDespesas },
     { id: 'fluxo',         label: 'Fluxo de Caixa',icon: TrendingUp,      color: '#2563EB' },
@@ -288,7 +289,9 @@ export default function CompanyFinanceiro() {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem' }}>Financeiro</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Honorários, despesas e fluxo do escritório</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {transactions.filter(t => monthKey(t.vencimento) === mesAtual).length} lançamentos · {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase())}
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -340,6 +343,7 @@ export default function CompanyFinanceiro() {
         <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Carregando…</div>
       ) : (
         <>
+          {tab === 'visao' && <TabVisaoGeral {...sharedProps} setTab={setTab} openNew={openNew} />}
           {tab === 'a-receber' && <TabLista tipo="receita" {...sharedProps} />}
           {tab === 'a-pagar' && <TabLista tipo="despesa" {...sharedProps} />}
           {tab === 'fluxo' && <TabFluxo {...sharedProps} />}
@@ -408,6 +412,232 @@ export default function CompanyFinanceiro() {
           <CheckCircle2 size={14} /> {toast.msg}
         </div>, document.body)}
     </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB: VISÃO GERAL
+// ════════════════════════════════════════════════════════════════════════════
+function TabVisaoGeral({ transactions, categorias, setTab, openNew }) {
+  const mesAtual = monthKey(todayISO())
+  const ano = new Date().getFullYear()
+
+  // YTD totals
+  const ytd = useMemo(() => {
+    let r = 0, d = 0
+    transactions.forEach(t => {
+      if (t.status === 'cancelado') return
+      if (!t.vencimento?.startsWith(String(ano))) return
+      const v = Number(t.valor || 0)
+      if (t.tipo === 'receita') r += v; else d += v
+    })
+    return { r, d, res: r - d }
+  }, [transactions, ano])
+
+  // Inadimplência (receita pendente vencida)
+  const inadimp = useMemo(() => {
+    const today = todayISO()
+    return transactions
+      .filter(t => t.tipo === 'receita' && t.status === 'pendente' && t.vencimento < today)
+      .reduce((s, t) => s + Number(t.valor || 0), 0)
+  }, [transactions])
+
+  // Mês atual
+  const mes = useMemo(() => {
+    let aR = 0, aP = 0
+    transactions.forEach(t => {
+      if (monthKey(t.vencimento) !== mesAtual) return
+      if (t.status !== 'pendente') return
+      const v = Number(t.valor || 0)
+      if (t.tipo === 'receita') aR += v; else aP += v
+    })
+    return { aR, aP }
+  }, [transactions, mesAtual])
+
+  // 6 meses pro chart
+  const chart6m = useMemo(() => {
+    const today = todayISO()
+    const arr = []
+    for (let i = -5; i <= 0; i++) {
+      const mk = monthKey(addMonthsISO(today, i))
+      let r = 0, d = 0, rR = 0, dR = 0
+      transactions.forEach(t => {
+        if (monthKey(t.vencimento) !== mk) return
+        if (t.status === 'cancelado') return
+        const v = Number(t.valor || 0)
+        if (t.tipo === 'receita') { r += v; if (t.status === 'pago') rR += v }
+        else { d += v; if (t.status === 'pago') dR += v }
+      })
+      arr.push({ mes: mk, mesLabel: monthLabel(mk), receita: r, despesa: d, saldoReal: rR - dR })
+    }
+    return arr
+  }, [transactions])
+
+  // Receitas por categoria (mês atual)
+  const recByCat = useMemo(() => {
+    const map = {}
+    transactions.forEach(t => {
+      if (t.tipo !== 'receita') return
+      if (t.status === 'cancelado') return
+      if (monthKey(t.vencimento) !== mesAtual) return
+      const cat = categorias.find(c => c.id === t.categoria_id)
+      const k = cat?.id || '_sem_'
+      if (!map[k]) map[k] = { nome: cat?.nome || 'Sem categoria', cor: cat?.cor || '#94A3B8', total: 0 }
+      map[k].total += Number(t.valor || 0)
+    })
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [transactions, categorias, mesAtual])
+  const recTotal = recByCat.reduce((s, c) => s + c.total, 0)
+
+  // Top clientes do mês (receitas pagas)
+  const topClientes = useMemo(() => {
+    const map = {}
+    transactions.forEach(t => {
+      if (t.tipo !== 'receita' || t.status !== 'pago') return
+      if (monthKey(t.vencimento) !== mesAtual) return
+      const k = t.contato_nome || 'Sem cliente'
+      map[k] = (map[k] || 0) + Number(t.valor || 0)
+    })
+    return Object.entries(map).map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total).slice(0, 5)
+  }, [transactions, mesAtual])
+
+  const KPI_YTD = [
+    { label: 'Receita YTD',    value: ytd.r,   color: COR_RECEITA, bg: '#F0FDF4', icon: TrendingUp },
+    { label: 'Despesa YTD',    value: ytd.d,   color: COR_DESPESA, bg: '#FEF2F2', icon: ArrowDownCircle },
+    { label: 'Resultado YTD',  value: ytd.res, color: ytd.res >= 0 ? COR_SALDO_POS : COR_DESPESA, bg: ytd.res >= 0 ? '#EFF6FF' : '#FEF2F2', icon: Wallet },
+    { label: 'Inadimplência',  value: inadimp, color: '#D97706', bg: '#FFFBEB', icon: AlertCircle },
+    { label: 'A Receber mês',  value: mes.aR,  color: COR_RECEITA, bg: '#F0FDF4', icon: ArrowUpCircle },
+    { label: 'A Pagar mês',    value: mes.aP,  color: COR_DESPESA, bg: '#FEF2F2', icon: ArrowDownCircle },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 6 KPIs em pastels */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+        {KPI_YTD.map(k => {
+          const Icon = k.icon
+          return (
+            <div key={k.label} style={{
+              background: k.bg, border: `1px solid ${k.color}22`,
+              borderRadius: 12, padding: '12px 14px', position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: k.color, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <Icon size={12} /> {k.label}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: k.color, fontFamily: 'var(--font-display)' }}>{fmt(k.value)}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Chart 6 meses Receita x Despesa */}
+      <div className="nx-card" style={{ padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Receita × Despesa</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Últimos 6 meses · previsto e realizado</div>
+          </div>
+          <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: COR_RECEITA, borderRadius: 2 }} /> Receita</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: COR_DESPESA, borderRadius: 2 }} /> Despesa</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#2563EB', borderRadius: 2 }} /> Saldo real</span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <ComposedChart data={chart6m}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+            <XAxis dataKey="mesLabel" tick={{ fontSize: 11 }} />
+            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
+            <Bar dataKey="receita" fill={COR_RECEITA} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="despesa" fill={COR_DESPESA} radius={[4, 4, 0, 0]} />
+            <Line type="monotone" dataKey="saldoReal" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Categoria + Top clientes lado a lado */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 14 }}>
+        <div className="nx-card" style={{ padding: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Receitas por categoria</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+            {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase())}
+          </div>
+          {recByCat.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Sem receitas este mês.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 14, alignItems: 'center' }}>
+              <ResponsiveContainer width={120} height={120}>
+                <PieChart>
+                  <Pie data={recByCat} dataKey="total" nameKey="nome" cx="50%" cy="50%" innerRadius={32} outerRadius={56} paddingAngle={2}>
+                    {recByCat.map((d, i) => <Cell key={i} fill={d.cor} />)}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {recByCat.map(c => {
+                  const pct = recTotal > 0 ? (c.total / recTotal) * 100 : 0
+                  return (
+                    <div key={c.nome}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: c.cor }} />
+                          <span style={{ fontWeight: 600 }}>{c.nome}</span>
+                        </span>
+                        <span style={{ fontWeight: 700, color: c.cor }}>{fmt(c.total)} <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 10 }}>{pct.toFixed(0)}%</span></span>
+                      </div>
+                      <div style={{ height: 3, background: '#F1F5F9', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: c.cor }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="nx-card" style={{ padding: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Top clientes · receita</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+            {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase())}
+          </div>
+          {topClientes.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Sem receitas pagas este mês.</div>
+          ) : topClientes.map((c, i) => (
+            <div key={c.nome} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i === topClientes.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
+              <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? '#16A34A' : '#F1F5F9', color: i === 0 ? '#fff' : 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{i + 1}</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
+              <span style={{ fontWeight: 700, color: COR_RECEITA, fontVariantNumeric: 'tabular-nums' }}>{fmt(c.total)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Acoes rapidas — pills coloridas */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <ActionPill label="+ Nova receita" color={COR_RECEITA} bg="#F0FDF4" onClick={() => openNew('receita')} />
+        <ActionPill label="+ Nova despesa" color={COR_DESPESA} bg="#FEF2F2" onClick={() => openNew('despesa')} />
+        <ActionPill label="Fluxo de caixa" color="#2563EB" bg="#EFF6FF" onClick={() => setTab('fluxo')} />
+        <ActionPill label="DRE" color="#7C3AED" bg="#F5F3FF" onClick={() => setTab('dre')} />
+        <ActionPill label="Inadimplência" color="#D97706" bg="#FFFBEB" onClick={() => setTab('inadimplencia')} />
+      </div>
+    </div>
+  )
+}
+
+function ActionPill({ label, color, bg, onClick }) {
+  return (
+    <button onClick={onClick}
+      style={{
+        background: bg, color, border: `1px solid ${color}33`,
+        borderRadius: 999, padding: '8px 18px', fontSize: 12, fontWeight: 700,
+        cursor: 'pointer', transition: 'all 0.15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#fff' }}
+      onMouseLeave={e => { e.currentTarget.style.background = bg; e.currentTarget.style.color = color }}>
+      {label}
+    </button>
   )
 }
 
