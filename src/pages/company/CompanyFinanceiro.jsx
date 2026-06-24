@@ -773,63 +773,110 @@ function TabLista({ tipo, transactions, categorias, openEdit, markPago, handleDe
         </div>
       </div>
 
-      <div className="nx-card" style={{ overflowX: 'auto' }}>
+      {/* Lista de lancamentos — estilo row card ao inves de table */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum lançamento neste filtro.</div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>
-              <tr>
-                <th style={th}>Descrição</th>
-                <th style={th}>Contato</th>
-                <th style={th}>Categoria</th>
-                <th style={th}>Forma</th>
-                <th style={th}>Vencimento</th>
-                <th style={th}>Valor</th>
-                <th style={th}>Status</th>
-                <th style={th}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(t => {
-                const cat = catMap[t.categoria_id]
-                const vencido = t.status === 'pendente' && t.vencimento < todayISO()
-                return (
-                  <tr key={t.id} style={{ borderBottom: '1px solid #F1F5F9', background: vencido ? '#FFF7ED' : 'transparent' }}>
-                    <td style={td}>
-                      <div style={{ fontWeight: 600 }}>{t.descricao}</div>
-                      {t.processo_numero && <div style={{ fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}><Scale size={9} /> {t.processo_numero}</div>}
-                      {(t.recorrente || t.grupo_recorrencia) && <span style={{ fontSize: 9, color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2 }}><Repeat size={9}/> recorrente</span>}
-                    </td>
-                    <td style={td}>{t.contato_nome || '—'}</td>
-                    <td style={td}>{cat ? <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: (cat.cor || '#94A3B8') + '22', color: cat.cor || '#475569', fontWeight: 600 }}>{cat.nome}</span> : '—'}</td>
-                    <td style={td}>{t.forma_pagamento || '—'}</td>
-                    <td style={td}>
-                      <div style={{ color: vencido ? '#D97706' : 'inherit', fontWeight: vencido ? 700 : 400 }}>{fmtDate(t.vencimento)}</div>
-                      {vencido && <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: '#D97706', padding: '1px 6px', borderRadius: 3 }}>VENCIDO</span>}
-                    </td>
-                    <td style={{ ...td, fontWeight: 700, color: corPrincipal }}>{fmt(Number(t.valor))}</td>
-                    <td style={td}><StatusBadge status={t.status} tipo={t.tipo} /></td>
-                    <td style={{ ...td, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      {t.status === 'pendente' && (
-                        <button onClick={() => markPago(t)} title={tipo === 'receita' ? 'Marcar como recebido' : 'Marcar como pago'}
-                          style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>✓</button>
-                      )}
-                      <button onClick={() => openEdit(t)} title="Editar"
-                        style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: 4, cursor: 'pointer', color: 'var(--text-secondary)', marginRight: 4 }}>
-                        <Pencil size={11} />
-                      </button>
-                      <button onClick={() => handleDelete(t)} title="Excluir"
-                        style={{ background: 'none', border: '1px solid #FECACA', borderRadius: 6, padding: 4, cursor: 'pointer', color: '#DC2626' }}>
-                        <Trash2 size={11} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
+          <div className="nx-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum lançamento neste filtro.</div>
+        ) : filtered.map(t => {
+          const cat = catMap[t.categoria_id]
+          const vencido = t.status === 'pendente' && t.vencimento < todayISO()
+          // Bolinha colorida: verde p/ receita, vermelha p/ despesa
+          const dotColor = t.tipo === 'receita' ? COR_RECEITA : COR_DESPESA
+          return (
+            <div key={t.id} className="nx-card"
+              style={{
+                padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
+                background: vencido ? '#FFF7ED' : '#fff',
+                borderLeft: vencido ? '3px solid #D97706' : undefined,
+              }}>
+              {/* Bolinha colorida */}
+              <span style={{
+                width: 10, height: 10, borderRadius: '50%',
+                background: dotColor, flexShrink: 0,
+              }} />
+
+              {/* Descricao + tags inline */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {t.descricao}
+                  {(t.recorrente || t.grupo_recorrencia) && (
+                    <span title="Recorrente" style={{ fontSize: 9, color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <Repeat size={9}/>
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                  {t.contato_nome && <span>{t.contato_nome}</span>}
+                  {cat && <>
+                    {t.contato_nome && <span style={{ opacity: 0.5 }}>•</span>}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: cat.cor || '#475569', fontWeight: 600 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: cat.cor || '#94A3B8' }} />
+                      {cat.nome}
+                    </span>
+                  </>}
+                  {t.centro_custo && <>
+                    <span style={{ opacity: 0.5 }}>•</span>
+                    <span>{t.centro_custo}</span>
+                  </>}
+                  {t.forma_pagamento && (
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 4, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', marginLeft: 2 }}>
+                      {t.forma_pagamento.toUpperCase()}
+                    </span>
+                  )}
+                  {t.processo_numero && <>
+                    <span style={{ opacity: 0.5 }}>•</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Scale size={9} /> {t.processo_numero}
+                    </span>
+                  </>}
+                </div>
+              </div>
+
+              {/* Data + parcela */}
+              <div style={{ textAlign: 'right', minWidth: 90 }}>
+                <div style={{ fontSize: 12, color: vencido ? '#D97706' : 'var(--text-secondary)', fontWeight: vencido ? 700 : 500 }}>
+                  {fmtDate(t.vencimento)}
+                </div>
+                {t.parcela_total > 1 && (
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {t.parcela_num}/{t.parcela_total}
+                  </div>
+                )}
+                {vencido && (
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#D97706', marginTop: 2 }}>VENCIDO</div>
+                )}
+              </div>
+
+              {/* Valor */}
+              <div style={{ fontWeight: 700, color: corPrincipal, fontSize: 14, minWidth: 90, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {fmt(Number(t.valor))}
+              </div>
+
+              {/* Status badge */}
+              <div style={{ minWidth: 86, textAlign: 'center' }}>
+                <StatusBadge status={t.status} tipo={t.tipo} />
+              </div>
+
+              {/* Acoes em pilulas coloridas */}
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                {t.status === 'pendente' && (
+                  <button onClick={() => markPago(t)} title={tipo === 'receita' ? 'Marcar como recebido' : 'Marcar como pago'}
+                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    ✓
+                  </button>
+                )}
+                <button onClick={() => openEdit(t)} title="Editar"
+                  style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: 7, cursor: 'pointer', color: '#2563EB', display: 'inline-flex' }}>
+                  <Pencil size={12} />
+                </button>
+                <button onClick={() => handleDelete(t)} title="Excluir"
+                  style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 7, cursor: 'pointer', color: '#DC2626', display: 'inline-flex' }}>
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
