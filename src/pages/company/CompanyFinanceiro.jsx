@@ -956,78 +956,141 @@ function TabDRE({ transactions, categorias }) {
   const totalReceitas = porCategoria.filter(c => c.tipo === 'receita').reduce((s, c) => s + c.total, 0)
   const totalDespesas = porCategoria.filter(c => c.tipo === 'despesa').reduce((s, c) => s + c.total, 0)
 
+  const resColor = totais.resultado >= 0 ? COR_SALDO_POS : COR_DESPESA
+  const margColor = totais.margem >= 0 ? COR_SALDO_POS : COR_DESPESA
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="nx-card" style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => setAno(a => a - 1)} className="nx-btn-ghost" style={{ fontSize: 12 }}>
-          <ChevronLeft size={14} /> {ano - 1}
-        </button>
-        <div style={{ fontWeight: 700, fontSize: 18 }}>{ano}</div>
-        <button onClick={() => setAno(a => a + 1)} className="nx-btn-ghost" style={{ fontSize: 12 }}>
-          {ano + 1} <ChevronRight size={14} />
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-        <KPI title="Receitas do ano" value={totais.receitas} color={COR_RECEITA} icon={ArrowUpCircle} />
-        <KPI title="Despesas do ano" value={totais.despesas} color={COR_DESPESA} icon={ArrowDownCircle} />
-        <KPI title="Resultado" value={totais.resultado} color={totais.resultado >= 0 ? COR_SALDO_POS : COR_SALDO_NEG} icon={TrendingUp} />
-        <div className="nx-card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Margem</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: totais.margem >= 0 ? COR_SALDO_POS : COR_SALDO_NEG, marginTop: 4 }}>
-            {totais.margem.toFixed(1)}%
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Titulo + ano navegavel */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Demonstração do Resultado do Exercício</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Receitas · Despesas · Resultado · Margem</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setAno(a => a - 1)}
+            style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ChevronLeft size={14} />
+          </button>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: 'var(--text-primary)', minWidth: 60, textAlign: 'center' }}>{ano}</div>
+          <button onClick={() => setAno(a => a + 1)}
+            style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ChevronRight size={14} />
+          </button>
         </div>
       </div>
 
-      <div className="nx-card" style={{ padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <BarChart3 size={16} style={{ color: '#7C3AED' }} />
-          <div style={{ fontWeight: 700, fontSize: 14 }}>DRE — {ano}</div>
-        </div>
+      {/* 4 KPIs INLINE (sem cards) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24, padding: '4px 8px' }}>
+        <InlineKPI label={`Receitas ${ano}`} value={fmt(totais.receitas)} color={COR_RECEITA} />
+        <InlineKPI label={`Despesas ${ano}`} value={fmt(totais.despesas)} color={COR_DESPESA} />
+        <InlineKPI label={`Resultado ${ano}`} value={fmt(totais.resultado)} color={resColor} />
+        <InlineKPI label={`Margem ${ano}`} value={`${totais.margem.toFixed(1)}%`} color={margColor} />
+      </div>
+
+      {/* Chart sem header (titulo ja esta acima) */}
+      <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 12px 8px' }}>
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={mensal}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis dataKey="mesLabel" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+            <XAxis dataKey="mesLabel" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
             <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12 }} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="receita" name="Receita" fill={COR_RECEITA} />
-            <Bar dataKey="despesa" name="Despesa" fill={COR_DESPESA} />
-            <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Bar dataKey="receita" name="Receita" fill={COR_RECEITA} radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="despesa" name="Despesa" fill={COR_DESPESA} radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3, fill: '#2563EB' }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
+      {/* 2 paineis side-by-side com headers '+' */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 14 }}>
-        <CategoriaPanel title="Receitas por categoria" data={porCategoria.filter(c => c.tipo === 'receita').sort((a, b) => b.total - a.total)} total={totalReceitas} corPadrao={COR_RECEITA} />
-        <CategoriaPanel title="Despesas por categoria" data={porCategoria.filter(c => c.tipo === 'despesa').sort((a, b) => b.total - a.total)} total={totalDespesas} corPadrao={COR_DESPESA} />
+        <DREPanel title="Receitas por Categoria" data={porCategoria.filter(c => c.tipo === 'receita').sort((a, b) => b.total - a.total)} total={totalReceitas} corHeader={COR_RECEITA} />
+        <DREPanel title="Despesas por Categoria" data={porCategoria.filter(c => c.tipo === 'despesa').sort((a, b) => b.total - a.total)} total={totalDespesas} corHeader={COR_DESPESA} />
       </div>
 
+      {/* Tabela mensal */}
       <div className="nx-card" style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead style={{ background: '#F8FAFC' }}>
-            <tr>
-              <th style={th}>Mês</th>
-              <th style={th}>Receita</th>
-              <th style={th}>Despesa</th>
-              <th style={th}>Resultado</th>
-              <th style={th}>Margem</th>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <th style={{ ...th, padding: '12px 16px' }}>Mês</th>
+              <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>Receitas</th>
+              <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>Despesas</th>
+              <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>Resultado</th>
+              <th style={{ ...th, padding: '12px 16px', textAlign: 'right' }}>Margem</th>
             </tr>
           </thead>
           <tbody>
-            {mensal.map(m => (
-              <tr key={m.mes} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                <td style={td}>{m.mesLabel}</td>
-                <td style={{ ...td, color: COR_RECEITA }}>{fmt(m.receita)}</td>
-                <td style={{ ...td, color: COR_DESPESA }}>{fmt(m.despesa)}</td>
-                <td style={{ ...td, fontWeight: 700, color: m.resultado >= 0 ? COR_SALDO_POS : COR_SALDO_NEG }}>{fmt(m.resultado)}</td>
-                <td style={{ ...td, color: m.margem >= 0 ? COR_SALDO_POS : COR_SALDO_NEG }}>{m.margem.toFixed(1)}%</td>
-              </tr>
-            ))}
+            {mensal.map(m => {
+              const isAtual = m.mes === monthKey(todayISO())
+              const isEmpty = m.receita === 0 && m.despesa === 0
+              return (
+                <tr key={m.mes} style={{ borderBottom: '1px solid #F8FAFC', background: isAtual ? '#EFF6FF' : 'transparent' }}>
+                  <td style={{ padding: '12px 16px', fontWeight: isAtual ? 700 : 500, color: isAtual ? '#2563EB' : 'var(--text-primary)' }}>
+                    {m.mesLabel.split('/')[0].charAt(0).toUpperCase() + m.mesLabel.split('/')[0].slice(1)}
+                    {isAtual && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 10, background: '#2563EB', color: '#fff', marginLeft: 6 }}>Atual</span>}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: isEmpty ? 'var(--text-muted)' : COR_RECEITA, fontWeight: isEmpty ? 400 : 600 }}>
+                    {isEmpty ? '—' : fmt(m.receita)}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: isEmpty ? 'var(--text-muted)' : COR_DESPESA, fontWeight: isEmpty ? 400 : 600 }}>
+                    {isEmpty ? '—' : fmt(m.despesa)}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: isEmpty ? 'var(--text-muted)' : (m.resultado >= 0 ? COR_SALDO_POS : COR_DESPESA) }}>
+                    {isEmpty ? '—' : fmt(m.resultado)}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: isEmpty ? 'var(--text-muted)' : (m.margem >= 0 ? COR_SALDO_POS : COR_DESPESA) }}>
+                    {isEmpty ? '—' : `${m.margem.toFixed(1)}%`}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function InlineKPI({ label, value, color }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color, letterSpacing: '-0.01em', lineHeight: 1 }}>{value}</div>
+    </div>
+  )
+}
+
+function DREPanel({ title, data, total, corHeader }) {
+  return (
+    <div className="nx-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: corHeader }}>
+          <span style={{ fontSize: 14 }}>+</span> {title}
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 13, color: corHeader, fontVariantNumeric: 'tabular-nums' }}>{fmt(total)}</div>
+      </div>
+      {data.length === 0 ? (
+        <div style={{ padding: 18, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Sem dados.</div>
+      ) : data.map(c => {
+        const pct = total > 0 ? (c.total / total) * 100 : 0
+        return (
+          <div key={c.nome} style={{ padding: '10px 16px', borderBottom: '1px solid #F8FAFC', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.cor || corHeader }} />
+                <span style={{ fontWeight: 600 }}>{c.nome}</span>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontWeight: 700, color: c.cor || corHeader, fontVariantNumeric: 'tabular-nums' }}>{fmt(c.total)}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{pct.toFixed(0)}%</span>
+              </span>
+            </div>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, height: 2, width: `${pct}%`, background: c.cor || corHeader, opacity: 0.65 }} />
+          </div>
+        )
+      })}
     </div>
   )
 }
