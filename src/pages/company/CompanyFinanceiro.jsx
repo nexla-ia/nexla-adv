@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
-  Wallet, Plus, X, Trash2, Pencil, Calendar, FileText,
-  TrendingUp, ArrowUpCircle, ArrowDownCircle, AlertCircle, CheckCircle2,
+  Wallet, Plus, X, Trash2, Pencil, Calendar, FileText, Clock,
+  TrendingUp, ArrowUpCircle, ArrowDownCircle, AlertCircle, AlertTriangle, CheckCircle2,
   ChevronLeft, ChevronRight, ChevronDown, PieChart as PieIcon, BarChart3,
   FileBarChart, Scale, Repeat,
 } from 'lucide-react'
@@ -1062,10 +1062,10 @@ function TabInadimplencia({ transactions, markPago, openEdit }) {
   const today = todayISO()
   const buckets = useMemo(() => {
     const b = {
-      '1-30':  { label: '1–30 dias',  total: 0, items: [], cor: '#FBBF24' },
-      '31-60': { label: '31–60 dias', total: 0, items: [], cor: '#F97316' },
-      '61-90': { label: '61–90 dias', total: 0, items: [], cor: '#DC2626' },
-      '90+':   { label: '+90 dias',   total: 0, items: [], cor: '#7C2D12' },
+      '1-30':  { label: '1–30 dias',  total: 0, items: [], cor: '#D97706', bg: '#FFFBEB', icon: Clock,         severity: 'recente' },
+      '31-60': { label: '31–60 dias', total: 0, items: [], cor: '#EA580C', bg: '#FFF7ED', icon: Calendar,      severity: 'atenção' },
+      '61-90': { label: '61–90 dias', total: 0, items: [], cor: '#DC2626', bg: '#FEF2F2', icon: AlertTriangle, severity: 'risco' },
+      '90+':   { label: '+90 dias',   total: 0, items: [], cor: '#7F1D1D', bg: '#FEF2F2', icon: AlertCircle,   severity: 'crítico' },
     }
     transactions.forEach(t => {
       if (t.tipo !== 'receita' || t.status !== 'pendente') return
@@ -1095,40 +1095,104 @@ function TabInadimplencia({ transactions, markPago, openEdit }) {
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>Distribuição de inadimplência por tempo de vencimento</div>
       </div>
 
-      {/* 4 cards limpos */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {Object.entries(buckets).map(([k, b]) => {
+      {/* 4 cards "Severity Arc" */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+        {Object.entries(buckets).map(([k, b], idx) => {
+          const Icon = b.icon
           const active = b.total > 0
           return (
-            <div key={k} className="nx-card" style={{ padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
-              {/* Faixa de cor no topo quando ativo */}
-              {active && (
-                <div style={{
-                  position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                  background: b.cor,
-                }} />
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: active ? b.cor : '#CBD5E1' }} />
-                <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  {b.label.toUpperCase()}
-                </span>
-              </div>
+            <div key={k}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                background: active ? b.bg : '#fff',
+                border: `1px solid ${active ? b.cor + '33' : 'var(--border)'}`,
+                borderRadius: 12, padding: '16px 18px 14px 22px',
+                animation: `aging-card-in 0.4s ease ${idx * 0.06}s both`,
+                transition: 'transform 0.18s, box-shadow 0.18s, border-color 0.18s',
+                cursor: 'default',
+                boxShadow: active ? `0 4px 14px -6px ${b.cor}55` : '0 1px 2px rgba(0,0,0,0.03)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = active
+                  ? `0 10px 24px -8px ${b.cor}66`
+                  : '0 4px 12px rgba(0,0,0,0.06)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = active
+                  ? `0 4px 14px -6px ${b.cor}55`
+                  : '0 1px 2px rgba(0,0,0,0.03)'
+              }}>
+              {/* Barra vertical de severidade na esquerda */}
               <div style={{
-                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
-                color: active ? b.cor : 'var(--text-muted)',
-                letterSpacing: '-0.015em', lineHeight: 1,
+                position: 'absolute', top: 0, bottom: 0, left: 0, width: 4,
+                background: active
+                  ? `linear-gradient(180deg, ${b.cor} 0%, ${b.cor}99 100%)`
+                  : '#E2E8F0',
+              }} />
+
+              {/* Header: icone em chip + label + severity badge */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: 7,
+                    background: active ? '#fff' : '#F1F5F9',
+                    border: active ? `1px solid ${b.cor}33` : '1px solid transparent',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    color: active ? b.cor : '#94A3B8',
+                  }}>
+                    <Icon size={12} strokeWidth={2.2} />
+                  </div>
+                  <span style={{
+                    fontSize: 10.5, fontWeight: 700,
+                    color: active ? b.cor : 'var(--text-muted)',
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                  }}>
+                    {b.label.toUpperCase()}
+                  </span>
+                </div>
+                {active && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 800,
+                    padding: '2px 7px', borderRadius: 4,
+                    background: '#fff', color: b.cor,
+                    border: `1px solid ${b.cor}44`,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}>
+                    {b.severity}
+                  </span>
+                )}
+              </div>
+
+              {/* Big number — monospaced feeling com tabular-nums */}
+              <div style={{
+                fontFamily: 'var(--font-display)', fontWeight: 800,
+                fontSize: 26,
+                color: active ? b.cor : '#94A3B8',
+                letterSpacing: '-0.025em', lineHeight: 1,
                 fontVariantNumeric: 'tabular-nums',
+                marginBottom: 8,
               }}>
                 {fmt(b.total)}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+
+              {/* Footer com qtd lançamentos */}
+              <div style={{
+                fontSize: 11, color: active ? b.cor : 'var(--text-muted)',
+                opacity: active ? 0.85 : 1, fontWeight: active ? 600 : 500,
+              }}>
                 {b.items.length} {b.items.length === 1 ? 'lançamento' : 'lançamentos'}
               </div>
             </div>
           )
         })}
       </div>
+
+      <style>{`@keyframes aging-card-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }`}</style>
 
       {/* Estado vazio simples */}
       {!hasInadimp ? (
