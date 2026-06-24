@@ -278,30 +278,39 @@ export default function CompanyCRM() {
     lists, setLists, activeList, setActiveList,
   }
 
+  // Dedupe funis com mesmo nome (bug que apareceu antes)
+  const uniqueFunnels = useMemo(() => {
+    const seen = new Set()
+    return funnels.filter(f => {
+      if (seen.has(f.nome)) return false
+      seen.add(f.nome); return true
+    })
+  }, [funnels])
+
   return (
     <div style={{ padding: '1.25rem', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header em barra unica estilo screenshot */}
-      <div className="nx-card" style={{ padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-        {/* Logo + titulo + counters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 8, background: '#0F172A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Briefcase size={18} />
+      {/* Header em barra unica — tudo compacto numa linha */}
+      <div className="nx-card" style={{ padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'nowrap', overflowX: 'auto' }}>
+        {/* Logo + titulo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#0F172A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Briefcase size={16} />
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--text-primary)', lineHeight: 1 }}>CRM</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Pipeline de clientes</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--text-primary)', lineHeight: 1 }}>CRM</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Pipeline de clientes</div>
           </div>
         </div>
 
-        {/* Counters inline */}
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        {/* Counters inline compactos */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
           <Counter icon="📋" color="#2563EB" value={counters.leads} label="leads" />
           <Counter icon="🔥" color="#DC2626" value={counters.quentes} label="quentes" />
           <Counter icon="⚠️" color="#D97706" value={counters.parados} label="parados" />
         </div>
 
-        {/* Tabs no meio */}
-        <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3, marginLeft: 'auto' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3, marginLeft: 'auto', flexShrink: 0 }}>
           {TABS.map(t => {
             const Icon = t.icon
             const active = tab === t.id
@@ -309,13 +318,13 @@ export default function CompanyCRM() {
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '6px 12px', border: 'none', cursor: 'pointer',
+                  padding: '5px 11px', border: 'none', cursor: 'pointer',
                   background: active ? '#fff' : 'transparent',
                   color: active ? 'var(--text-primary)' : 'var(--text-muted)',
                   borderRadius: 6, fontSize: 12, fontWeight: 600,
                   boxShadow: active ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
                 }}>
-                <Icon size={13} /> {t.label}
+                <Icon size={12} /> {t.label}
                 {typeof t.count === 'number' && t.count > 0 && (
                   <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 10, background: '#FEE2E2', color: '#B91C1C', marginLeft: 2 }}>{t.count}</span>
                 )}
@@ -325,40 +334,42 @@ export default function CompanyCRM() {
         </div>
 
         {/* Search */}
-        <div style={{ position: 'relative', minWidth: 200 }}>
-          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>🔍</span>
+        <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
+          <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 11 }}>🔍</span>
           <input className="nx-input" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar lead…"
-            style={{ paddingLeft: 30, fontSize: 12, height: 34 }} />
+            style={{ paddingLeft: 26, fontSize: 12, height: 32 }} />
         </div>
 
         {/* Filtro temperatura */}
         <select className="nx-select" value={tempoFilter} onChange={e => setTempoFilter(e.target.value)}
-          style={{ fontSize: 12, width: 'auto', minWidth: 110, height: 34 }}>
+          style={{ fontSize: 12, width: 90, height: 32, flexShrink: 0 }}>
           <option value="todos">Todos</option>
-          {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}s</option>)}
+          {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
 
-        {/* Botao etapas + novo lead */}
+        {/* Etapas (icon-only pra economizar espaco) */}
         <button onClick={() => setStagesModal(true)} title="Editar etapas"
-          style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: 'var(--text-secondary)', height: 34, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-          <Layers size={13} /> Etapas
+          style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text-secondary)', height: 32, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0 }}>
+          <Layers size={12} /> Etapas
         </button>
+
+        {/* Novo Lead */}
         <button onClick={openNewContact}
           style={{
             background: '#0F172A', color: '#fff', border: 'none',
-            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
-            boxShadow: '0 1px 3px rgba(15,23,42,0.2)',
+            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
+            boxShadow: '0 1px 3px rgba(15,23,42,0.2)', flexShrink: 0,
           }}>
-          <Plus size={14} /> Novo Lead
+          <Plus size={13} /> Novo Lead
         </button>
       </div>
 
-      {/* Funil selector quando >1 */}
-      {funnels.length > 1 && (
+      {/* Funil selector quando >1 (dedupe ja aplicado) */}
+      {uniqueFunnels.length > 1 && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-          {funnels.map(f => {
+          {uniqueFunnels.map(f => {
             const active = activeFunnel === f.id
             return (
               <button key={f.id} onClick={() => setActiveFunnel(f.id)}
@@ -464,7 +475,7 @@ function BoardKanban({ activeStages, byStage, moveContact, setSelectedContact, s
   }
 
   return (
-    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, flex: 1 }}>
+    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
       {activeStages.map(stage => {
         const cards = byStage[stage.id] || []
         const hover = dragOverStage === stage.id
@@ -480,12 +491,13 @@ function BoardKanban({ activeStages, byStage, moveContact, setSelectedContact, s
               setDragId(null); setDragOverStage(null)
             }}
             style={{
-              minWidth: 260, width: 260, flexShrink: 0,
+              minWidth: 240, width: 240, flexShrink: 0,
               background: '#fff',
               border: `1px solid ${hover ? '#2563EB' : 'var(--border)'}`,
               boxShadow: hover ? '0 2px 8px rgba(37,99,235,0.15)' : '0 1px 2px rgba(0,0,0,0.04)',
               borderRadius: 10, display: 'flex', flexDirection: 'column',
               transition: 'all 0.15s',
+              alignSelf: 'flex-start', /* nao estica vertical */
             }}>
             {/* Header coluna */}
             <div style={{
@@ -506,8 +518,9 @@ function BoardKanban({ activeStages, byStage, moveContact, setSelectedContact, s
             <div style={{ padding: '0 12px 8px', fontSize: 10, color: 'var(--text-muted)' }}>
               alerta após {stage.alerta_dias || 7}d
             </div>
-            {/* Cards */}
-            <div style={{ padding: '0 8px 8px', display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', maxHeight: 'calc(100vh - 320px)', minHeight: 40 }}>
+            {/* Cards — altura natural quando vazio, scroll se passar de 8 cards */}
+            {cards.length > 0 && (
+            <div style={{ padding: '0 8px 4px', display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', maxHeight: 'calc(100vh - 320px)' }}>
               {cards.map(c => {
                 const tempo = TEMPERATURAS.find(t => t.value === c.temperatura)
                 const TempIcon = tempo?.icon
@@ -563,6 +576,7 @@ function BoardKanban({ activeStages, byStage, moveContact, setSelectedContact, s
                 )
               })}
             </div>
+            )}
             {/* Rodape: + Adicionar lead */}
             <button onClick={() => addToStage(stage.id)}
               style={{
