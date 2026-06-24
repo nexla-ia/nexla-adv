@@ -100,6 +100,11 @@ export default function CompanyAdmin() {
     return () => clearInterval(t)
   }, [evolutionUrl, instance, apiKey])
 
+  // Quando conectar, limpa o QR (e fecha o modal automaticamente)
+  useEffect(() => {
+    if (connState === 'open' && qrBase64) setQrBase64(null)
+  }, [connState])
+
   async function handleGenerateQR() {
     if (!evolutionUrl || !instance || !apiKey) {
       setQrErr('Configuração de Evolution incompleta. Contate o administrador.'); return
@@ -550,22 +555,58 @@ export default function CompanyAdmin() {
                 </div>
               )}
 
-              {qrBase64 && connState !== 'open' && (
-                <div style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                  padding: '16px', background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 10,
-                }}>
-                  <img src={qrBase64} alt="QR Code WhatsApp"
-                    style={{ width: 240, height: 240, borderRadius: 8, background: '#fff', padding: 8 }} />
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', maxWidth: 380, lineHeight: 1.5 }}>
-                    Abra o <strong>WhatsApp</strong> no celular → <strong>Aparelhos conectados</strong> → <strong>Conectar um aparelho</strong> e escaneie o código.
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal QR Code: abre quando ha base64 + ainda nao conectado, fecha sozinho ao conectar */}
+      {qrBase64 && connState !== 'open' && createPortal(
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem',
+          animation: 'qr-modal-in 0.2s ease',
+        }} onClick={() => setQrBase64(null)}>
+          <div className="nx-card"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 380, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', position: 'relative' }}>
+            <button onClick={() => setQrBase64(null)}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#25D36622', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <QrCode size={16} />
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>Conectar WhatsApp</div>
+            </div>
+            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'flex' }}>
+              <img src={qrBase64} alt="QR Code WhatsApp"
+                style={{ width: 260, height: 260, display: 'block' }} />
+            </div>
+            <div style={{
+              fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.55,
+              padding: '8px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid var(--border)',
+            }}>
+              No celular: abra o <strong>WhatsApp</strong> → menu <strong>⋮</strong> → <strong>Aparelhos conectados</strong> → <strong>Conectar um aparelho</strong> e escaneie o código acima.
+            </div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontSize: 11, fontWeight: 600, color: '#D97706',
+              background: '#FFFBEB', border: '1px solid #FDE68A',
+              borderRadius: 20, padding: '4px 12px',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#D97706', animation: 'qr-pulse 1.2s infinite' }} />
+              Aguardando você escanear…
+            </div>
+            <style>{`
+              @keyframes qr-modal-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+              @keyframes qr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+            `}</style>
+          </div>
+        </div>, document.body
+      )}
 
       {/* Setores */}
       <div className="page-body">
