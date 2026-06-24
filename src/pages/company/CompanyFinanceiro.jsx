@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import {
   Wallet, Plus, X, Trash2, Pencil, Calendar, FileText,
   TrendingUp, ArrowUpCircle, ArrowDownCircle, AlertCircle, CheckCircle2,
-  ChevronLeft, ChevronRight, PieChart as PieIcon, BarChart3,
+  ChevronLeft, ChevronRight, ChevronDown, PieChart as PieIcon, BarChart3,
   FileBarChart, Scale, Repeat,
 } from 'lucide-react'
 import {
@@ -294,14 +294,9 @@ export default function CompanyFinanceiro() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => openNew('receita')} className="nx-btn-primary" style={{ fontSize: 12, background: COR_RECEITA, borderColor: COR_RECEITA }}>
-            <ArrowUpCircle size={13} /> Receita
-          </button>
-          <button onClick={() => openNew('despesa')} className="nx-btn-primary" style={{ fontSize: 12, background: COR_DESPESA, borderColor: COR_DESPESA }}>
-            <ArrowDownCircle size={13} /> Despesa
-          </button>
-        </div>
+        <button onClick={() => openNew('receita')} className="nx-btn-primary" style={{ fontSize: 12 }}>
+          <Plus size={13} /> Novo lançamento
+        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 16 }}>
@@ -319,21 +314,14 @@ export default function CompanyFinanceiro() {
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                padding: '10px 16px', fontSize: 13, fontWeight: 600,
-                color: active ? t.color : 'var(--text-secondary)',
-                borderBottom: active ? `2px solid ${t.color}` : '2px solid transparent',
-                display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
+                padding: '10px 18px', fontSize: 13, fontWeight: active ? 700 : 500,
+                color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                borderBottom: active ? '2px solid #0F172A' : '2px solid transparent',
+                display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                transition: 'all 0.15s',
               }}>
-              <Icon size={14} /> {t.label}
-              {typeof t.count === 'number' && t.count > 0 && (
-                <span style={{
-                  fontSize: 10, fontWeight: 700, minWidth: 18, height: 18,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: 20, padding: '0 6px',
-                  background: active ? t.color : '#E2E8F0',
-                  color: active ? '#fff' : 'var(--text-muted)',
-                }}>{t.count}</span>
-              )}
+              {t.id === 'visao' && <Icon size={12} />}
+              {t.label}
             </button>
           )
         })}
@@ -626,6 +614,26 @@ function TabVisaoGeral({ transactions, categorias, setTab, openNew }) {
   )
 }
 
+// Pill de filtro: visual de chip claro com texto + chevron, esconde o <select> nativo por cima
+const hiddenSelect = {
+  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%',
+}
+function FilterPill({ icon: Icon, value, children }) {
+  return (
+    <div style={{
+      position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6,
+      background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
+      padding: '8px 12px', fontSize: 12, color: 'var(--text-secondary)',
+      cursor: 'pointer', height: 36,
+    }}>
+      {Icon && <Icon size={12} style={{ color: 'var(--text-muted)' }} />}
+      <span>{value}</span>
+      <ChevronDown size={11} style={{ color: 'var(--text-muted)', marginLeft: 2 }} />
+      {children}
+    </div>
+  )
+}
+
 function ActionPill({ label, color, bg, onClick }) {
   return (
     <button onClick={onClick}
@@ -730,26 +738,38 @@ function TabLista({ tipo, transactions, categorias, openEdit, markPago, handleDe
           </ResponsiveContainer>
         </div>
       )}
-      <div className="nx-card" style={{ padding: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select className="nx-select" value={filter.mes} onChange={e => setFilter(p => ({ ...p, mes: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 130 }}>
-          <option value="">Todos meses</option>
-          {monthsAvail.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-        </select>
-        <select className="nx-select" value={filter.status} onChange={e => setFilter(p => ({ ...p, status: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 110 }}>
-          <option value="todos">Todos status</option>
-          <option value="pendente">Pendente</option>
-          <option value="pago">{tipo === 'receita' ? 'Recebido' : 'Pago'}</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
-        <select className="nx-select" value={filter.forma} onChange={e => setFilter(p => ({ ...p, forma: e.target.value }))} style={{ fontSize: 12, width: 'auto', minWidth: 130 }}>
-          <option value="">Todas formas</option>
-          {FORMAS_PAGAMENTO.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
-        <input className="nx-input" placeholder="Buscar descrição, contato, processo..."
-          value={filter.search} onChange={e => setFilter(p => ({ ...p, search: e.target.value }))}
-          style={{ flex: 1, minWidth: 200, fontSize: 12 }} />
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-          <strong style={{ color: corPrincipal, fontSize: 14 }}>{fmt(totalFilt)}</strong> em {filtered.length} lançamento{filtered.length !== 1 ? 's' : ''}
+      {/* Filter pills + search + Novo lancamento */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <FilterPill icon={Calendar} value={filter.mes ? monthLabel(filter.mes) : 'Todos meses'}>
+          <select value={filter.mes} onChange={e => setFilter(p => ({ ...p, mes: e.target.value }))} style={hiddenSelect}>
+            <option value="">Todos meses</option>
+            {monthsAvail.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
+        </FilterPill>
+        <FilterPill value={filter.status === 'todos' ? 'Todos status' : (filter.status === 'pago' ? (tipo === 'receita' ? 'Recebido' : 'Pago') : filter.status.charAt(0).toUpperCase() + filter.status.slice(1))}>
+          <select value={filter.status} onChange={e => setFilter(p => ({ ...p, status: e.target.value }))} style={hiddenSelect}>
+            <option value="todos">Todos status</option>
+            <option value="pendente">Pendente</option>
+            <option value="pago">{tipo === 'receita' ? 'Recebido' : 'Pago'}</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </FilterPill>
+        <FilterPill value={filter.forma || 'Todas formas'}>
+          <select value={filter.forma} onChange={e => setFilter(p => ({ ...p, forma: e.target.value }))} style={hiddenSelect}>
+            <option value="">Todas formas</option>
+            {FORMAS_PAGAMENTO.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </FilterPill>
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12 }}>🔍</span>
+          <input
+            placeholder="Buscar descrição ou paciente..."
+            value={filter.search} onChange={e => setFilter(p => ({ ...p, search: e.target.value }))}
+            style={{
+              width: '100%', height: 36, paddingLeft: 32, paddingRight: 12,
+              borderRadius: 8, border: '1px solid var(--border)', background: '#fff',
+              fontSize: 12, outline: 'none',
+            }} />
         </div>
       </div>
 
