@@ -3,10 +3,12 @@
    Applies on top of component CSS — doesn't touch desktop.
 ───────────────────────────────────────────────────────────────────────── */
 
-/* ── Plan card: 1 coluna no mobile ─────────────────────────────────────── */
-.plan-card-grid {
-  grid-template-columns: 1fr !important;
-  gap: 16px !important;
+/* ── Plan card: 1 coluna no mobile (so quando tela <= 768px) ──────────── */
+@media (max-width: 768px) {
+  .plan-card-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
 }
 
 /* ── Desktop: esconde elementos só-mobile ───────────────────────────────── */

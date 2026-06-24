@@ -437,15 +437,15 @@ export default function CompanyAdmin() {
             pointerEvents: 'none',
           }} />
 
-          <div className="plan-card-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 32, alignItems: 'flex-start', position: 'relative' }}>
-            {/* Esquerda: plano */}
-            <div>
+          <div className="plan-card-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 40, alignItems: 'stretch', position: 'relative' }}>
+            {/* Esquerda: plano (sem botao) */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 background: planAccent.pillBg, borderRadius: 20,
                 padding: '4px 12px', fontSize: 10, fontWeight: 700,
                 color: planAccent.pillColor, letterSpacing: '0.12em', marginBottom: 12,
-                textTransform: 'uppercase',
+                textTransform: 'uppercase', alignSelf: 'flex-start',
               }}>
                 ⚡ Plano atual
               </div>
@@ -456,32 +456,38 @@ export default function CompanyAdmin() {
               }}>
                 {limits.plan}
               </div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 18 }}>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)' }}>
                 {planPrice[limits.plan]}
                 {limits.extra_users > 0 && <span style={{ display: 'block', fontSize: 12, marginTop: 2 }}>+{limits.extra_users} usuário{limits.extra_users > 1 ? 's' : ''} extra</span>}
+              </div>
+            </div>
+
+            {/* Direita: barras de uso + botao upgrade no fim */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <DarkUsageBar label="Profissionais" icon="⚖️" used={prosCount} total={limits.professionals} />
+                <DarkUsageBar label="Usuários na equipe" icon="👥" used={activeUsers.length} total={limits.users} />
+                <DarkUsageBar label="Agendas" icon="📅" used={agendasCount} total={limits.agendas} />
               </div>
               {limits.plan !== 'Business' && (
                 <a
                   href={`https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20fazer%20upgrade%20do%20plano%20${limits.plan}%20da%20AdvoSac.`}
                   target="_blank" rel="noreferrer"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     background: `linear-gradient(90deg, #F59E0B 0%, #FBBF24 100%)`,
                     color: '#0F172A', borderRadius: 10,
-                    padding: '11px 20px', fontSize: 13, fontWeight: 800,
+                    padding: '12px 18px', fontSize: 13, fontWeight: 800,
                     textDecoration: 'none',
                     boxShadow: '0 4px 14px rgba(251,191,36,0.35)',
+                    marginTop: 8,
                   }}>
-                  ↗ Fazer upgrade {limits.plan === 'Starter' ? 'pro Pro' : 'pro Business'}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    ↗ Fazer upgrade {limits.plan === 'Starter' ? 'pro Pro' : 'pro Business'}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.75 }}>Falar com o time</span>
                 </a>
               )}
-            </div>
-
-            {/* Direita: barras de uso (com tema escuro) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <DarkUsageBar label="Profissionais" icon="⚖️" used={prosCount} total={limits.professionals} />
-              <DarkUsageBar label="Usuários na equipe" icon="👥" used={activeUsers.length} total={limits.users} />
-              <DarkUsageBar label="Agendas" icon="📅" used={agendasCount} total={limits.agendas} />
             </div>
           </div>
         </div>
