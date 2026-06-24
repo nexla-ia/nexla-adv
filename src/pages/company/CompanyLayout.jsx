@@ -6,7 +6,7 @@ import BillingBanner from '../../components/BillingBanner'
 import BlockedScreen from '../../components/BlockedScreen'
 import SupportWidget from '../../components/SupportWidget'
 import { shouldBlockAccess } from '../../lib/billing'
-import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu, Headset, MessageSquareHeart, Users, Wallet, Briefcase } from 'lucide-react'
+import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu, Headset, MessageSquareHeart, Users, Wallet, Briefcase, X as XIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { latestUpdateDate } from '../../data/updates'
@@ -164,6 +164,89 @@ export default function CompanyLayout() {
         </main>
       </div>
       <SupportWidget session={session} />
+      <WhatsAppDisconnectedToast session={session} />
+    </div>
+  )
+}
+
+// Toast no canto direito quando WhatsApp esta desconectado
+function WhatsAppDisconnectedToast({ session }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [connected, setConnected] = useState(true) // assume conectado ate provar contrario (evita flash)
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('nx_wa_toast_dismissed') === '1')
+
+  const instance = session?.company?.instance
+  const apiKey = session?.company?.api_instancia
+  const evolutionUrl = (session?.company?.evolution_url || 'https://evolutionapi.nexladesenvolvimento.com.br').replace(/\/+$/, '')
+  const isAdminPage = location.pathname === '/painel/admin'
+
+  useEffect(() => {
+    if (!instance || !apiKey) return
+    let cancelled = false
+    async function check() {
+      try {
+        const res = await fetch(`${evolutionUrl}/instance/connectionState/${instance}`, { headers: { apikey: apiKey } })
+        if (!res.ok) return
+        const data = await res.json()
+        const state = data?.instance?.state || data?.state
+        if (cancelled) return
+        const isConn = state === 'open'
+        setConnected(isConn)
+        // Se reconectou, reseta o dismissed pra reaparecer da proxima desconexao
+        if (isConn) {
+          sessionStorage.removeItem('nx_wa_toast_dismissed')
+          setDismissed(false)
+        }
+      } catch {}
+    }
+    check()
+    const id = setInterval(check, 60_000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [instance, apiKey, evolutionUrl])
+
+  if (connected || dismissed || isAdminPage || !instance) return null
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, zIndex: 9990,
+      maxWidth: 360, background: '#fff',
+      border: '1px solid #FECACA', borderLeft: '4px solid #DC2626',
+      borderRadius: 12, boxShadow: '0 10px 30px rgba(220,38,38,0.15), 0 2px 6px rgba(0,0,0,0.06)',
+      padding: '14px 16px', display: 'flex', gap: 12, animation: 'wa-toast-in 0.25s ease',
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: '50%', background: '#FEF2F2',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+        </svg>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#B91C1C', marginBottom: 2 }}>
+          WhatsApp desconectado
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45, marginBottom: 8 }}>
+          A instância <strong>{instance}</strong> não está recebendo mensagens. Reconecte pra voltar a operar.
+        </div>
+        <button onClick={() => navigate('/painel/admin')}
+          style={{
+            background: '#DC2626', color: '#fff', border: 'none',
+            borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer',
+          }}>
+          Reconectar agora →
+        </button>
+      </div>
+      <button
+        onClick={() => { sessionStorage.setItem('nx_wa_toast_dismissed', '1'); setDismissed(true) }}
+        title="Esconder até a próxima sessão"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, alignSelf: 'flex-start' }}>
+        <XIcon size={14} />
+      </button>
+      <style>{`@keyframes wa-toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
     </div>
   )
 }
