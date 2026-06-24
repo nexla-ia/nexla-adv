@@ -644,6 +644,14 @@ export default function CompanyAdmin() {
         )}
       </div>
 
+      {/* Etiquetas de clientes */}
+      <div className="page-body" style={{ marginTop: 0 }}>
+        <div className="section-header">
+          <div className="section-title">Etiquetas de clientes</div>
+        </div>
+        <TagsManager instance={instance} />
+      </div>
+
       {/* Usuários */}
       <div className="page-body" style={{ marginTop: 0 }}>
         <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1253,4 +1261,153 @@ export default function CompanyAdmin() {
       , document.body)}
     </div>
   )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAGS MANAGER — cria/edita/remove etiquetas com cor
+// ════════════════════════════════════════════════════════════════════════════
+const TAG_COLOR_PALETTE = ['#2563EB', '#7C3AED', '#DB2777', '#16A34A', '#D97706', '#DC2626', '#0891B2', '#475569']
+
+function TagsManager({ instance }) {
+  const [tagsMeta, setTagsMeta] = useState([])
+  const [allTagNames, setAllTagNames] = useState([])
+  const [name, setName] = useState('')
+  const [color, setColor] = useState(TAG_COLOR_PALETTE[0])
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function load() {
+    if (!instance) return
+    const [metaR, contactsR] = await Promise.all([
+      supabase.from('tags_meta').select('*').eq('instancia', instance).order('name'),
+      supabase.from('saved_contacts').select('tags').eq('instancia', instance),
+    ])
+    setTagsMeta(metaR.data || [])
+    // Aggregate todas tags unicas dos contatos
+    const set = new Set()
+    ;(contactsR.data || []).forEach(c => (c.tags || []).forEach(t => set.add(t)))
+    setAllTagNames(Array.from(set).sort())
+  }
+  useEffect(() => { load() }, [instance])
+
+  async function createTag() {
+    if (!name.trim()) { setErr('Nome obrigatório'); return }
+    setSaving(true); setErr('')
+    const nm = name.trim().toLowerCase()
+    const { error } = await supabase.from('tags_meta').upsert({ instancia: instance, name: nm, color }, { onConflict: 'instancia,name' })
+    setSaving(false)
+    if (error) { setErr(error.message); return }
+    setName('')
+    setColor(TAG_COLOR_PALETTE[0])
+    load()
+  }
+  async function updateColor(tagName, newColor) {
+    await supabase.from('tags_meta').upsert({ instancia: instance, name: tagName, color: newColor }, { onConflict: 'instancia,name' })
+    load()
+  }
+  async function deleteTag(tagName) {
+    if (!confirm(`Excluir etiqueta "${tagName}"? Os contatos que têm essa etiqueta vão perdê-la.`)) return
+    // Apaga o meta
+    await supabase.from('tags_meta').delete().eq('instancia', instance).eq('name', tagName)
+    // Remove de todos os saved_contacts
+    const { data: contacts } = await supabase.from('saved_contacts').select('id, tags').eq('instancia', instance).contains('tags', [tagName])
+    for (const c of (contacts || [])) {
+      const newTags = (c.tags || []).filter(t => t !== tagName)
+      await supabase.from('saved_contacts').update({ tags: newTags }).eq('id', c.id)
+    }
+    load()
+  }
+
+  // Une nomes do metadata + tags soltas em saved_contacts
+  const allTags = Array.from(new Set([...tagsMeta.map(t => t.name), ...allTagNames])).sort()
+  const metaByName = Object.fromEntries(tagsMeta.map(t => [t.name, t]))
+
+  return (
+    <div className="nx-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header com icon + descricao */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+        <div style={{ flex: 1, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
+          Crie etiquetas (ex: <em>VIP, Inadimplente, Pós-operatório</em>) e marque clientes/contatos nas Conversas,
+          Finalizados e Clientes. Use depois pra filtrar e enxergar grupos específicos.
+        </div>
+      </div>
+
+      {/* Form criar */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 5 }}>Nome da etiqueta</label>
+          <input
+            className="nx-input"
+            placeholder="Ex: VIP, Inadimplente, Pós-cirúrgico..."
+            value={name} onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') createTag() }} />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 5 }}>Cor</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {TAG_COLOR_PALETTE.map(c => (
+              <button key={c} onClick={() => setColor(c)} type="button"
+                style={{
+                  width: 26, height: 26, borderRadius: 6, background: c,
+                  border: color === c ? '2px solid #0F172A' : '2px solid transparent',
+                  cursor: 'pointer', flexShrink: 0, padding: 0,
+                  boxShadow: color === c ? '0 0 0 2px ' + c + '44' : 'none',
+                  transition: 'all 0.12s',
+                }} />
+            ))}
+          </div>
+        </div>
+        <button className="nx-btn-primary" onClick={createTag} disabled={saving || !name.trim()} style={{ height: 38, fontSize: 13 }}>
+          <Plus size={13} /> Criar etiqueta
+        </button>
+      </div>
+      {err && <div style={{ color: '#DC2626', fontSize: 12 }}>{err}</div>}
+
+      {/* Lista de etiquetas existentes */}
+      {allTags.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 4 }}>
+          {allTags.map(tname => {
+            const meta = metaByName[tname]
+            const curColor = meta?.color || hashColor(tname)
+            return (
+              <div key={tname}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: '#fff', border: '1px solid var(--border)',
+                  borderRadius: 999, padding: '4px 4px 4px 12px',
+                  fontSize: 12,
+                }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: curColor }} />
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{tname}</span>
+                <div style={{ display: 'flex', gap: 3, padding: '0 6px', borderLeft: '1px solid var(--border)', marginLeft: 4 }}>
+                  {TAG_COLOR_PALETTE.map(c => (
+                    <button key={c} onClick={() => updateColor(tname, c)} type="button" title={`Mudar pra ${c}`}
+                      style={{
+                        width: 12, height: 12, borderRadius: 2, background: c,
+                        border: curColor === c ? '1.5px solid #0F172A' : 'none',
+                        cursor: 'pointer', padding: 0,
+                      }} />
+                  ))}
+                </div>
+                <button onClick={() => deleteTag(tname)} title="Excluir"
+                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4, display: 'inline-flex' }}>
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Hash simples pra cor default quando nao ha meta
+function hashColor(str) {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  return TAG_COLOR_PALETTE[h % TAG_COLOR_PALETTE.length]
 }
