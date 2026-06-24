@@ -6,7 +6,7 @@ import BillingBanner from '../../components/BillingBanner'
 import BlockedScreen from '../../components/BlockedScreen'
 import SupportWidget from '../../components/SupportWidget'
 import { shouldBlockAccess } from '../../lib/billing'
-import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu, Headset, MessageSquareHeart, Users, Wallet } from 'lucide-react'
+import { MessageSquare, History, BellRing, BarChart2, Settings2, Contact2, Calendar, Sparkles, Kanban, Scale, GraduationCap, Instagram, ShieldCheck, Menu, Headset, MessageSquareHeart, Users, Wallet, Briefcase } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { latestUpdateDate } from '../../data/updates'
@@ -124,6 +124,7 @@ export default function CompanyLayout() {
     { to: '/painel/agenda',    icon: Calendar,      label: 'Agenda' },
     { to: '/painel/atividades', icon: Kanban,       label: 'Atividades' },
     { to: '/painel/financeiro', icon: Wallet,       label: 'Financeiro' },
+    ...(isAdmin ? [{ to: '/painel/crm', icon: Briefcase, label: 'CRM' }] : []),
     { to: '/painel/alertas',   icon: BellRing,      label: 'Alertas',
       badge: pendingAlerts > 0 ? pendingAlerts : null, badgeColor: 'amber' },
     { to: '/painel/tutorial',  icon: GraduationCap, label: 'Tutorial' },

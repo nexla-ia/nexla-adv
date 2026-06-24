@@ -5,6 +5,21 @@
 export const UPDATES = [
   {
     date: '2026-06-19',
+    title: 'CRM com funil de leads em kanban',
+    type: 'feature',
+    tags: ['CRM', 'Comercial'],
+    items: [
+      'Nova aba "CRM" no menu (admin) com pipeline visual de leads em colunas drag-and-drop: Novo Lead → Primeiro Contato → Agendou → Compareceu → Retorno.',
+      'Cada lead tem: nome, telefone, email, origem, temperatura (frio/morno/quente), área de prática jurídica, número do processo (CNJ), valor estimado de honorários, tags, responsável.',
+      'Painel lateral ao clicar num lead: timeline unificada juntando interações + mensagens do WhatsApp + agendamentos + lançamentos financeiros + tarefas do Kanban num só lugar.',
+      'Alerta automático de leads parados: cada etapa tem um limite de dias e leads que passam aparecem na aba Alertas.',
+      'Listas dinâmicas: filtros salvos (temperatura, etapa, origem, área, tag, dias) que podem ser aplicadas no funil em 1 clique.',
+      'Auto-avanço: criar um agendamento na Agenda pra um lead no CRM avança ele pra "Agendou" automaticamente.',
+      'Bridge com Kanban: "Criar tarefa" no painel do lead gera card no Kanban já vinculado.',
+    ],
+  },
+  {
+    date: '2026-06-19',
     title: 'Player de áudio, vídeo e imagem novos no chat',
     type: 'feature',
     tags: ['Conversas'],
