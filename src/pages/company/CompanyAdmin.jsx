@@ -377,47 +377,107 @@ export default function CompanyAdmin() {
     )
   }
 
+  // Versao escura pra usar no card preto de Plano e Cobranca
+  function DarkUsageBar({ label, icon, used, total }) {
+    const pct = total === Infinity ? 12 : Math.min(100, Math.round((used / total) * 100))
+    const over = used > total && total !== Infinity
+    const barColor = over ? '#EF4444' : pct >= 80 ? '#F59E0B' : '#22C55E'
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12 }}>{icon}</span> {label}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: over ? '#FCA5A5' : '#fff' }}>
+            {used}/{total === Infinity ? '∞' : total}
+          </span>
+        </div>
+        <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: total === Infinity ? '100%' : `${pct}%`,
+            background: total === Infinity
+              ? 'repeating-linear-gradient(45deg, #22C55E, #22C55E 6px, #16A34A 6px, #16A34A 12px)'
+              : barColor,
+            borderRadius: 10, transition: 'width 0.6s ease',
+            boxShadow: `0 0 8px ${barColor}66`,
+          }} />
+        </div>
+      </div>
+    )
+  }
+
+  // Cor de destaque por plano (yellow no Pro, etc.)
+  const planAccent = {
+    Starter:  { glow: '#F59E0B', pillBg: 'rgba(245,158,11,0.15)', pillColor: '#FCD34D', name: '#FCD34D' },
+    Pro:      { glow: '#FBBF24', pillBg: 'rgba(251,191,36,0.18)', pillColor: '#FCD34D', name: '#FBBF24' },
+    Business: { glow: '#A78BFA', pillBg: 'rgba(167,139,250,0.18)', pillColor: '#C4B5FD', name: '#A78BFA' },
+  }[limits.plan] || { glow: '#FBBF24', pillBg: 'rgba(251,191,36,0.18)', pillColor: '#FCD34D', name: '#FBBF24' }
+
   return (
     <div className="page-enter">
-      {/* Card Plano e Cobrança */}
-      <div style={{ padding: '1.5rem 1.5rem 0' }}>
+      {/* Plano e Cobrança — card preto + acento amarelo (estilo screenshot) */}
+      <div style={{ padding: '1.25rem 1.5rem 0' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, fontWeight: 600 }}>Plano e cobrança</div>
         <div style={{
-          background: planBg, border: `1.5px solid ${planColor}33`,
-          borderRadius: 16, padding: '1.5rem', marginBottom: 20,
-          display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 24, alignItems: 'start',
-        }} className="plan-card-grid">
-          {/* Esquerda: plano */}
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: planColor + '20', border: `1px solid ${planColor}44`, borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: planColor, letterSpacing: '0.1em', marginBottom: 10 }}>
-              ⚡ PLANO ATUAL
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 42, color: planColor, lineHeight: 1, marginBottom: 6 }}>
-              {limits.plan}
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-              {planPrice[limits.plan]}
-              {limits.extra_users > 0 && <span style={{ display: 'block', fontSize: 11, marginTop: 2 }}>+{limits.extra_users} usuário{limits.extra_users > 1 ? 's' : ''} extra</span>}
-            </div>
-            {limits.plan !== 'Business' && (
-              <a
-                href={`https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20fazer%20upgrade%20do%20plano%20${limits.plan}%20da%20AdvoSac.`}
-                target="_blank" rel="noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: planColor, color: '#fff', borderRadius: 8,
-                  padding: '9px 18px', fontSize: 13, fontWeight: 700,
-                  textDecoration: 'none', boxShadow: `0 2px 8px ${planColor}44`,
-                }}>
-                ↗ Fazer upgrade {limits.plan === 'Starter' ? 'pro Pro' : 'pro Business'}
-              </a>
-            )}
-          </div>
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 18, padding: '1.75rem 2rem', marginBottom: 24,
+          position: 'relative', overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(15,23,42,0.25)',
+        }}>
+          {/* Glow no fundo */}
+          <div style={{
+            position: 'absolute', top: -80, right: -80, width: 280, height: 280,
+            background: `radial-gradient(circle, ${planAccent.glow}33 0%, transparent 70%)`,
+            pointerEvents: 'none',
+          }} />
 
-          {/* Direita: barras de uso */}
-          <div>
-            <UsageBar label="Advogados" icon="⚖️" used={prosCount} total={limits.professionals} />
-            <UsageBar label="Usuários na equipe" icon="👥" used={activeUsers.length} total={limits.users} />
-            <UsageBar label="Agendas" icon="📅" used={agendasCount} total={limits.agendas} />
+          <div className="plan-card-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 32, alignItems: 'flex-start', position: 'relative' }}>
+            {/* Esquerda: plano */}
+            <div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: planAccent.pillBg, borderRadius: 20,
+                padding: '4px 12px', fontSize: 10, fontWeight: 700,
+                color: planAccent.pillColor, letterSpacing: '0.12em', marginBottom: 12,
+                textTransform: 'uppercase',
+              }}>
+                ⚡ Plano atual
+              </div>
+              <div style={{
+                fontFamily: 'var(--font-display)', fontWeight: 900,
+                fontSize: 64, color: planAccent.name, lineHeight: 0.95, marginBottom: 8,
+                letterSpacing: '-0.02em',
+              }}>
+                {limits.plan}
+              </div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 18 }}>
+                {planPrice[limits.plan]}
+                {limits.extra_users > 0 && <span style={{ display: 'block', fontSize: 12, marginTop: 2 }}>+{limits.extra_users} usuário{limits.extra_users > 1 ? 's' : ''} extra</span>}
+              </div>
+              {limits.plan !== 'Business' && (
+                <a
+                  href={`https://wa.me/5561999999999?text=Ol%C3%A1!%20Quero%20fazer%20upgrade%20do%20plano%20${limits.plan}%20da%20AdvoSac.`}
+                  target="_blank" rel="noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: `linear-gradient(90deg, #F59E0B 0%, #FBBF24 100%)`,
+                    color: '#0F172A', borderRadius: 10,
+                    padding: '11px 20px', fontSize: 13, fontWeight: 800,
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 14px rgba(251,191,36,0.35)',
+                  }}>
+                  ↗ Fazer upgrade {limits.plan === 'Starter' ? 'pro Pro' : 'pro Business'}
+                </a>
+              )}
+            </div>
+
+            {/* Direita: barras de uso (com tema escuro) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <DarkUsageBar label="Profissionais" icon="⚖️" used={prosCount} total={limits.professionals} />
+              <DarkUsageBar label="Usuários na equipe" icon="👥" used={activeUsers.length} total={limits.users} />
+              <DarkUsageBar label="Agendas" icon="📅" used={agendasCount} total={limits.agendas} />
+            </div>
           </div>
         </div>
       </div>
