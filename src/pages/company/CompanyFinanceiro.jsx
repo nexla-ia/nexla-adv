@@ -95,6 +95,7 @@ export default function CompanyFinanceiro() {
   const [categorias, setCategorias] = useState([])
   const [transactions, setTransactions] = useState([])
   const [crmContatos, setCrmContatos] = useState([]) // pra autocomplete de cliente no modal
+  const [waContatos, setWaContatos] = useState([])   // contatos do WhatsApp (mensagens_geral)
   const [modal, setModal] = useState(null)
   const [deleteModal, setDeleteModal] = useState(null) // { t, groupSize, groupKey, groupType }
   const [toast, setToast] = useState(null)
@@ -111,10 +112,29 @@ export default function CompanyFinanceiro() {
       supabase.from('financial_categories').select('*').or(`instancia.eq.${instance},instancia.eq._default_`).order('nome'),
       supabase.from('financial_transactions').select('*').eq('instancia', instance).order('vencimento', { ascending: false }).limit(5000),
       supabase.from('crm_contacts').select('nome, phone, email').eq('instancia', instance).order('nome').limit(2000),
-    ]).then(([c, t, ct]) => {
+      // Contatos do WhatsApp (mensagens_geral) — pega mensagens recentes nao-grupo, dedup por numero
+      supabase.from('mensagens_geral')
+        .select('numero, nome, idgrupo')
+        .eq('instancia', instance)
+        .or('aplicativo.eq.whatsapp,aplicativo.is.null')
+        .order('id', { ascending: false })
+        .limit(2000),
+    ]).then(([c, t, ct, wa]) => {
       if (c.data) setCategorias(c.data)
       if (t.data) setTransactions(t.data)
       if (ct.data) setCrmContatos(ct.data)
+      if (wa.data) {
+        // Dedup por numero, mantendo o primeiro nome nao-vazio (mais recente)
+        const seen = new Map()
+        for (const row of wa.data) {
+          if (row.idgrupo) continue // pula grupos
+          if (!row.numero) continue
+          if (!seen.has(row.numero) && row.nome?.trim()) {
+            seen.set(row.numero, { nome: row.nome.trim(), phone: row.numero })
+          }
+        }
+        setWaContatos([...seen.values()])
+      }
       setLoading(false)
     })
   }, [instance])
@@ -346,18 +366,25 @@ export default function CompanyFinanceiro() {
 
       {modal && <ModalLancamento modal={modal} setModal={setModal} categorias={categorias} onSave={handleSave}
         clientes={(() => {
-          // Combina nomes unicos de transactions + crm_contacts (case-insensitive dedup)
+          // Combina nomes unicos de WhatsApp + CRM + financeiro (case-insensitive dedup)
+          // Ordem de prioridade da fonte: WA > CRM > FIN (WA tem mais info — phone real)
           const seen = new Map()
-          for (const t of transactions) {
-            if (t.contato_nome?.trim()) {
-              const k = t.contato_nome.trim().toLowerCase()
-              if (!seen.has(k)) seen.set(k, { nome: t.contato_nome.trim(), source: 'fin' })
+          for (const w of waContatos) {
+            if (w.nome?.trim()) {
+              const k = w.nome.trim().toLowerCase()
+              if (!seen.has(k)) seen.set(k, { nome: w.nome.trim(), source: 'wa', phone: w.phone })
             }
           }
           for (const c of crmContatos) {
             if (c.nome?.trim()) {
               const k = c.nome.trim().toLowerCase()
               if (!seen.has(k)) seen.set(k, { nome: c.nome.trim(), source: 'crm', phone: c.phone })
+            }
+          }
+          for (const t of transactions) {
+            if (t.contato_nome?.trim()) {
+              const k = t.contato_nome.trim().toLowerCase()
+              if (!seen.has(k)) seen.set(k, { nome: t.contato_nome.trim(), source: 'fin' })
             }
           }
           return [...seen.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
@@ -1526,11 +1553,11 @@ function ModalLancamento({ modal, setModal, categorias, onSave, clientes = [] })
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <span style={{
                         fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4,
-                        background: c.source === 'crm' ? '#EFF6FF' : '#F0FDF4',
-                        color: c.source === 'crm' ? '#1D4ED8' : '#15803D',
+                        background: c.source === 'wa' ? '#DCFCE7' : c.source === 'crm' ? '#EFF6FF' : '#F1F5F9',
+                        color: c.source === 'wa' ? '#15803D' : c.source === 'crm' ? '#1D4ED8' : 'var(--text-muted)',
                         letterSpacing: '0.05em',
                       }}>
-                        {c.source === 'crm' ? 'CRM' : 'FIN'}
+                        {c.source === 'wa' ? 'WA' : c.source === 'crm' ? 'CRM' : 'FIN'}
                       </span>
                       <span style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {c.nome}
