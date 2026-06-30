@@ -688,18 +688,19 @@ export default function CompanyConversations({ mode = 'individual' }) {
       .then(r => r.ok ? r.json() : null)
       .then(raw => {
         if (cancelled || !raw) return
+        console.log('[grupo permissao] RAW RESPONSE:', raw)
         // Pode vir como [{...}] ou {...}
         const data = Array.isArray(raw) ? raw[0] : raw
+        // 'announce' pode estar no top-level OU dentro de groupMetadata OU info
         const announce = data?.announce === true
-        // owner da INSTANCIA: tentar pegar da resposta ou usar o numero da instancia
-        // Geralmente nao vem; fallback: usar 'instance' (que costuma ser o proprio numero)
-        const ownerRaw = data?.instanceOwner || data?.owner_instance
-        const ownerDigits = (ownerRaw && typeof ownerRaw === 'string')
-          ? ownerRaw.replace(/@.*/, '').replace(/\D/g, '')
-          : (instance || '').replace(/\D/g, '') // fallback: nome da instancia geralmente e o numero
+          || data?.groupMetadata?.announce === true
+          || data?.info?.announce === true
+          || data?.group?.announce === true
+        const ownerDigits = (instance || '').replace(/\D/g, '')
         if (ownerDigits) setInstanceOwnerJid(ownerDigits)
 
-        const participants = data?.participants || data?.members || data?.integrantes || []
+        const participants = data?.participants || data?.members || data?.integrantes
+          || data?.groupMetadata?.participants || []
         let isMeAdmin = false
         if (announce && ownerDigits) {
           const me = participants.find(p => {
@@ -711,8 +712,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
           isMeAdmin = me?.admin === 'admin' || me?.admin === 'superadmin' || me?.isAdmin === true
         }
         const canSend = !announce || isMeAdmin
-        console.log('[grupo permissao]', { announce, isMeAdmin, canSend, ownerDigits, participantsCount: participants.length })
-        setGroupSendInfo({ canSend, announce, isMeAdmin, checked: true })
+        const announceFound = data?.announce !== undefined
+          || data?.groupMetadata?.announce !== undefined
+          || data?.info?.announce !== undefined
+        console.log('[grupo permissao]', { announce, isMeAdmin, canSend, ownerDigits, participantsCount: participants.length, announceFieldFound: announceFound })
+        setGroupSendInfo({ canSend, announce, isMeAdmin, checked: true, announceFound })
       })
       .catch(e => {
         console.warn('[grupo permissao] erro:', e)
@@ -2196,7 +2200,21 @@ export default function CompanyConversations({ mode = 'individual' }) {
       .then(async raw => {
         // n8n retorna 3 linhas: instancia, mensagem, id_mensagem
         const lines = (raw || '').split('\n').map(l => l.trim()).filter(Boolean)
-        if (lines.length < 3) { console.warn('[envio] resposta n8n inesperada:', raw); return }
+        if (lines.length < 3) {
+          console.warn('[envio] resposta n8n inesperada:', raw)
+          // Detecta erro de grupo restrito a admins (varios formatos possiveis)
+          const lower = (raw || '').toLowerCase()
+          const isAdminErr = lower.includes('not-allowed') || lower.includes('only admins')
+            || lower.includes('apenas admin') || lower.includes('forbidden')
+            || lower.includes('403') || lower.includes('admin-only')
+          if (isAdminErr && selected?.isGroup) {
+            console.log('[envio] grupo restrito detectado pelo erro do envio')
+            setGroupSendInfo({ canSend: false, announce: true, isMeAdmin: false, checked: true, learnedFromFailure: true })
+            setToast({ message: 'Este grupo só permite mensagens de administradores.', color: '#DC2626' })
+            setTimeout(() => setToast(null), 4000)
+          }
+          return
+        }
         const [respInstancia, respMensagem, respIdMensagem] = lines
         if (!respIdMensagem) return
         // Acha a linha mais recente em mensagens_geral matching (instancia + numero + mensagem)
@@ -2640,7 +2658,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
                       <div style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {headerName || selected.phone}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', flexWrap: 'wrap' }}>
                         {selected.isGroup ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Users size={11} /> Ver integrantes <ChevronRight size={11} />
@@ -2651,6 +2669,39 @@ export default function CompanyConversations({ mode = 'individual' }) {
                           </span>
                         )}
                         {!loadingMsgs && <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{messages.length} msg</span>}
+                        {selected.isGroup && groupSendInfo?.checked && (
+                          groupSendInfo.canSend ? (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '1px 7px', borderRadius: 4, background: '#DCFCE7',
+                              color: '#15803D', fontSize: 10, fontWeight: 700,
+                              border: '1px solid #BBF7D0',
+                            }}
+                            title={`announce=${String(groupSendInfo.announce)} • isMeAdmin=${String(groupSendInfo.isMeAdmin)}`}>
+                              ● aberto
+                            </span>
+                          ) : (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '1px 7px', borderRadius: 4, background: '#FEF3C7',
+                              color: '#92400E', fontSize: 10, fontWeight: 700,
+                              border: '1px solid #FDE68A',
+                            }}
+                            title={`announce=${String(groupSendInfo.announce)} • isMeAdmin=${String(groupSendInfo.isMeAdmin)}`}>
+                              🔒 só admins
+                            </span>
+                          )
+                        )}
+                        {selected.isGroup && groupSendInfo?.checked && groupSendInfo.announceFound === false && (
+                          <span style={{
+                            padding: '1px 7px', borderRadius: 4, background: '#FEE2E2',
+                            color: '#B91C1C', fontSize: 10, fontWeight: 700,
+                            border: '1px solid #FECACA',
+                          }}
+                          title="O webhook n8n não está retornando o campo 'announce'. Precisa configurar o n8n pra repassar a resposta completa do Evolution findGroupInfos.">
+                            ⚠ webhook sem campo announce
+                          </span>
+                        )}
                       </div>
                     </div>
                   </>
