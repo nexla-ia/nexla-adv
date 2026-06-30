@@ -174,7 +174,14 @@ function WhatsAppDisconnectedToast({ session }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [connected, setConnected] = useState(true) // assume conectado ate provar contrario (evita flash)
-  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('nx_wa_toast_dismissed') === '1')
+  const [dismissed, setDismissed] = useState(() => {
+    // Dismiss expira em 30min (antes ficava sessao toda — atrapalhava muito)
+    const raw = sessionStorage.getItem('nx_wa_toast_dismissed')
+    if (!raw) return false
+    const ts = parseInt(raw, 10)
+    if (isNaN(ts)) return false
+    return Date.now() - ts < 30 * 60 * 1000
+  })
 
   const instance = session?.company?.instance
   const apiKey = session?.company?.api_instancia
@@ -187,7 +194,12 @@ function WhatsAppDisconnectedToast({ session }) {
     async function check() {
       try {
         const res = await fetch(`${evolutionUrl}/instance/connectionState/${instance}`, { headers: { apikey: apiKey } })
-        if (!res.ok) return
+        if (cancelled) return
+        if (!res.ok) {
+          // API erro (404/500) = instancia provavelmente fora do ar = desconectado
+          setConnected(false)
+          return
+        }
         const data = await res.json()
         const state = data?.instance?.state || data?.state
         if (cancelled) return
@@ -198,10 +210,14 @@ function WhatsAppDisconnectedToast({ session }) {
           sessionStorage.removeItem('nx_wa_toast_dismissed')
           setDismissed(false)
         }
-      } catch {}
+      } catch {
+        // fetch falhou (rede/CORS/timeout) = trate como desconectado
+        if (!cancelled) setConnected(false)
+      }
     }
     check()
-    const id = setInterval(check, 60_000)
+    // Polling a cada 20s (antes era 60s — muito lento pra detectar disconnect)
+    const id = setInterval(check, 20_000)
     return () => { cancelled = true; clearInterval(id) }
   }, [instance, apiKey, evolutionUrl])
 
@@ -241,8 +257,8 @@ function WhatsAppDisconnectedToast({ session }) {
         </button>
       </div>
       <button
-        onClick={() => { sessionStorage.setItem('nx_wa_toast_dismissed', '1'); setDismissed(true) }}
-        title="Esconder até a próxima sessão"
+        onClick={() => { sessionStorage.setItem('nx_wa_toast_dismissed', String(Date.now())); setDismissed(true) }}
+        title="Esconder por 30 min"
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, alignSelf: 'flex-start' }}>
         <XIcon size={14} />
       </button>
