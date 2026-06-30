@@ -1196,15 +1196,13 @@ function ContactModal({ modal, setModal, stages, users, onSave }) {
           <section>
             <div style={sectionTitle}><span>Identificação</span><div style={sectionLine} /></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>Nome</label>
-                  <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
-                </div>
-                <div>
-                  <label style={labelStyle}>Telefone</label>
-                  <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
-                </div>
+              <div>
+                <label style={labelStyle}>Nome</label>
+                <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+              </div>
+              <div>
+                <label style={labelStyle}>Telefone</label>
+                <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
                 <div>
