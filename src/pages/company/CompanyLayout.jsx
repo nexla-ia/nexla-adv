@@ -198,6 +198,7 @@ function WhatsAppDisconnectedToast({ session }) {
         if (!res.ok) {
           // API erro (404/500) = instancia provavelmente fora do ar = desconectado
           setConnected(false)
+          localStorage.setItem('nx_wa_connected', '0')
           return
         }
         const data = await res.json()
@@ -205,6 +206,7 @@ function WhatsAppDisconnectedToast({ session }) {
         if (cancelled) return
         const isConn = state === 'open'
         setConnected(isConn)
+        localStorage.setItem('nx_wa_connected', isConn ? '1' : '0')
         // Se reconectou, reseta o dismissed pra reaparecer da proxima desconexao
         if (isConn) {
           sessionStorage.removeItem('nx_wa_toast_dismissed')
@@ -212,7 +214,10 @@ function WhatsAppDisconnectedToast({ session }) {
         }
       } catch {
         // fetch falhou (rede/CORS/timeout) = trate como desconectado
-        if (!cancelled) setConnected(false)
+        if (!cancelled) {
+          setConnected(false)
+          localStorage.setItem('nx_wa_connected', '0')
+        }
       }
     }
     check()

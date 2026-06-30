@@ -1502,7 +1502,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
           if (lastIdMensagem) {
             const seenKey = `nx_seen_${instance}_${remoteJid}`
             const alreadySeen = localStorage.getItem(seenKey)
-            if (alreadySeen !== lastIdMensagem) {
+            // Nao dispara presenca quando WhatsApp esta desconectado
+            // (Evolution rejeitaria de qualquer forma — evita request inutil + log de erro)
+            const waConnected = localStorage.getItem('nx_wa_connected') !== '0'
+            if (alreadySeen !== lastIdMensagem && waConnected) {
               const params = new URLSearchParams({
                 instancia: instance || '',
                 apikey: apiInstancia || '',
