@@ -445,7 +445,7 @@ export default function CompanyCRM() {
       {/* Modal novo/editar lead */}
       {contactModal && (
         <ContactModal modal={contactModal} setModal={setContactModal} stages={activeStages}
-          users={users} onSave={saveContact} />
+          users={users} onSave={saveContact} instance={instance} />
       )}
 
       {/* Modal editar etapas */}
@@ -1171,9 +1171,41 @@ function PhoneInput({ value = '', onChange }) {
 // ════════════════════════════════════════════════════════════════════════════
 // MODAIS
 // ════════════════════════════════════════════════════════════════════════════
-function ContactModal({ modal, setModal, stages, users, onSave }) {
+function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
   const sectionTitle = { fontSize: 10.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }
   const sectionLine = { flex: 1, height: 1, background: 'var(--border)' }
+  const [lookupState, setLookupState] = useState(null) // null | 'searching' | 'found' | 'not_found'
+
+  // Lookup automatico no mensagens_geral pra autopreencher nome quando ja existe contato
+  useEffect(() => {
+    if (modal.id) return // so pra novo lead, nao edicao
+    if (!instance) return
+    const digits = (modal.phone || '').replace(/\D/g, '')
+    if (digits.length < 10) { setLookupState(null); return }
+
+    let cancelled = false
+    const t = setTimeout(async () => {
+      setLookupState('searching')
+      const { data } = await supabase.from('mensagens_geral')
+        .select('nome')
+        .eq('instancia', instance)
+        .eq('numero', digits)
+        .not('nome', 'is', null)
+        .neq('nome', '')
+        .order('id', { ascending: false })
+        .limit(1)
+      if (cancelled) return
+      const foundName = data?.[0]?.nome
+      if (foundName) {
+        // So preenche se o usuario nao digitou nada manualmente ainda
+        setModal(p => p.nome?.trim() ? p : { ...p, nome: foundName })
+        setLookupState('found')
+      } else {
+        setLookupState('not_found')
+      }
+    }, 500)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [modal.phone, modal.id, instance])
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
       <div className="nx-card" style={{ width: '100%', maxWidth: 640, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 24px 60px -12px rgba(15,23,42,0.25)' }}>
@@ -1201,8 +1233,27 @@ function ContactModal({ modal, setModal, stages, users, onSave }) {
                 <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
               </div>
               <div>
-                <label style={labelStyle}>Telefone</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Telefone</label>
+                  {lookupState === 'searching' && (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid #CBD5E1', borderTopColor: 'transparent', animation: 'lookup-spin 0.8s linear infinite' }} />
+                      buscando…
+                    </span>
+                  )}
+                  {lookupState === 'found' && !modal.id && (
+                    <span style={{ fontSize: 10, color: '#15803D', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <CheckCircle2 size={11} /> contato encontrado
+                    </span>
+                  )}
+                  {lookupState === 'not_found' && !modal.id && (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      novo contato
+                    </span>
+                  )}
+                </div>
                 <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
+                <style>{`@keyframes lookup-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
                 <div>
