@@ -38,6 +38,21 @@ function fmtMoney(v) {
   return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Formata valor pra exibicao no input '1.234,56' (sem prefixo R$)
+function fmtBRLInput(value) {
+  if (value === '' || value === null || value === undefined) return ''
+  const n = typeof value === 'number' ? value : parseFloat(value)
+  if (isNaN(n)) return ''
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// Parse digito-a-digito tipo "12345" -> 123.45 (centavos)
+function parseBRLInput(str) {
+  const digits = (str || '').replace(/\D/g, '')
+  if (!digits) return ''
+  return parseInt(digits, 10) / 100
+}
+
 const TABS = [
   { key: 'profissionais', label: 'Advogados',                          icon: Scale },
   { key: 'procedimentos', label: 'Serviços / Audiências / Diligências', icon: ClipboardList },
@@ -533,8 +548,15 @@ export default function CompanyCatalog() {
               </select>
             </Field>
             <Field label="Valor — Avulso / Particular (R$)">
-              <input className="nx-input" type="number" step="0.01" min={0}
-                value={procModal.price_particular} onChange={e => setProcModal(p => ({ ...p, price_particular: e.target.value }))} />
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, pointerEvents: 'none' }}>R$</span>
+                <input className="nx-input"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  value={fmtBRLInput(procModal.price_particular)}
+                  onChange={e => setProcModal(p => ({ ...p, price_particular: parseBRLInput(e.target.value) }))}
+                  style={{ paddingLeft: 34, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }} />
+              </div>
             </Field>
             {plans.filter(p => p.active !== false).length > 0 && (
               <div>
@@ -544,12 +566,13 @@ export default function CompanyCatalog() {
                     <div key={plan.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
                       <Briefcase size={13} style={{ color: '#2563EB', flexShrink: 0 }} />
                       <span style={{ flex: 1, fontWeight: 500 }}>{plan.name}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>R$</span>
-                      <input className="nx-input" type="number" step="0.01" min={0}
-                        style={{ width: 110, fontSize: 12, padding: '5px 9px' }}
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>R$</span>
+                      <input className="nx-input"
+                        inputMode="numeric"
+                        style={{ width: 120, fontSize: 12, padding: '5px 9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
                         placeholder="0,00"
-                        value={procModal._prices?.[plan.id] || ''}
-                        onChange={e => setProcModal(p => ({ ...p, _prices: { ...(p._prices || {}), [plan.id]: e.target.value } }))} />
+                        value={fmtBRLInput(procModal._prices?.[plan.id])}
+                        onChange={e => setProcModal(p => ({ ...p, _prices: { ...(p._prices || {}), [plan.id]: parseBRLInput(e.target.value) } }))} />
                     </div>
                   ))}
                 </div>
