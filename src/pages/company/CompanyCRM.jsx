@@ -39,7 +39,7 @@ const TEMPERATURAS = [
 const ORIGENS = ['WhatsApp', 'Indicação', 'Site', 'Google', 'Instagram', 'Facebook', 'LinkedIn', 'Anúncio', 'Evento', 'Outros']
 const AREAS_PRATICA = ['Trabalhista', 'Cível', 'Tributário', 'Família', 'Empresarial', 'Previdenciário', 'Penal', 'Consumidor', 'Outros']
 
-const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 5 }
+const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 7 }
 
 function Counter({ icon, color, value, label }) {
   return (
@@ -1046,22 +1046,22 @@ function Info({ icon: Icon, label, value, mono, color }) {
 // PHONE INPUT (com dropdown de pais)
 // ════════════════════════════════════════════════════════════════════════════
 const COUNTRIES = [
-  { code: '55',  flag: '🇧🇷', name: 'Brasil' },
-  { code: '1',   flag: '🇺🇸', name: 'EUA / Canadá' },
-  { code: '351', flag: '🇵🇹', name: 'Portugal' },
-  { code: '54',  flag: '🇦🇷', name: 'Argentina' },
-  { code: '56',  flag: '🇨🇱', name: 'Chile' },
-  { code: '57',  flag: '🇨🇴', name: 'Colômbia' },
-  { code: '52',  flag: '🇲🇽', name: 'México' },
-  { code: '51',  flag: '🇵🇪', name: 'Peru' },
-  { code: '595', flag: '🇵🇾', name: 'Paraguai' },
-  { code: '598', flag: '🇺🇾', name: 'Uruguai' },
-  { code: '591', flag: '🇧🇴', name: 'Bolívia' },
-  { code: '34',  flag: '🇪🇸', name: 'Espanha' },
-  { code: '44',  flag: '🇬🇧', name: 'Reino Unido' },
-  { code: '33',  flag: '🇫🇷', name: 'França' },
-  { code: '49',  flag: '🇩🇪', name: 'Alemanha' },
-  { code: '39',  flag: '🇮🇹', name: 'Itália' },
+  { code: '55',  iso: 'BR', tint: '#16A34A', name: 'Brasil' },
+  { code: '1',   iso: 'US', tint: '#2563EB', name: 'EUA / Canadá' },
+  { code: '351', iso: 'PT', tint: '#DC2626', name: 'Portugal' },
+  { code: '54',  iso: 'AR', tint: '#0EA5E9', name: 'Argentina' },
+  { code: '56',  iso: 'CL', tint: '#DC2626', name: 'Chile' },
+  { code: '57',  iso: 'CO', tint: '#EAB308', name: 'Colômbia' },
+  { code: '52',  iso: 'MX', tint: '#16A34A', name: 'México' },
+  { code: '51',  iso: 'PE', tint: '#DC2626', name: 'Peru' },
+  { code: '595', iso: 'PY', tint: '#DC2626', name: 'Paraguai' },
+  { code: '598', iso: 'UY', tint: '#0EA5E9', name: 'Uruguai' },
+  { code: '591', iso: 'BO', tint: '#16A34A', name: 'Bolívia' },
+  { code: '34',  iso: 'ES', tint: '#EAB308', name: 'Espanha' },
+  { code: '44',  iso: 'GB', tint: '#1E40AF', name: 'Reino Unido' },
+  { code: '33',  iso: 'FR', tint: '#1E40AF', name: 'França' },
+  { code: '49',  iso: 'DE', tint: '#0F172A', name: 'Alemanha' },
+  { code: '39',  iso: 'IT', tint: '#16A34A', name: 'Itália' },
 ]
 
 function PhoneInput({ value = '', onChange }) {
@@ -1097,15 +1097,18 @@ function PhoneInput({ value = '', onChange }) {
     <div style={{ position: 'relative', display: 'flex', width: '100%' }}>
       <button type="button" onClick={() => setOpen(o => !o)}
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '0 9px', border: '1px solid var(--border)',
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '0 10px', border: '1px solid var(--border)',
           borderRight: 'none', borderRadius: '8px 0 0 8px',
-          background: '#F8FAFC', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          flexShrink: 0, color: 'var(--text-primary)',
+          background: '#F8FAFC', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+          flexShrink: 0, color: 'var(--text-primary)', height: 38,
         }}>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>{selected.flag}</span>
+        <span style={{
+          fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4,
+          background: selected.tint, color: '#fff', letterSpacing: '0.04em',
+        }}>{selected.iso}</span>
         <span style={{ fontVariantNumeric: 'tabular-nums' }}>+{selected.code}</span>
-        <ChevronDown size={10} style={{ opacity: 0.6 }} />
+        <ChevronDown size={11} style={{ opacity: 0.55 }} />
       </button>
       <input
         type="tel"
@@ -1143,15 +1146,18 @@ function PhoneInput({ value = '', onChange }) {
               <button key={c.code} type="button" onClick={() => pickCountry(c)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '8px 12px', border: 'none',
+                  padding: '9px 12px', border: 'none',
                   background: c.code === country ? '#EFF6FF' : 'transparent',
                   cursor: 'pointer', textAlign: 'left', fontSize: 12.5,
                   borderBottom: '1px solid #F1F5F9',
                 }}
                 onMouseEnter={e => { if (c.code !== country) e.currentTarget.style.background = '#F8FAFC' }}
                 onMouseLeave={e => { if (c.code !== country) e.currentTarget.style.background = 'transparent' }}>
-                <span style={{ fontSize: 15 }}>{c.flag}</span>
-                <span style={{ flex: 1, color: 'var(--text-primary)' }}>{c.name}</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4,
+                  background: c.tint, color: '#fff', letterSpacing: '0.04em', minWidth: 28, textAlign: 'center',
+                }}>{c.iso}</span>
+                <span style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 500 }}>{c.name}</span>
                 <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontVariantNumeric: 'tabular-nums', fontSize: 11.5 }}>+{c.code}</span>
               </button>
             ))}
@@ -1166,82 +1172,118 @@ function PhoneInput({ value = '', onChange }) {
 // MODAIS
 // ════════════════════════════════════════════════════════════════════════════
 function ContactModal({ modal, setModal, stages, users, onSave }) {
+  const sectionTitle = { fontSize: 10.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }
+  const sectionLine = { flex: 1, height: 1, background: 'var(--border)' }
   return createPortal(
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
-      <div className="nx-card" style={{ width: '100%', maxWidth: 580, maxHeight: '92vh', overflow: 'auto' }}>
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{modal.id ? 'Editar lead' : 'Novo lead'}</div>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setModal(null)}><X size={16} /></button>
-        </div>
-        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 10 }}>
-            <div>
-              <label style={labelStyle}>Nome</label>
-              <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} />
-            </div>
-            <div>
-              <label style={labelStyle}>Telefone</label>
-              <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={labelStyle}>Email</label>
-              <input className="nx-input" type="email" value={modal.email || ''} onChange={e => setModal(p => ({ ...p, email: e.target.value }))} />
-            </div>
-            <div>
-              <label style={labelStyle}>Origem</label>
-              <select className="nx-select" value={modal.origem || ''} onChange={e => setModal(p => ({ ...p, origem: e.target.value }))}>
-                <option value="">— —</option>
-                {ORIGENS.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={labelStyle}>Etapa</label>
-              <select className="nx-select" value={modal.stage_id || ''} onChange={e => setModal(p => ({ ...p, stage_id: e.target.value }))}>
-                {stages.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Temperatura</label>
-              <select className="nx-select" value={modal.temperatura || 'morno'} onChange={e => setModal(p => ({ ...p, temperatura: e.target.value }))}>
-                {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Área</label>
-              <select className="nx-select" value={modal.area_pratica || ''} onChange={e => setModal(p => ({ ...p, area_pratica: e.target.value }))}>
-                <option value="">— —</option>
-                {AREAS_PRATICA.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
-            <div>
-              <label style={labelStyle}>Nº processo (CNJ)</label>
-              <input className="nx-input" value={modal.processo_numero || ''} onChange={e => setModal(p => ({ ...p, processo_numero: e.target.value }))} placeholder="opcional" />
-            </div>
-            <div>
-              <label style={labelStyle}>Valor estimado (R$)</label>
-              <input className="nx-input" type="number" step="0.01" value={modal.valor_estimado || ''} onChange={e => setModal(p => ({ ...p, valor_estimado: e.target.value }))} />
-            </div>
-          </div>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
+      <div className="nx-card" style={{ width: '100%', maxWidth: 640, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 24px 60px -12px rgba(15,23,42,0.25)' }}>
+        {/* Header */}
+        <div style={{ padding: '1.5rem 2rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <label style={labelStyle}>Tags (separadas por vírgula)</label>
-            <input className="nx-input" value={(modal.tags || []).join(', ')}
-              onChange={e => setModal(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
-              placeholder="vip, urgente" />
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              {modal.id ? 'Editar lead' : 'Novo lead'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              {modal.id ? 'Atualize as informações do contato' : 'Cadastre um novo contato no funil'}
+            </div>
           </div>
-          <div>
-            <label style={labelStyle}>Observações</label>
-            <textarea className="nx-input" rows={3} value={modal.observacoes || ''} onChange={e => setModal(p => ({ ...p, observacoes: e.target.value }))} />
-          </div>
+          <button style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)', width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setModal(null)}><X size={14} /></button>
         </div>
-        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
+
+        <div style={{ padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+          {/* Seção: Identificação */}
+          <section>
+            <div style={sectionTitle}><span>Identificação</span><div style={sectionLine} /></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>Nome</label>
+                  <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Telefone</label>
+                  <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>Email</label>
+                  <input className="nx-input" type="email" value={modal.email || ''} onChange={e => setModal(p => ({ ...p, email: e.target.value }))} placeholder="email@dominio.com" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Origem</label>
+                  <select className="nx-select" value={modal.origem || ''} onChange={e => setModal(p => ({ ...p, origem: e.target.value }))}>
+                    <option value="">— Selecione —</option>
+                    {ORIGENS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Seção: Classificação */}
+          <section>
+            <div style={sectionTitle}><span>Classificação</span><div style={sectionLine} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>Etapa</label>
+                <select className="nx-select" value={modal.stage_id || ''} onChange={e => setModal(p => ({ ...p, stage_id: e.target.value }))}>
+                  {stages.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Temperatura</label>
+                <select className="nx-select" value={modal.temperatura || 'morno'} onChange={e => setModal(p => ({ ...p, temperatura: e.target.value }))}>
+                  {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Área</label>
+                <select className="nx-select" value={modal.area_pratica || ''} onChange={e => setModal(p => ({ ...p, area_pratica: e.target.value }))}>
+                  <option value="">— —</option>
+                  {AREAS_PRATICA.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Seção: Processo */}
+          <section>
+            <div style={sectionTitle}><span>Processo</span><div style={sectionLine} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>Nº processo (CNJ)</label>
+                <input className="nx-input" value={modal.processo_numero || ''} onChange={e => setModal(p => ({ ...p, processo_numero: e.target.value }))} placeholder="opcional" />
+              </div>
+              <div>
+                <label style={labelStyle}>Valor estimado (R$)</label>
+                <input className="nx-input" type="number" step="0.01" value={modal.valor_estimado || ''} onChange={e => setModal(p => ({ ...p, valor_estimado: e.target.value }))} placeholder="0,00" />
+              </div>
+            </div>
+          </section>
+
+          {/* Seção: Detalhes */}
+          <section>
+            <div style={sectionTitle}><span>Detalhes</span><div style={sectionLine} /></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div>
+                <label style={labelStyle}>Tags (separadas por vírgula)</label>
+                <input className="nx-input" value={(modal.tags || []).join(', ')}
+                  onChange={e => setModal(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
+                  placeholder="vip, urgente" />
+              </div>
+              <div>
+                <label style={labelStyle}>Observações</label>
+                <textarea className="nx-input" rows={3} value={modal.observacoes || ''} onChange={e => setModal(p => ({ ...p, observacoes: e.target.value }))} placeholder="Anotações internas sobre o lead" style={{ resize: 'vertical', minHeight: 70 }} />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div style={{ padding: '1.25rem 2rem', borderTop: '1px solid var(--border)', display: 'flex', gap: 12, background: '#FAFBFC' }}>
           <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setModal(null)}>Cancelar</button>
-          <button className="nx-btn-primary" style={{ flex: 1 }} onClick={() => onSave(modal)}>Salvar</button>
+          <button className="nx-btn-primary" style={{ flex: 2 }} onClick={() => onSave(modal)}>Salvar lead</button>
         </div>
       </div>
     </div>, document.body)
