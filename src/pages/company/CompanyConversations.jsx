@@ -671,29 +671,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
     })
   }
 
-  // Pega a identidade WhatsApp da instancia (owner JID) UMA VEZ pra usar em checagem de admin
-  useEffect(() => {
-    if (!instance || !apiInstancia) return
-    let cancelled = false
-    fetch(`${evolutionUrlBase}/instance/fetchInstances?instanceName=${encodeURIComponent(instance)}`, {
-      headers: { apikey: apiInstancia },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (cancelled || !data) return
-        const inst = Array.isArray(data) ? data[0] : data
-        // Tenta varias shapes da Evolution API
-        const ownerRaw = inst?.instance?.owner || inst?.owner || inst?.ownerJid
-          || inst?.instance?.ownerJid || inst?.ownerJID
-        if (ownerRaw && typeof ownerRaw === 'string') {
-          setInstanceOwnerJid(ownerRaw.replace(/@.*/, ''))
-        }
-      })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [instance, apiInstancia, evolutionUrlBase])
-
-  // Ao selecionar grupo: descobre se pode enviar (announce + isMeAdmin)
+  // Ao selecionar grupo: chama o webhook n8n pra pegar info do grupo (announce + participants)
+  // e tambem o owner JID da instancia (vem na mesma resposta, ou no proprio numero da instancia)
   useEffect(() => {
     if (!selected?.isGroup || !instance || !apiInstancia) {
       setGroupSendInfo(null)
@@ -701,32 +680,46 @@ export default function CompanyConversations({ mode = 'individual' }) {
     }
     let cancelled = false
     const idgrupo = selected.session_id
-    fetch(`${evolutionUrlBase}/group/findGroupInfos/${encodeURIComponent(instance)}?groupJid=${encodeURIComponent(idgrupo)}`, {
-      headers: { apikey: apiInstancia },
+    fetch('https://n8n.nexladesenvolvimento.com.br/webhook/infogrupoadv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instancia: instance, apikey: apiInstancia, idgrupo }),
     })
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (cancelled || !data) return
+      .then(raw => {
+        if (cancelled || !raw) return
+        // Pode vir como [{...}] ou {...}
+        const data = Array.isArray(raw) ? raw[0] : raw
         const announce = data?.announce === true
-        const participants = data?.participants || []
+        // owner da INSTANCIA: tentar pegar da resposta ou usar o numero da instancia
+        // Geralmente nao vem; fallback: usar 'instance' (que costuma ser o proprio numero)
+        const ownerRaw = data?.instanceOwner || data?.owner_instance
+        const ownerDigits = (ownerRaw && typeof ownerRaw === 'string')
+          ? ownerRaw.replace(/@.*/, '').replace(/\D/g, '')
+          : (instance || '').replace(/\D/g, '') // fallback: nome da instancia geralmente e o numero
+        if (ownerDigits) setInstanceOwnerJid(ownerDigits)
+
+        const participants = data?.participants || data?.members || data?.integrantes || []
         let isMeAdmin = false
-        if (announce && instanceOwnerJid) {
+        if (announce && ownerDigits) {
           const me = participants.find(p => {
-            const pid1 = String(p.phoneNumber || '').replace(/@.*/, '')
-            const pid2 = String(p.id || '').replace(/@.*/, '')
-            return pid1 === instanceOwnerJid || pid2 === instanceOwnerJid
+            const pid1 = String(p.phoneNumber || '').replace(/@.*/, '').replace(/\D/g, '')
+            const pid2 = String(p.id || '').replace(/@.*/, '').replace(/\D/g, '')
+            return pid1 === ownerDigits || pid2 === ownerDigits
+              || pid1.endsWith(ownerDigits) || ownerDigits.endsWith(pid1)
           })
-          isMeAdmin = me?.admin === 'admin' || me?.admin === 'superadmin'
+          isMeAdmin = me?.admin === 'admin' || me?.admin === 'superadmin' || me?.isAdmin === true
         }
         const canSend = !announce || isMeAdmin
+        console.log('[grupo permissao]', { announce, isMeAdmin, canSend, ownerDigits, participantsCount: participants.length })
         setGroupSendInfo({ canSend, announce, isMeAdmin, checked: true })
       })
-      .catch(() => {
-        // Erro = optimistic permite enviar (Evolution vai retornar erro depois se nao puder)
+      .catch(e => {
+        console.warn('[grupo permissao] erro:', e)
         if (!cancelled) setGroupSendInfo({ canSend: true, announce: false, isMeAdmin: false, checked: false })
       })
     return () => { cancelled = true }
-  }, [selected?.session_id, selected?.isGroup, instance, apiInstancia, evolutionUrlBase, instanceOwnerJid])
+  }, [selected?.session_id, selected?.isGroup, instance, apiInstancia])
 
   async function fetchGroupMembers(idgrupo) {
     if (!idgrupo) return
@@ -2003,6 +1996,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
 
   async function handleSend() {
     if (sending || !selected) return
+    // Grupo restrito: bloqueia com mensagem especifica
+    if (isGroupMode && groupSendInfo?.checked && groupSendInfo.announce && !groupSendInfo.isMeAdmin) {
+      setToast({
+        message: 'Este grupo só permite mensagens de administradores. Você não pode enviar.',
+        color: '#DC2626',
+      })
+      setTimeout(() => setToast(null), 4000)
+      return
+    }
     if (!canRespond(selected)) {
       const att = attendancesMap[selected.session_id]
       setToast({
