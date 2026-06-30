@@ -250,9 +250,8 @@ export default function CompanyFinanceiro() {
       setDeleteModal({ t, groupKey: 'grupo_parcelas', groupId: t.grupo_parcelas, groupSize: irmaos.length, groupType: 'parcelas' })
       return
     }
-    // Sem grupo: confirm simples
-    if (!confirm('Excluir esse lançamento?')) return
-    deleteSingle(t)
+    // Sem grupo: abre modal customizado
+    setDeleteModal({ t, groupType: 'single' })
   }
   async function deleteSingle(t) {
     const { error } = await supabase.from('financial_transactions').delete().eq('id', t.id)
@@ -392,49 +391,76 @@ export default function CompanyFinanceiro() {
       />}
 
       {deleteModal && createPortal(
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
-          <div className="nx-card" style={{ width: '100%', maxWidth: 460 }}>
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trash2 size={16} />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteModal(null) }}>
+          <div className="nx-card" style={{ width: '100%', maxWidth: 460, boxShadow: '0 24px 60px -12px rgba(15,23,42,0.25)' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={17} />
               </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>
-                  Excluir {deleteModal.groupType === 'parcelas' ? 'parcela' : 'ocorrência'}?
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--text-primary)' }}>
+                  {deleteModal.groupType === 'single'
+                    ? 'Excluir lançamento?'
+                    : `Excluir ${deleteModal.groupType === 'parcelas' ? 'parcela' : 'ocorrência'}?`}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {deleteModal.t.descricao} · {fmtDate(deleteModal.t.vencimento)}
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                  {deleteModal.t.descricao} · {fmtDate(deleteModal.t.vencimento)} · {fmt(Number(deleteModal.t.valor))}
                 </div>
               </div>
             </div>
-            <div style={{ padding: '1.25rem 1.5rem', fontSize: 13, color: 'var(--text-secondary)' }}>
-              Esse lançamento faz parte de uma <strong>série {deleteModal.groupType === 'parcelas' ? 'parcelada' : 'recorrente'}</strong> com <strong>{deleteModal.groupSize}</strong> {deleteModal.groupType === 'parcelas' ? 'parcelas' : 'ocorrências'} no total. O que você quer fazer?
-            </div>
-            <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => deleteSingle(deleteModal.t)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#2563EB'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>Só essa</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Apaga só este lançamento, mantém o resto da série.</div>
+
+            {deleteModal.groupType === 'single' ? (
+              <>
+                <div style={{ padding: '1.25rem 1.5rem', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Esta ação <strong style={{ color: '#B91C1C' }}>não pode ser desfeita</strong>. O lançamento será removido permanentemente do histórico financeiro.
                 </div>
-                <ChevronRight size={16} style={{ color: '#94A3B8' }} />
-              </button>
-              <button onClick={() => deleteGroup(deleteModal.groupKey, deleteModal.groupId)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#FEE2E2'}
-                onMouseLeave={e => e.currentTarget.style.background = '#FEF2F2'}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>Toda a série ({deleteModal.groupSize})</div>
-                  <div style={{ fontSize: 11, color: '#DC2626' }}>Apaga essa e todas as outras {deleteModal.groupType === 'parcelas' ? 'parcelas' : 'ocorrências'} de uma vez.</div>
+                <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', gap: 10 }}>
+                  <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteModal(null)}>Cancelar</button>
+                  <button
+                    onClick={() => deleteSingle(deleteModal.t)}
+                    style={{
+                      flex: 1.5, background: '#DC2626', color: '#fff', border: 'none',
+                      borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+                    }}>
+                    <Trash2 size={13} /> Excluir
+                  </button>
                 </div>
-                <ChevronRight size={16} style={{ color: '#DC2626' }} />
-              </button>
-            </div>
-            <div style={{ padding: '0 1.5rem 1.25rem' }}>
-              <button className="nx-btn-ghost" style={{ width: '100%' }} onClick={() => setDeleteModal(null)}>Cancelar</button>
-            </div>
+              </>
+            ) : (
+              <>
+                <div style={{ padding: '1.25rem 1.5rem', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Esse lançamento faz parte de uma <strong>série {deleteModal.groupType === 'parcelas' ? 'parcelada' : 'recorrente'}</strong> com <strong>{deleteModal.groupSize}</strong> {deleteModal.groupType === 'parcelas' ? 'parcelas' : 'ocorrências'} no total. O que você quer fazer?
+                </div>
+                <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button onClick={() => deleteSingle(deleteModal.t)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#2563EB'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>Só essa</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Apaga só este lançamento, mantém o resto da série.</div>
+                    </div>
+                    <ChevronRight size={16} style={{ color: '#94A3B8' }} />
+                  </button>
+                  <button onClick={() => deleteGroup(deleteModal.groupKey, deleteModal.groupId)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#FEE2E2'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#FEF2F2'}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>Toda a série ({deleteModal.groupSize})</div>
+                      <div style={{ fontSize: 11, color: '#DC2626' }}>Apaga essa e todas as outras {deleteModal.groupType === 'parcelas' ? 'parcelas' : 'ocorrências'} de uma vez.</div>
+                    </div>
+                    <ChevronRight size={16} style={{ color: '#DC2626' }} />
+                  </button>
+                </div>
+                <div style={{ padding: '0 1.5rem 1.25rem' }}>
+                  <button className="nx-btn-ghost" style={{ width: '100%' }} onClick={() => setDeleteModal(null)}>Cancelar</button>
+                </div>
+              </>
+            )}
           </div>
         </div>, document.body)}
 
