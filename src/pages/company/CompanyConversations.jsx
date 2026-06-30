@@ -634,6 +634,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [memberConfirm, setMemberConfirm] = useState(null) // { name, number }
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
   const [groupMembers, setGroupMembers] = useState(null) // null | { members: [], loading: bool, error: str }
+  const [instanceOwnerJid, setInstanceOwnerJid] = useState(null) // identidade WA da instancia (LID/phone)
+  // Permissao de envio em grupo: null = nao checado | { canSend, announce, isMeAdmin }
+  const [groupSendInfo, setGroupSendInfo] = useState(null)
+  const evolutionUrlBase = (session?.company?.evolution_url || 'https://evolutionapi.nexladesenvolvimento.com.br').replace(/\/+$/, '')
   const msgInputRef = useRef(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [recentEmojis, setRecentEmojis] = useState(() => {
@@ -666,6 +670,63 @@ export default function CompanyConversations({ mode = 'individual' }) {
       el.style.height = Math.min(140, el.scrollHeight) + 'px'
     })
   }
+
+  // Pega a identidade WhatsApp da instancia (owner JID) UMA VEZ pra usar em checagem de admin
+  useEffect(() => {
+    if (!instance || !apiInstancia) return
+    let cancelled = false
+    fetch(`${evolutionUrlBase}/instance/fetchInstances?instanceName=${encodeURIComponent(instance)}`, {
+      headers: { apikey: apiInstancia },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled || !data) return
+        const inst = Array.isArray(data) ? data[0] : data
+        // Tenta varias shapes da Evolution API
+        const ownerRaw = inst?.instance?.owner || inst?.owner || inst?.ownerJid
+          || inst?.instance?.ownerJid || inst?.ownerJID
+        if (ownerRaw && typeof ownerRaw === 'string') {
+          setInstanceOwnerJid(ownerRaw.replace(/@.*/, ''))
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [instance, apiInstancia, evolutionUrlBase])
+
+  // Ao selecionar grupo: descobre se pode enviar (announce + isMeAdmin)
+  useEffect(() => {
+    if (!selected?.isGroup || !instance || !apiInstancia) {
+      setGroupSendInfo(null)
+      return
+    }
+    let cancelled = false
+    const idgrupo = selected.session_id
+    fetch(`${evolutionUrlBase}/group/findGroupInfos/${encodeURIComponent(instance)}?groupJid=${encodeURIComponent(idgrupo)}`, {
+      headers: { apikey: apiInstancia },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled || !data) return
+        const announce = data?.announce === true
+        const participants = data?.participants || []
+        let isMeAdmin = false
+        if (announce && instanceOwnerJid) {
+          const me = participants.find(p => {
+            const pid1 = String(p.phoneNumber || '').replace(/@.*/, '')
+            const pid2 = String(p.id || '').replace(/@.*/, '')
+            return pid1 === instanceOwnerJid || pid2 === instanceOwnerJid
+          })
+          isMeAdmin = me?.admin === 'admin' || me?.admin === 'superadmin'
+        }
+        const canSend = !announce || isMeAdmin
+        setGroupSendInfo({ canSend, announce, isMeAdmin, checked: true })
+      })
+      .catch(() => {
+        // Erro = optimistic permite enviar (Evolution vai retornar erro depois se nao puder)
+        if (!cancelled) setGroupSendInfo({ canSend: true, announce: false, isMeAdmin: false, checked: false })
+      })
+    return () => { cancelled = true }
+  }, [selected?.session_id, selected?.isGroup, instance, apiInstancia, evolutionUrlBase, instanceOwnerJid])
 
   async function fetchGroupMembers(idgrupo) {
     if (!idgrupo) return
@@ -1874,8 +1935,11 @@ export default function CompanyConversations({ mode = 'individual' }) {
   // Regra: dono da conversa OU admin OU conversa ainda sem atendimento.
   function canRespond(contact) {
     if (!contact) return false
-    // Modo grupo: sempre pode responder, sem assumir/encerrar
-    if (isGroupMode) return true
+    // Modo grupo: checa se o grupo aceita mensagens (announce + admin)
+    if (isGroupMode) {
+      if (groupSendInfo && groupSendInfo.checked && !groupSendInfo.canSend) return false
+      return true
+    }
     if (closedMap[contact.session_id]) return false
     const att = attendancesMap[contact.session_id]
     if (!att) return true
@@ -3786,6 +3850,21 @@ export default function CompanyConversations({ mode = 'individual' }) {
                     </button>
                   </div>
                 )}
+                {isGroupMode && groupSendInfo?.checked && groupSendInfo.announce && !groupSendInfo.isMeAdmin && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
+                    padding: '10px 14px', background: '#FEF9C3', border: '1px solid #FDE68A',
+                    borderRadius: 8, fontSize: 12, color: '#92400E', fontWeight: 600,
+                  }}>
+                    <span style={{ fontSize: 16 }}>🔒</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, marginBottom: 1 }}>Grupo restrito a administradores</div>
+                      <div style={{ fontSize: 11, color: '#A16207', fontWeight: 500 }}>
+                        Apenas admins podem enviar mensagens neste grupo. Você consegue ler, mas não responder.
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1, position: 'relative' }}>
                     <textarea
@@ -3798,7 +3877,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         padding: '9px 12px', overflowY: 'auto',
                       }}
                       placeholder={
-                        !canRespond(selected) ? "Conversa está com outro atendente — você não pode responder"
+                        !canRespond(selected)
+                          ? (isGroupMode && groupSendInfo?.announce && !groupSendInfo?.isMeAdmin
+                              ? "🔒 Apenas administradores podem enviar mensagens neste grupo"
+                              : "Conversa está com outro atendente — você não pode responder")
                         : recordedAudio ? "Mensagem opcional para acompanhar o áudio..."
                         : attachedFile ? "Mensagem opcional para acompanhar o arquivo..."
                         : "Digite uma mensagem"
