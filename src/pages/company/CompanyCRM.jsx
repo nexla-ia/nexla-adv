@@ -41,6 +41,27 @@ const AREAS_PRATICA = ['Trabalhista', 'Cível', 'Tributário', 'Família', 'Empr
 
 const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 7 }
 
+// CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO (20 digitos)
+function formatCNJ(value) {
+  const d = (value || '').replace(/\D/g, '').slice(0, 20)
+  if (!d) return ''
+  let out = d.slice(0, 7)
+  if (d.length > 7)  out += '-' + d.slice(7, 9)
+  if (d.length > 9)  out += '.' + d.slice(9, 13)
+  if (d.length > 13) out += '.' + d.slice(13, 14)
+  if (d.length > 14) out += '.' + d.slice(14, 16)
+  if (d.length > 16) out += '.' + d.slice(16, 20)
+  return out
+}
+
+// Valor BRL: aceita number ou string, retorna '1.234,56' (sem prefixo R$)
+function formatBRL(value) {
+  if (value === '' || value === null || value === undefined) return ''
+  const n = typeof value === 'number' ? value : parseFloat(value)
+  if (isNaN(n)) return ''
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function Counter({ icon, color, value, label }) {
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -1303,11 +1324,30 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
               <div>
                 <label style={labelStyle}>Nº processo (CNJ)</label>
-                <input className="nx-input" value={modal.processo_numero || ''} onChange={e => setModal(p => ({ ...p, processo_numero: e.target.value }))} placeholder="opcional" />
+                <input className="nx-input"
+                  value={formatCNJ(modal.processo_numero || '')}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 20)
+                    setModal(p => ({ ...p, processo_numero: digits }))
+                  }}
+                  inputMode="numeric"
+                  placeholder="0000000-00.0000.0.00.0000" />
               </div>
               <div>
                 <label style={labelStyle}>Valor estimado (R$)</label>
-                <input className="nx-input" type="number" step="0.01" value={modal.valor_estimado || ''} onChange={e => setModal(p => ({ ...p, valor_estimado: e.target.value }))} placeholder="0,00" />
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, pointerEvents: 'none' }}>R$</span>
+                  <input className="nx-input"
+                    value={formatBRL(modal.valor_estimado)}
+                    onChange={e => {
+                      const digits = e.target.value.replace(/\D/g, '')
+                      const numeric = digits ? (parseInt(digits, 10) / 100) : ''
+                      setModal(p => ({ ...p, valor_estimado: numeric }))
+                    }}
+                    inputMode="numeric"
+                    placeholder="0,00"
+                    style={{ paddingLeft: 34, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }} />
+                </div>
               </div>
             </div>
           </section>
