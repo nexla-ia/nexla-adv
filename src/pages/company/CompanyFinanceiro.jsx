@@ -94,6 +94,7 @@ export default function CompanyFinanceiro() {
   const [loading, setLoading] = useState(true)
   const [categorias, setCategorias] = useState([])
   const [transactions, setTransactions] = useState([])
+  const [crmContatos, setCrmContatos] = useState([]) // pra autocomplete de cliente no modal
   const [modal, setModal] = useState(null)
   const [deleteModal, setDeleteModal] = useState(null) // { t, groupSize, groupKey, groupType }
   const [toast, setToast] = useState(null)
@@ -109,9 +110,11 @@ export default function CompanyFinanceiro() {
     Promise.all([
       supabase.from('financial_categories').select('*').or(`instancia.eq.${instance},instancia.eq._default_`).order('nome'),
       supabase.from('financial_transactions').select('*').eq('instancia', instance).order('vencimento', { ascending: false }).limit(5000),
-    ]).then(([c, t]) => {
+      supabase.from('crm_contacts').select('nome, phone, email').eq('instancia', instance).order('nome').limit(2000),
+    ]).then(([c, t, ct]) => {
       if (c.data) setCategorias(c.data)
       if (t.data) setTransactions(t.data)
+      if (ct.data) setCrmContatos(ct.data)
       setLoading(false)
     })
   }, [instance])
@@ -341,7 +344,25 @@ export default function CompanyFinanceiro() {
         </>
       )}
 
-      {modal && <ModalLancamento modal={modal} setModal={setModal} categorias={categorias} onSave={handleSave} />}
+      {modal && <ModalLancamento modal={modal} setModal={setModal} categorias={categorias} onSave={handleSave}
+        clientes={(() => {
+          // Combina nomes unicos de transactions + crm_contacts (case-insensitive dedup)
+          const seen = new Map()
+          for (const t of transactions) {
+            if (t.contato_nome?.trim()) {
+              const k = t.contato_nome.trim().toLowerCase()
+              if (!seen.has(k)) seen.set(k, { nome: t.contato_nome.trim(), source: 'fin' })
+            }
+          }
+          for (const c of crmContatos) {
+            if (c.nome?.trim()) {
+              const k = c.nome.trim().toLowerCase()
+              if (!seen.has(k)) seen.set(k, { nome: c.nome.trim(), source: 'crm', phone: c.phone })
+            }
+          }
+          return [...seen.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+        })()}
+      />}
 
       {deleteModal && createPortal(
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
@@ -1402,10 +1423,16 @@ function TabPorCategoria({ transactions, categorias }) {
 // ════════════════════════════════════════════════════════════════════════════
 // MODAL DE LANÇAMENTO
 // ════════════════════════════════════════════════════════════════════════════
-function ModalLancamento({ modal, setModal, categorias, onSave }) {
+function ModalLancamento({ modal, setModal, categorias, onSave, clientes = [] }) {
   const catsFiltered = categorias.filter(c => c.tipo === modal.tipo)
   const isReceita = modal.tipo === 'receita'
   const isEdit = !!modal.id
+  const [clienteOpen, setClienteOpen] = useState(false)
+  const filteredClientes = useMemo(() => {
+    const q = (modal.contato_nome || '').trim().toLowerCase()
+    if (!q) return clientes.slice(0, 8)
+    return clientes.filter(c => c.nome.toLowerCase().includes(q)).slice(0, 8)
+  }, [modal.contato_nome, clientes])
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1.5rem' }}>
       <div className="nx-card" style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto' }}>
@@ -1471,11 +1498,48 @@ function ModalLancamento({ modal, setModal, categorias, onSave }) {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
+            <div style={{ position: 'relative' }}>
               <label style={labelStyle}>{isReceita ? 'Cliente' : 'Fornecedor'}</label>
               <input className="nx-input" value={modal.contato_nome || ''}
-                onChange={e => setModal(p => ({ ...p, contato_nome: e.target.value }))}
-                placeholder="Nome livre" />
+                onChange={e => { setModal(p => ({ ...p, contato_nome: e.target.value })); setClienteOpen(true) }}
+                onFocus={() => setClienteOpen(true)}
+                onBlur={() => setTimeout(() => setClienteOpen(false), 150)}
+                placeholder={clientes.length ? `Digite ou escolha (${clientes.length} cadastrados)` : 'Nome livre'}
+                autoComplete="off" />
+              {clienteOpen && filteredClientes.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+                  background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                  zIndex: 10001, maxHeight: 240, overflow: 'auto',
+                }}>
+                  {filteredClientes.map((c, i) => (
+                    <button key={`${c.nome}-${i}`} type="button"
+                      onMouseDown={e => { e.preventDefault(); setModal(p => ({ ...p, contato_nome: c.nome })); setClienteOpen(false) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                        padding: '8px 12px', border: 'none', background: 'transparent',
+                        cursor: 'pointer', textAlign: 'left', fontSize: 12.5,
+                        borderBottom: '1px solid #F1F5F9',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4,
+                        background: c.source === 'crm' ? '#EFF6FF' : '#F0FDF4',
+                        color: c.source === 'crm' ? '#1D4ED8' : '#15803D',
+                        letterSpacing: '0.05em',
+                      }}>
+                        {c.source === 'crm' ? 'CRM' : 'FIN'}
+                      </span>
+                      <span style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.nome}
+                      </span>
+                      {c.phone && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Centro de custo</label>
