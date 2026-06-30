@@ -1043,6 +1043,126 @@ function Info({ icon: Icon, label, value, mono, color }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// PHONE INPUT (com dropdown de pais)
+// ════════════════════════════════════════════════════════════════════════════
+const COUNTRIES = [
+  { code: '55',  flag: '🇧🇷', name: 'Brasil' },
+  { code: '1',   flag: '🇺🇸', name: 'EUA / Canadá' },
+  { code: '351', flag: '🇵🇹', name: 'Portugal' },
+  { code: '54',  flag: '🇦🇷', name: 'Argentina' },
+  { code: '56',  flag: '🇨🇱', name: 'Chile' },
+  { code: '57',  flag: '🇨🇴', name: 'Colômbia' },
+  { code: '52',  flag: '🇲🇽', name: 'México' },
+  { code: '51',  flag: '🇵🇪', name: 'Peru' },
+  { code: '595', flag: '🇵🇾', name: 'Paraguai' },
+  { code: '598', flag: '🇺🇾', name: 'Uruguai' },
+  { code: '591', flag: '🇧🇴', name: 'Bolívia' },
+  { code: '34',  flag: '🇪🇸', name: 'Espanha' },
+  { code: '44',  flag: '🇬🇧', name: 'Reino Unido' },
+  { code: '33',  flag: '🇫🇷', name: 'França' },
+  { code: '49',  flag: '🇩🇪', name: 'Alemanha' },
+  { code: '39',  flag: '🇮🇹', name: 'Itália' },
+]
+
+function PhoneInput({ value = '', onChange }) {
+  // Detecta DDI do valor atual (tenta prefixos do mais longo pro mais curto pra evitar conflito ex: 55 vs 595)
+  const detectCountry = (v) => {
+    const digits = (v || '').replace(/\D/g, '')
+    const sorted = [...COUNTRIES].sort((a, b) => b.code.length - a.code.length)
+    return sorted.find(c => digits.startsWith(c.code))?.code || '55'
+  }
+  const [country, setCountry] = useState(() => detectCountry(value))
+  const [open, setOpen] = useState(false)
+
+  const digitsOnly = (value || '').replace(/\D/g, '')
+  const localNumber = digitsOnly.startsWith(country) ? digitsOnly.slice(country.length) : digitsOnly
+
+  function pickCountry(c) {
+    setCountry(c.code)
+    setOpen(false)
+    const oldDigits = (value || '').replace(/\D/g, '')
+    const oldCountry = detectCountry(value)
+    const local = oldDigits.startsWith(oldCountry) ? oldDigits.slice(oldCountry.length) : oldDigits
+    onChange(c.code + local)
+  }
+
+  function onLocalChange(e) {
+    const localDigits = e.target.value.replace(/\D/g, '')
+    onChange(country + localDigits)
+  }
+
+  const selected = COUNTRIES.find(c => c.code === country) || COUNTRIES[0]
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', width: '100%' }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '0 9px', border: '1px solid var(--border)',
+          borderRight: 'none', borderRadius: '8px 0 0 8px',
+          background: '#F8FAFC', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+          flexShrink: 0, color: 'var(--text-primary)',
+        }}>
+        <span style={{ fontSize: 14, lineHeight: 1 }}>{selected.flag}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>+{selected.code}</span>
+        <ChevronDown size={10} style={{ opacity: 0.6 }} />
+      </button>
+      <input
+        type="tel"
+        inputMode="numeric"
+        autoComplete="tel-national"
+        className="nx-input"
+        value={localNumber}
+        onChange={onLocalChange}
+        onKeyDown={e => {
+          // Bloqueia letras e simbolos (deixa passar backspace, setas, tab, ctrl+v etc)
+          if (e.key.length === 1 && !/[0-9]/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault()
+          }
+        }}
+        onPaste={e => {
+          // Limpa o que colar
+          e.preventDefault()
+          const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '')
+          onChange(country + (localNumber + pasted))
+        }}
+        placeholder="DDD + número"
+        style={{ borderRadius: '0 8px 8px 0', flex: 1, minWidth: 0 }}
+      />
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 10000 }} />
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+            background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+            zIndex: 10001, minWidth: 220, maxHeight: 280, overflow: 'auto',
+          }}>
+            {COUNTRIES.map(c => (
+              <button key={c.code} type="button" onClick={() => pickCountry(c)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '8px 12px', border: 'none',
+                  background: c.code === country ? '#EFF6FF' : 'transparent',
+                  cursor: 'pointer', textAlign: 'left', fontSize: 12.5,
+                  borderBottom: '1px solid #F1F5F9',
+                }}
+                onMouseEnter={e => { if (c.code !== country) e.currentTarget.style.background = '#F8FAFC' }}
+                onMouseLeave={e => { if (c.code !== country) e.currentTarget.style.background = 'transparent' }}>
+                <span style={{ fontSize: 15 }}>{c.flag}</span>
+                <span style={{ flex: 1, color: 'var(--text-primary)' }}>{c.name}</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontVariantNumeric: 'tabular-nums', fontSize: 11.5 }}>+{c.code}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // MODAIS
 // ════════════════════════════════════════════════════════════════════════════
 function ContactModal({ modal, setModal, stages, users, onSave }) {
@@ -1061,7 +1181,7 @@ function ContactModal({ modal, setModal, stages, users, onSave }) {
             </div>
             <div>
               <label style={labelStyle}>Telefone</label>
-              <input className="nx-input" value={modal.phone || ''} onChange={e => setModal(p => ({ ...p, phone: e.target.value }))} placeholder="5569..." />
+              <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
