@@ -66,6 +66,28 @@ const AuthContext = createContext(null)
 
 const SESSION_KEY = 'nx_session'
 
+// Rótulo curto do dispositivo (SO · navegador) pra identificar a sessão
+function deviceLabel() {
+  if (typeof navigator === 'undefined') return null
+  const ua = navigator.userAgent || ''
+  const os = /Windows/.test(ua) ? 'Windows'
+    : /Macintosh|Mac OS/.test(ua) ? 'Mac'
+    : /Android/.test(ua) ? 'Android'
+    : /iPhone|iPad|iPod/.test(ua) ? 'iOS'
+    : /Linux/.test(ua) ? 'Linux' : 'Desconhecido'
+  const br = /Edg/.test(ua) ? 'Edge'
+    : /OPR|Opera/.test(ua) ? 'Opera'
+    : /Chrome/.test(ua) ? 'Chrome'
+    : /Firefox/.test(ua) ? 'Firefox'
+    : /Safari/.test(ua) ? 'Safari' : ''
+  return [os, br].filter(Boolean).join(' · ')
+}
+
+function newToken() {
+  try { return crypto.randomUUID() }
+  catch { return 'tok-' + Math.random().toString(36).slice(2) + Date.now().toString(36) }
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => {
     try { return JSON.parse(localStorage.getItem(SESSION_KEY)) } catch { return null }
@@ -73,11 +95,35 @@ export function AuthProvider({ children }) {
   const [db, setDb] = useState({ companies: [] })
   const [dbLoading, setDbLoading] = useState(false)
   const [dbError, setDbError] = useState(null)
+  // Aviso mostrado na tela de login após logout forçado (limite de sessões)
+  const [authNotice, setAuthNotice] = useState(null)
 
   useEffect(() => {
     if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     else localStorage.removeItem(SESSION_KEY)
   }, [session])
+
+  // Limite de 2 sessões simultâneas: checa a cada 15s se o token ainda é válido.
+  // Se outro login derrubou esta sessão, o heartbeat volta false → desloga aqui.
+  useEffect(() => {
+    const token = session?.token
+    if (!token) return
+    let active = true
+    async function beat() {
+      const { data, error } = await supabase.rpc('session_heartbeat', { p_token: token })
+      if (!active) return
+      // Só desloga se o servidor respondeu explicitamente que a sessão sumiu.
+      // Erro de rede/RPC ausente NÃO desloga (evita queda por instabilidade).
+      if (!error && data === false) {
+        setAuthNotice('Sua conta atingiu o limite de 2 acessos simultâneos. Este acesso foi encerrado porque era o mais antigo.')
+        setSession(null)
+        localStorage.removeItem(SESSION_KEY)
+      }
+    }
+    beat()
+    const id = setInterval(beat, 15000)
+    return () => { active = false; clearInterval(id) }
+  }, [session?.token])
 
   // Quando o ADM muda algo na company (plano, limites, modules, etc.), o painel
   // do usuario logado atualiza sem precisar deslogar. Dois caminhos:
@@ -148,7 +194,10 @@ export function AuthProvider({ children }) {
 
     if (mode === 'adm') {
       if (user.role !== 'adm') return { ok: false, error: 'Credenciais ADM inválidas.' }
-      setSession({ role: 'adm', user: { name: user.name, email: user.email } })
+      const token = newToken()
+      try { await supabase.rpc('register_session', { p_user_id: user.id, p_token: token, p_device: deviceLabel() }) } catch {}
+      setAuthNotice(null)
+      setSession({ role: 'adm', user: { name: user.name, email: user.email }, userId: user.id, token })
       return { ok: true }
     }
 
@@ -181,11 +230,19 @@ export function AuthProvider({ children }) {
       sector = memberData?.sectors || null
     } catch {}
 
-    setSession({ role: 'company', user: { ...user, sector }, company })
+    const token = newToken()
+    try { await supabase.rpc('register_session', { p_user_id: user.id, p_token: token, p_device: deviceLabel() }) } catch {}
+    setAuthNotice(null)
+    setSession({ role: 'company', user: { ...user, sector }, company, userId: user.id, token })
     return { ok: true }
   }
 
-  function logout() { setSession(null); localStorage.removeItem(SESSION_KEY) }
+  async function logout() {
+    const token = session?.token
+    if (token) { try { await supabase.rpc('end_session', { p_token: token }) } catch {} }
+    setSession(null)
+    localStorage.removeItem(SESSION_KEY)
+  }
 
   async function addCompany(data) {
     const slug = data.name
@@ -271,7 +328,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, setSession, db, dbLoading, dbError, login, logout, loadDB, addCompany, addUser, updateUser, toggleUserActive, toggleCompanyActive }}>
+    <AuthContext.Provider value={{ session, setSession, db, dbLoading, dbError, authNotice, setAuthNotice, login, logout, loadDB, addCompany, addUser, updateUser, toggleUserActive, toggleCompanyActive }}>
       {children}
     </AuthContext.Provider>
   )

@@ -6,7 +6,7 @@ import BrandMark from '../components/BrandMark'
 import './LoginPage.css'
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, authNotice, setAuthNotice } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('empresa')
   const [showPass, setShowPass] = useState(false)
@@ -17,6 +17,7 @@ export default function LoginPage() {
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError('')
+    if (authNotice) setAuthNotice(null)
   }
 
   async function handleSubmit(e) {
@@ -154,6 +155,12 @@ export default function LoginPage() {
 
             {tab === 'empresa' && (
               <div className="login-forgot"><a href="#">Esqueceu a senha?</a></div>
+            )}
+
+            {authNotice && (
+              <div className="login-error" style={{ background: '#FFFBEB', borderColor: '#FCD34D', color: '#92400E' }}>
+                {authNotice}
+              </div>
             )}
 
             {error && <div className="login-error">{error}</div>}
