@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
-  Briefcase, Plus, X, Trash2, Pencil, Phone, Mail, Calendar, FileText,
+  Briefcase, Plus, X, Trash2, Pencil, Phone, Mail, Calendar, FileText, Info as InfoIcon,
   AlertCircle, CheckCircle2, Filter, ChevronDown, ChevronRight, MoreVertical,
   Flame, Snowflake, Thermometer, MessageSquare, Tag as TagIcon, User,
   Layers, ListChecks, GripVertical, Scale, Wallet, Kanban as KanbanIcon,
@@ -40,6 +40,38 @@ const ORIGENS = ['WhatsApp', 'Indicação', 'Site', 'Google', 'Instagram', 'Face
 const AREAS_PRATICA = ['Trabalhista', 'Cível', 'Tributário', 'Família', 'Empresarial', 'Previdenciário', 'Penal', 'Consumidor', 'Outros']
 
 const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 7 }
+
+// Ícone de ajuda com tooltip no hover
+function Hint({ text }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', verticalAlign: 'middle' }}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <InfoIcon size={12.5} style={{ color: '#94A3B8', cursor: 'help' }} />
+      {show && (
+        <span style={{
+          position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+          background: '#0F172A', color: '#fff', fontSize: 11, fontWeight: 500, lineHeight: 1.45,
+          padding: '7px 10px', borderRadius: 7, width: 210, zIndex: 10003,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.28)', textTransform: 'none', letterSpacing: 'normal',
+          whiteSpace: 'normal', pointerEvents: 'none',
+        }}>
+          {text}
+          <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0F172A' }} />
+        </span>
+      )}
+    </span>
+  )
+}
+
+// Label com ícone de ajuda opcional
+function FieldLabel({ children, hint, style }) {
+  return (
+    <label style={{ ...labelStyle, display: 'inline-flex', alignItems: 'center', gap: 5, ...style }}>
+      {children}{hint && <Hint text={hint} />}
+    </label>
+  )
+}
 
 // CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO (20 digitos)
 function formatCNJ(value) {
@@ -1089,7 +1121,7 @@ const COUNTRIES = [
   { code: '39',  iso: 'IT', tint: '#16A34A', name: 'Itália' },
 ]
 
-function PhoneInput({ value = '', onChange }) {
+function PhoneInput({ value = '', onChange, suggestions = [], onPickSuggestion }) {
   // Detecta DDI do valor atual (tenta prefixos do mais longo pro mais curto pra evitar conflito ex: 55 vs 595)
   const detectCountry = (v) => {
     const digits = (v || '').replace(/\D/g, '')
@@ -1098,9 +1130,15 @@ function PhoneInput({ value = '', onChange }) {
   }
   const [country, setCountry] = useState(() => detectCountry(value))
   const [open, setOpen] = useState(false)
+  const [sugOpen, setSugOpen] = useState(false)
 
   const digitsOnly = (value || '').replace(/\D/g, '')
   const localNumber = digitsOnly.startsWith(country) ? digitsOnly.slice(country.length) : digitsOnly
+
+  // Sugestões que casam com o que já foi digitado (ou as mais recentes se vazio)
+  const sugMatches = (suggestions || [])
+    .filter(s => !digitsOnly || s.numero.includes(digitsOnly) || s.numero.includes(localNumber))
+    .slice(0, 8)
 
   function pickCountry(c) {
     setCountry(c.code)
@@ -1154,9 +1192,42 @@ function PhoneInput({ value = '', onChange }) {
           const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '')
           onChange(country + (localNumber + pasted))
         }}
+        onFocus={() => setSugOpen(true)}
+        onBlur={() => setTimeout(() => setSugOpen(false), 150)}
         placeholder="DDD + número"
         style={{ borderRadius: '0 8px 8px 0', flex: 1, minWidth: 0 }}
       />
+      {sugOpen && sugMatches.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.12)', zIndex: 10001,
+          maxHeight: 240, overflow: 'auto',
+        }}>
+          <div style={{ padding: '7px 12px', fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #F1F5F9' }}>
+            Já entraram em contato
+          </div>
+          {sugMatches.map(s => (
+            <button key={s.numero} type="button"
+              onMouseDown={e => { e.preventDefault(); onPickSuggestion ? onPickSuggestion(s) : onChange(s.numero); setSugOpen(false) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                padding: '9px 12px', border: 'none', background: 'transparent',
+                cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #F1F5F9',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 700 }}>
+                {(s.nome || '#').charAt(0).toUpperCase()}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nome || 'Sem nome'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>+{s.numero}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
       {open && (
         <>
           <div onClick={() => setOpen(false)}
@@ -1200,6 +1271,34 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
   const sectionTitle = { fontSize: 10.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }
   const sectionLine = { flex: 1, height: 1, background: 'var(--border)' }
   const [lookupState, setLookupState] = useState(null) // null | 'searching' | 'found' | 'not_found'
+  const [phoneSug, setPhoneSug] = useState([]) // números que já entraram em contato
+
+  // Carrega números que já mandaram mensagem (pra sugerir no campo Telefone)
+  useEffect(() => {
+    if (modal.id || !instance) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.from('mensagens_geral')
+        .select('numero, nome, idgrupo')
+        .eq('instancia', instance)
+        .order('id', { ascending: false })
+        .limit(3000)
+      if (cancelled || !data) return
+      const seen = new Set()
+      const out = []
+      for (const m of data) {
+        if (m.idgrupo) continue // pula grupos
+        const num = (m.numero || '').replace(/@.*/, '').replace(/\D/g, '')
+        if (!num || num.length < 10 || num.length > 13) continue
+        if (seen.has(num)) continue
+        seen.add(num)
+        out.push({ numero: num, nome: m.nome || '' })
+        if (out.length >= 500) break
+      }
+      setPhoneSug(out)
+    })()
+    return () => { cancelled = true }
+  }, [instance, modal.id])
 
   // Lookup automatico no mensagens_geral pra autopreencher nome quando ja existe contato
   useEffect(() => {
@@ -1254,12 +1353,12 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
             <div style={sectionTitle}><span>Identificação</span><div style={sectionLine} /></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div>
-                <label style={labelStyle}>Nome</label>
+                <FieldLabel hint="Nome completo do lead. Se o telefone já tiver conversado no WhatsApp, o nome é preenchido sozinho.">Nome</FieldLabel>
                 <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>Telefone</label>
+                  <FieldLabel style={{ marginBottom: 0 }} hint="Número de WhatsApp com DDD. Clique no campo pra escolher da lista de quem já entrou em contato.">Telefone</FieldLabel>
                   {lookupState === 'searching' && (
                     <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid #CBD5E1', borderTopColor: 'transparent', animation: 'lookup-spin 0.8s linear infinite' }} />
@@ -1277,16 +1376,18 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
                     </span>
                   )}
                 </div>
-                <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))} />
+                <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))}
+                  suggestions={phoneSug}
+                  onPickSuggestion={s => setModal(p => ({ ...p, phone: s.numero, nome: p.nome?.trim() ? p.nome : (s.nome || '') }))} />
                 <style>{`@keyframes lookup-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>Email</label>
+                  <FieldLabel hint="E-mail do lead (opcional). Usado pra contato e identificação.">Email</FieldLabel>
                   <input className="nx-input" type="email" value={modal.email || ''} onChange={e => setModal(p => ({ ...p, email: e.target.value }))} placeholder="email@dominio.com" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Origem</label>
+                  <FieldLabel hint="De onde veio o lead: indicação, site, anúncio, redes sociais, etc.">Origem</FieldLabel>
                   <select className="nx-select" value={modal.origem || ''} onChange={e => setModal(p => ({ ...p, origem: e.target.value }))}>
                     <option value="">— Selecione —</option>
                     {ORIGENS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -1301,19 +1402,19 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
             <div style={sectionTitle}><span>Classificação</span><div style={sectionLine} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
               <div>
-                <label style={labelStyle}>Etapa</label>
+                <FieldLabel hint="Em qual fase do funil o lead entra. Normalmente começa em 'Lead novo'.">Etapa</FieldLabel>
                 <select className="nx-select" value={modal.stage_id || ''} onChange={e => setModal(p => ({ ...p, stage_id: e.target.value }))}>
                   {stages.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Temperatura</label>
+                <FieldLabel hint="Nível de interesse do lead: quente (pronto pra fechar), morno ou frio.">Temperatura</FieldLabel>
                 <select className="nx-select" value={modal.temperatura || 'morno'} onChange={e => setModal(p => ({ ...p, temperatura: e.target.value }))}>
                   {TEMPERATURAS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Área</label>
+                <FieldLabel hint="Área do direito do caso: trabalhista, cível, família, criminal, etc.">Área</FieldLabel>
                 <select className="nx-select" value={modal.area_pratica || ''} onChange={e => setModal(p => ({ ...p, area_pratica: e.target.value }))}>
                   <option value="">— —</option>
                   {AREAS_PRATICA.map(a => <option key={a} value={a}>{a}</option>)}
@@ -1327,7 +1428,7 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
             <div style={sectionTitle}><span>Processo</span><div style={sectionLine} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
               <div>
-                <label style={labelStyle}>Nº processo (CNJ)</label>
+                <FieldLabel hint="Número do processo no padrão CNJ, se já existir. Só números — a formatação é automática. Opcional.">Nº processo (CNJ)</FieldLabel>
                 <input className="nx-input"
                   value={formatCNJ(modal.processo_numero || '')}
                   onChange={e => {
@@ -1338,7 +1439,7 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
                   placeholder="0000000-00.0000.0.00.0000" />
               </div>
               <div>
-                <label style={labelStyle}>Valor estimado (R$)</label>
+                <FieldLabel hint="Valor potencial de honorários desse lead. Ajuda a priorizar os mais valiosos.">Valor estimado (R$)</FieldLabel>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, pointerEvents: 'none' }}>R$</span>
                   <input className="nx-input"
@@ -1361,13 +1462,13 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
             <div style={sectionTitle}><span>Detalhes</span><div style={sectionLine} /></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div>
-                <label style={labelStyle}>Tags (separadas por vírgula)</label>
+                <FieldLabel hint="Marcadores livres separados por vírgula (ex: vip, urgente) pra filtrar leads depois.">Tags (separadas por vírgula)</FieldLabel>
                 <input className="nx-input" value={(modal.tags || []).join(', ')}
                   onChange={e => setModal(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
                   placeholder="vip, urgente" />
               </div>
               <div>
-                <label style={labelStyle}>Observações</label>
+                <FieldLabel hint="Anotações internas sobre o lead. Só a equipe vê — o cliente não.">Observações</FieldLabel>
                 <textarea className="nx-input" rows={3} value={modal.observacoes || ''} onChange={e => setModal(p => ({ ...p, observacoes: e.target.value }))} placeholder="Anotações internas sobre o lead" style={{ resize: 'vertical', minHeight: 70 }} />
               </div>
             </div>

@@ -221,6 +221,18 @@ export default function CompanyCatalog() {
     setPlanModal(null)
   }
 
+  // ─── Ativar/desativar rápido (toggle otimista) ─────────────────────────────
+  async function toggleActive(table, item, setter) {
+    const newActive = !(item.active !== false)
+    setter(prev => prev.map(x => x.id === item.id ? { ...x, active: newActive } : x))
+    const { error } = await supabase.from(table).update({ active: newActive }).eq('id', item.id)
+    if (error) {
+      // rollback se falhar
+      setter(prev => prev.map(x => x.id === item.id ? { ...x, active: !newActive } : x))
+      alert('Erro ao mudar status: ' + error.message)
+    }
+  }
+
   // ─── Delete genérico ───────────────────────────────────────────────────────
   function askDelete(type, item) { setConfirmDelete({ type, item }) }
   async function doDelete() {
@@ -320,9 +332,10 @@ export default function CompanyCatalog() {
                         ) : '—'}
                       </td>
                       <td>
-                        <span className={`nx-badge ${p.active !== false ? 'nx-badge-green' : 'nx-badge-red'}`}>
-                          {p.active !== false ? 'Ativo' : 'Inativo'}
-                        </span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          <Switch on={p.active !== false} onClick={() => toggleActive('professionals', p, setPros)} />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: p.active !== false ? '#16A34A' : 'var(--text-muted)' }}>{p.active !== false ? 'Ativo' : 'Inativo'}</span>
+                        </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
@@ -371,9 +384,10 @@ export default function CompanyCatalog() {
                         <td style={{ fontSize: 12 }}>{p.duration_minutes} min</td>
                         <td style={{ fontSize: 12, fontWeight: 600 }}>{fmtMoney(p.price_particular)}</td>
                         <td>
-                          <span className={`nx-badge ${p.active !== false ? 'nx-badge-green' : 'nx-badge-red'}`}>
-                            {p.active !== false ? 'Ativo' : 'Inativo'}
-                          </span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <Switch on={p.active !== false} onClick={() => toggleActive('procedures', p, setProcs)} />
+                            <span style={{ fontSize: 11, fontWeight: 600, color: p.active !== false ? '#16A34A' : 'var(--text-muted)' }}>{p.active !== false ? 'Ativo' : 'Inativo'}</span>
+                          </div>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: 6 }}>
@@ -412,9 +426,10 @@ export default function CompanyCatalog() {
                       </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.active !== false ? 'Ativo' : 'Inativo'}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: p.active !== false ? '#16A34A' : 'var(--text-muted)' }}>{p.active !== false ? 'Ativo' : 'Inativo'}</div>
                       </div>
                     </div>
+                    <Switch on={p.active !== false} onClick={() => toggleActive('insurance_plans', p, setPlans)} />
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                     <button className="table-action" onClick={() => openEditPlan(p)} style={{ flex: 1, justifyContent: 'center' }}><Pencil size={11} /> Editar</button>
@@ -634,6 +649,22 @@ function EmptyCard({ icon: Icon, text }) {
       <Icon size={28} style={{ opacity: 0.2 }} />
       <div style={{ fontSize: 14 }}>{text}</div>
     </div>
+  )
+}
+
+// Toggle liga/desliga (ativar/desativar)
+function Switch({ on, onClick }) {
+  return (
+    <button type="button" onClick={onClick} title={on ? 'Desativar' : 'Ativar'}
+      style={{
+        width: 36, height: 21, borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer',
+        background: on ? '#16A34A' : '#CBD5E1', position: 'relative', transition: 'background .15s', flexShrink: 0,
+      }}>
+      <span style={{
+        position: 'absolute', top: 2, left: on ? 17 : 2, width: 17, height: 17, borderRadius: '50%',
+        background: '#fff', transition: 'left .15s', boxShadow: '0 1px 2px rgba(0,0,0,.25)',
+      }} />
+    </button>
   )
 }
 
