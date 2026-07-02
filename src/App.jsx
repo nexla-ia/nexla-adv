@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import SessionEndedModal from './components/SessionEndedModal'
 import LoginPage from './pages/LoginPage'
 import Landing from './pages/Landing'
 import AdmLayout from './pages/adm/AdmLayout'
@@ -55,6 +56,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <SessionEndedModal />
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />

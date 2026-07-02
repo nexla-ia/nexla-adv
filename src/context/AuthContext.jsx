@@ -115,7 +115,7 @@ export function AuthProvider({ children }) {
       // Só desloga se o servidor respondeu explicitamente que a sessão sumiu.
       // Erro de rede/RPC ausente NÃO desloga (evita queda por instabilidade).
       if (!error && data === false) {
-        setAuthNotice('Sua conta atingiu o limite de 2 acessos simultâneos. Este acesso foi encerrado porque era o mais antigo.')
+        setAuthNotice('Um novo dispositivo entrou na sua conta agora. Como sua conta permite apenas 2 acessos simultâneos, este acesso — que era o mais antigo — foi encerrado automaticamente.')
         setSession(null)
         localStorage.removeItem(SESSION_KEY)
       }
