@@ -53,7 +53,7 @@ export default function AdmOperacao() {
   const [alerts, setAlerts]         = useState([])
   const [msgs, setMsgs]             = useState([])
 
-  const company = companies.find(c => c.id === selected)
+  const company = companies.find(c => c.id === selected) || companies[0]
 
   useEffect(() => { if (company?.instance) loadAll() }, [company?.instance])
 

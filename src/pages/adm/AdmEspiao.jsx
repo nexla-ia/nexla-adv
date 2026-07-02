@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
@@ -72,9 +73,10 @@ function detectIssues(messages) {
 
 export default function AdmEspiao() {
   const { db } = useAuth()
+  const [searchParams] = useSearchParams()
   const companies = (db.companies || []).filter(c => c.instance && c.active)
 
-  const [selected, setSelected] = useState(companies[0]?.id || null)
+  const [selected, setSelected] = useState(searchParams.get('empresa') || companies[0]?.id || null)
   const [period, setPeriod] = useState('7d')
   const [typeFilter, setTypeFilter] = useState('todos')
   const [search, setSearch] = useState('')
@@ -85,7 +87,7 @@ export default function AdmEspiao() {
   const [loading, setLoading] = useState(false)
   const [lastSync, setLastSync] = useState(null)
 
-  const company = companies.find(c => c.id === selected)
+  const company = companies.find(c => c.id === selected) || companies[0]
   const chatRef = useRef(null)
 
   useEffect(() => {

@@ -1,8 +1,8 @@
-﻿import React, { useState } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { Plus, Building2, ChevronRight, X, RefreshCw, Users, Database } from 'lucide-react'
+import { Plus, Building2, ChevronRight, X, RefreshCw, Users, Database, Wifi, WifiOff } from 'lucide-react'
 import './Adm.css'
 
 function slugify(name) {
@@ -30,6 +30,7 @@ export default function AdmCompanies() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [wppStatuses, setWppStatuses] = useState({}) // instance → 'open'|'close'|'unknown'
   const [form, setForm] = useState({
     name: '',
     contactsTable: 'clientes',
@@ -39,6 +40,31 @@ export default function AdmCompanies() {
     numAccess: 1,
     users: [{ ...emptyUser }],
   })
+
+  function checkAllInstances() {
+    db.companies.forEach(c => {
+      if (!c.instance || !c.api_instancia) return
+      const baseUrl = c.evolution_url || 'https://evolutionapi.nexladesenvolvimento.com.br'
+      fetch(`${baseUrl}/instance/connectionState/${c.instance}`, {
+        headers: { apikey: c.api_instancia },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => {
+          const state = j?.instance?.state || j?.state || 'unknown'
+          setWppStatuses(prev => ({ ...prev, [c.instance]: state }))
+        })
+        .catch(() => {
+          setWppStatuses(prev => ({ ...prev, [c.instance]: 'unknown' }))
+        })
+    })
+  }
+
+  useEffect(() => {
+    if (!db.companies?.length) return
+    checkAllInstances()
+    const id = setInterval(checkAllInstances, 30000)
+    return () => clearInterval(id)
+  }, [db.companies?.length])
 
   function handleCompanyName(name) {
     const slug = slugify(name)
@@ -173,6 +199,29 @@ export default function AdmCompanies() {
                   {(c.users || []).length} acesso(s) · Criada em {new Date(c.created_at).toLocaleDateString('pt-BR')}
                 </div>
               </div>
+              {(() => {
+                if (!c.instance) return null
+                const state = wppStatuses[c.instance]
+                if (state === 'open') {
+                  return (
+                    <span className="nx-badge nx-badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <Wifi size={11} /> Conectado
+                    </span>
+                  )
+                }
+                if (state === 'close' || state === 'connecting') {
+                  return (
+                    <span className="nx-badge nx-badge-red" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <WifiOff size={11} /> Desconectado
+                    </span>
+                  )
+                }
+                return (
+                  <span className="nx-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, color: 'var(--text-muted)' }}>
+                    <WifiOff size={11} /> {state === undefined ? '...' : 'Sem status'}
+                  </span>
+                )
+              })()}
               <span className={`nx-badge ${c.active ? 'nx-badge-green' : 'nx-badge-red'}`}>{c.active ? 'Ativa' : 'Inativa'}</span>
               <button className="table-action" style={{ flexShrink: 0 }}
                 onClick={e => { e.stopPropagation(); toggleCompanyActive(c.id) }}>

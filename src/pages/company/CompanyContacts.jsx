@@ -99,6 +99,9 @@ export default function CompanyContacts() {
         setChatPhones(unsaved.slice(0, 200))
       }
       setLoading(false)
+    }).catch(err => {
+      console.error('[contacts] erro ao carregar:', err)
+      setLoading(false)
     })
 
     const ch = supabase.channel(`patients-${instance}`)
@@ -109,8 +112,9 @@ export default function CompanyContacts() {
           } else if (p.new) {
             setPatients(prev => {
               const exists = prev.find(c => c.id === p.new.id)
-              if (exists) return prev.map(c => c.id === p.new.id ? p.new : c).sort((a, b) => a.nome.localeCompare(b.nome))
-              return [...prev, p.new].sort((a, b) => a.nome.localeCompare(b.nome))
+              const byName = (a, b) => (a.nome || '').localeCompare(b.nome || '')
+              if (exists) return prev.map(c => c.id === p.new.id ? p.new : c).sort(byName)
+              return [...prev, p.new].sort(byName)
             })
           }
         })

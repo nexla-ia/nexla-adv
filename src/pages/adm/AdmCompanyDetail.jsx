@@ -60,9 +60,7 @@ export default function AdmCompanyDetail() {
     if (!company?.instance) return
     supabase.from('sectors').select('*').eq('instancia', company.instance).order('created_at')
       .then(({ data }) => { if (data) setSectors(data) })
-    supabase.from('sector_members').select('*')
-      .in('sector_id', []) // carregado depois que sectors chega
-      .then(() => {})
+    // sector_members é carregado no effect abaixo, quando `sectors` chega
   }, [company?.instance])
 
   useEffect(() => {
@@ -191,7 +189,8 @@ export default function AdmCompanyDetail() {
   }
 
   async function handleDeleteSector(sectorId) {
-    await supabase.from('sectors').delete().eq('id', sectorId)
+    const { error } = await supabase.from('sectors').delete().eq('id', sectorId)
+    if (error) { alert('Erro ao excluir setor: ' + error.message); return }
     setSectors(prev => prev.filter(s => s.id !== sectorId))
     setSectorMembers(prev => prev.filter(m => m.sector_id !== sectorId))
   }
@@ -200,15 +199,17 @@ export default function AdmCompanyDetail() {
     if (!assignModal) return
     // Remove de qualquer setor anterior
     await supabase.from('sector_members').delete().eq('user_id', userId)
-    const { data } = await supabase.from('sector_members').insert({
+    const { data, error } = await supabase.from('sector_members').insert({
       sector_id: assignModal.id,
       user_id: userId,
     }).select().single()
+    if (error) { alert('Erro ao atribuir usuário: ' + error.message); return }
     if (data) setSectorMembers(prev => [...prev.filter(m => m.user_id !== userId), data])
   }
 
   async function handleRemoveMember(userId) {
-    await supabase.from('sector_members').delete().eq('user_id', userId)
+    const { error } = await supabase.from('sector_members').delete().eq('user_id', userId)
+    if (error) { alert('Erro ao remover membro: ' + error.message); return }
     setSectorMembers(prev => prev.filter(m => m.user_id !== userId))
   }
 

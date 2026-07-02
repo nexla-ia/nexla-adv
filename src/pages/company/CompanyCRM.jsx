@@ -131,7 +131,10 @@ export default function CompanyCRM() {
       setUsers(usR.data || [])
       if (funList.length && !activeFunnel) setActiveFunnel(funList[0].id)
       setLoading(false)
-    })()
+    })().catch(err => {
+      console.error('[crm] erro ao carregar:', err)
+      setLoading(false)
+    })
   }, [instance])
 
   // Stages do funil ativo
@@ -244,15 +247,6 @@ export default function CompanyCRM() {
     showToast('Excluído')
   }
 
-  if (!isAdmin) {
-    return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <Briefcase size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
-        <div>CRM disponível apenas pra administradores.</div>
-      </div>
-    )
-  }
-
   // Busca + filtro de temperatura no header
   const [search, setSearch] = useState('')
   const [tempoFilter, setTempoFilter] = useState('todos')
@@ -307,6 +301,16 @@ export default function CompanyCRM() {
       seen.add(f.nome); return true
     })
   }, [funnels])
+
+  // Guard de acesso — DEPOIS de todos os hooks (Rules of Hooks)
+  if (!isAdmin) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <Briefcase size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
+        <div>CRM disponível apenas pra administradores.</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: '1.25rem', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

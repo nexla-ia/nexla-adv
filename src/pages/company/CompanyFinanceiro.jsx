@@ -136,11 +136,12 @@ export default function CompanyFinanceiro() {
         setWaContatos([...seen.values()])
       }
       setLoading(false)
+    }).catch(err => {
+      console.error('[financeiro] erro ao carregar:', err)
+      setLoading(false)
     })
   }, [instance])
 
-  if (!isAdmin) return <Blocked icon={Wallet} msg="Módulo Financeiro disponível apenas pra administradores." />
-  if (!moduleEnabled) return <Blocked icon={Wallet} msg="Módulo Financeiro desativado pra essa empresa. Contate o suporte pra liberar." />
 
   function openNew(tipo = 'receita') {
     setModal({
@@ -571,6 +572,10 @@ function TabVisaoGeral({ transactions, categorias, setTab, openNew }) {
     { label: 'A Receber mês',  value: mes.aR,  color: COR_RECEITA, bg: '#F0FDF4', icon: ArrowUpCircle },
     { label: 'A Pagar mês',    value: mes.aP,  color: COR_DESPESA, bg: '#FEF2F2', icon: ArrowDownCircle },
   ]
+
+  // Guards de acesso — DEPOIS de todos os hooks (Rules of Hooks)
+  if (!isAdmin) return <Blocked icon={Wallet} msg="Módulo Financeiro disponível apenas pra administradores." />
+  if (!moduleEnabled) return <Blocked icon={Wallet} msg="Módulo Financeiro desativado pra essa empresa. Contate o suporte pra liberar." />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

@@ -85,6 +85,9 @@ export default function CompanyKanban() {
       if (ca) setCards(ca)
       if (u) setUsers(u.filter(x => x.active !== false))
       setLoading(false)
+    }).catch(err => {
+      console.error('[kanban] erro ao carregar:', err)
+      setLoading(false)
     })
   }, [instance, companyId])
 

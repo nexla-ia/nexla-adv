@@ -840,10 +840,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const isPrependingRef = useRef(false)
   const selectedRef  = useRef(null)
   const autoCloseDone = useRef(false)
+  // Espelham o state pra evitar stale closure nos handlers de realtime (deps só [instance])
+  const mutedGroupsRef = useRef(mutedGroups)
+  const closedMapRef = useRef(closedMap)
 
   function changeTab(t) { sessionStorage.setItem('nx_conv_tab', t); setTab(t) }
 
   useEffect(() => { selectedRef.current = selected }, [selected])
+  useEffect(() => { mutedGroupsRef.current = mutedGroups }, [mutedGroups])
+  useEffect(() => { closedMapRef.current = closedMap }, [closedMap])
 
   // Limpa estado de "respondendo" ao trocar de conversa
   useEffect(() => { setReplyingTo(null); setEditingMsg(null) }, [selected?.session_id])
@@ -1304,7 +1309,7 @@ export default function CompanyConversations({ mode = 'individual' }) {
           const incomingTypeForUnread = (row.type || '').toLowerCase()
           const isFromMe = incomingTypeForUnread === 'atendente' || incomingTypeForUnread === 'humano'
             || row.fromMe === true || row['minha?'] === true || row.minha === true
-          const isSilenced = mutedGroups.has(sid)
+          const isSilenced = mutedGroupsRef.current.has(sid)
           const isOpen = selectedRef.current?.session_id === sid
           if (!isFromMe && !isOpen && !isSilenced) {
             setUnreadCounts(prev => ({ ...prev, [sid]: (prev[sid] || 0) + 1 }))
@@ -1321,11 +1326,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
           }
 
           // Reabre ticket encerrado: remove do closed (mantém attendance se já assumido)
-          setClosedMap(prev => {
-            if (!prev[sid]) return prev
+          // Side-effect (delete) fora do updater; updater fica puro
+          if (closedMapRef.current[sid]) {
             supabase.from('conversations').delete().eq('session_id', sid).eq('instancia', instance)
-            const next = { ...prev }; delete next[sid]; return next
-          })
+            setClosedMap(prev => {
+              if (!prev[sid]) return prev
+              const next = { ...prev }; delete next[sid]; return next
+            })
+          }
 
           setContacts(prev => {
             const exists = prev.find(c => c.session_id === sid)
@@ -2022,7 +2030,14 @@ export default function CompanyConversations({ mode = 'individual' }) {
         p_hora: new Date().toISOString(),
         p_base64: mediaBase64,
       })
-      if (insErr) console.error('send_mensagem_geral:', insErr)
+      if (insErr) {
+        console.error('send_mensagem_geral:', insErr)
+        // Rollback: remove a bolha otimista e avisa o atendente que NÃO enviou
+        setMessages(prev => prev.filter(m => m.id !== optId))
+        setToast({ message: 'Falha ao enviar mensagem. Tente novamente.', color: '#DC2626' })
+        setTimeout(() => setToast(null), 4000)
+        return
+      }
 
       // fromMe e marcado automaticamente pela trigger do banco
       // (trg_mensagens_geral_set_frommemine) quando type='atendente'

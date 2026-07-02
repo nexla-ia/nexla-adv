@@ -58,24 +58,24 @@ export default function AdmDashboard() {
         .then(r => r.ok ? r.json() : null)
         .then(j => {
           const state = j?.instance?.state || j?.state || 'unknown'
-          setEvolutionStatuses(prev => {
-            const previous = prev[c.instance]
-            // Detectou transição open → close: notifica
-            if (previous === 'open' && state === 'close') {
-              notifyDisconnect(c)
-              setBannerDismissed(false) // re-mostra banner se estava fechado
-              setOfflineSince(o => ({ ...o, [c.instance]: Date.now() }))
-            }
-            // Voltou online: limpa offlineSince
-            if (state === 'open' && previous !== 'open') {
-              setOfflineSince(o => { const n = { ...o }; delete n[c.instance]; return n })
-            }
-            // Primeira leitura e está offline: marca momento
-            if (!previous && state === 'close') {
-              setOfflineSince(o => o[c.instance] ? o : { ...o, [c.instance]: Date.now() })
-            }
-            return { ...prev, [c.instance]: state }
-          })
+          // Side-effects calculados FORA do updater (updater deve ser puro)
+          const previous = prevStatusesRef.current[c.instance]
+          prevStatusesRef.current[c.instance] = state
+          // Detectou transição open → close: notifica
+          if (previous === 'open' && state === 'close') {
+            notifyDisconnect(c)
+            setBannerDismissed(false) // re-mostra banner se estava fechado
+            setOfflineSince(o => ({ ...o, [c.instance]: Date.now() }))
+          }
+          // Voltou online: limpa offlineSince
+          if (state === 'open' && previous !== 'open') {
+            setOfflineSince(o => { const n = { ...o }; delete n[c.instance]; return n })
+          }
+          // Primeira leitura e está offline: marca momento
+          if (!previous && state === 'close') {
+            setOfflineSince(o => o[c.instance] ? o : { ...o, [c.instance]: Date.now() })
+          }
+          setEvolutionStatuses(prev => ({ ...prev, [c.instance]: state }))
         })
         .catch(() => {
           setEvolutionStatuses(prev => ({ ...prev, [c.instance]: 'unknown' }))

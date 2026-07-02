@@ -34,7 +34,10 @@ function startOfDay(d = new Date()) {
 function parseDate(val) {
   if (!val) return null
   if (val instanceof Date) return startOfDay(val)
-  // YYYY-MM-DD ou ISO
+  // YYYY-MM-DD puro: constrói local pra não escorregar 1 dia em fuso negativo (UTC-3)
+  const m = typeof val === 'string' && val.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  // ISO com hora
   const d = new Date(val)
   if (isNaN(d.getTime())) return null
   return startOfDay(d)

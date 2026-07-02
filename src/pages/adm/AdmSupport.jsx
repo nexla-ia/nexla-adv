@@ -103,7 +103,7 @@ export default function AdmSupport() {
       const s = search.toLowerCase()
       list = list.filter(t => {
         const cName = companyById[t.company_id]?.name || ''
-        return t.subject.toLowerCase().includes(s) || cName.toLowerCase().includes(s)
+        return (t.subject || '').toLowerCase().includes(s) || cName.toLowerCase().includes(s)
       })
     }
     return list
@@ -188,7 +188,7 @@ export default function AdmSupport() {
               const [c1, c2] = hashColor(c?.name || '')
               const initial = (c?.name || '?').charAt(0).toUpperCase()
               const hoursOpen = (Date.now() - new Date(t.created_at).getTime()) / 3600000
-              const isUrgent = (t.status === 'open' || t.status === 'answered' && t.last_sender === 'company') && hoursOpen > 24
+              const isUrgent = (t.status === 'open' || t.status === 'answered') && t.last_sender === 'company' && hoursOpen > 24
               return (
                 <button key={t.id} className={`adm-sup-ticket ${isActive ? 'active' : ''} ${isUrgent ? 'urgent' : ''}`} onClick={() => setActiveId(t.id)}>
                   <div className="adm-sup-ticket-avatar" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>

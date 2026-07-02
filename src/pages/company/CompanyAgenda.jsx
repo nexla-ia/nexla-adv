@@ -151,6 +151,7 @@ export default function CompanyAgenda() {
   const [confirmDeleteAppt, setConfirmDeleteAppt] = useState(false)
   const [deletingNow, setDeletingNow] = useState(false)
   const [futureAppointments, setFutureAppointments] = useState([])
+  const [toast, setToast] = useState(null)
 
   // Carrega agendas + agendamentos + contatos
   useEffect(() => {
@@ -213,6 +214,9 @@ export default function CompanyAgenda() {
       if (procs) setProcedures(procs.filter(p => p.active !== false))
       if (plans) setInsurancePlans(plans.filter(p => p.active !== false))
       if (prices) setProcedurePrices(prices)
+      setLoading(false)
+    }).catch(err => {
+      console.error('[agenda] erro ao carregar:', err)
       setLoading(false)
     })
   }, [instance])
@@ -931,6 +935,13 @@ export default function CompanyAgenda() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
+      {toast && createPortal(
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: toast.color || '#16A34A', color: '#fff', padding: '10px 18px',
+          borderRadius: 10, fontSize: 13, fontWeight: 600, zIndex: 99999,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+        }}>{toast.message}</div>, document.body)}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)' }}>Agenda</div>

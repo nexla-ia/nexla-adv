@@ -183,7 +183,7 @@ export default function AdmAnalise() {
           <div className="an-company-select-wrap">
             <Building2 size={14} className="an-company-select-ico" />
             <select className="an-company-select" value={selectedId} onChange={e => setSelectedId(e.target.value)}>
-              {companies.sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
+              {[...companies].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
