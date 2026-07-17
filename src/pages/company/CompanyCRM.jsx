@@ -41,34 +41,40 @@ const AREAS_PRATICA = ['Trabalhista', 'Cível', 'Tributário', 'Família', 'Empr
 
 const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 7 }
 
-// Ícone de ajuda com tooltip no hover
+// Ícone de ajuda com tooltip no hover (portal fixo pra não ser cortado pelo modal)
 function Hint({ text }) {
-  const [show, setShow] = useState(false)
+  const ref = useRef(null)
+  const [pos, setPos] = useState(null)
+  function show() {
+    const r = ref.current?.getBoundingClientRect()
+    if (!r) return
+    const W = 210, margin = 8
+    const centerX = Math.min(Math.max(r.left + r.width / 2, W / 2 + margin), window.innerWidth - W / 2 - margin)
+    setPos({ left: centerX, top: r.top })
+  }
   return (
-    <span style={{ position: 'relative', display: 'inline-flex', verticalAlign: 'middle' }}
-      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-      <InfoIcon size={12.5} style={{ color: '#94A3B8', cursor: 'help' }} />
-      {show && (
-        <span style={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+    <>
+      <span ref={ref} onMouseEnter={show} onMouseLeave={() => setPos(null)}
+        style={{ display: 'inline-flex', verticalAlign: 'middle', cursor: 'help' }}>
+        <InfoIcon size={12.5} style={{ color: '#94A3B8' }} />
+      </span>
+      {pos && createPortal(
+        <div style={{
+          position: 'fixed', left: pos.left, top: pos.top - 8, transform: 'translate(-50%, -100%)',
           background: '#0F172A', color: '#fff', fontSize: 11, fontWeight: 500, lineHeight: 1.45,
-          padding: '7px 10px', borderRadius: 7, width: 210, zIndex: 10003,
+          padding: '7px 10px', borderRadius: 7, width: 210, zIndex: 100000,
           boxShadow: '0 8px 24px rgba(0,0,0,0.28)', textTransform: 'none', letterSpacing: 'normal',
-          whiteSpace: 'normal', pointerEvents: 'none',
-        }}>
-          {text}
-          <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0F172A' }} />
-        </span>
-      )}
-    </span>
+          whiteSpace: 'normal', textAlign: 'left', pointerEvents: 'none',
+        }}>{text}</div>, document.body)}
+    </>
   )
 }
 
-// Label com ícone de ajuda opcional
-function FieldLabel({ children, hint, style }) {
+// Label com ícone de ajuda opcional + asterisco de obrigatório
+function FieldLabel({ children, hint, style, required }) {
   return (
     <label style={{ ...labelStyle, display: 'inline-flex', alignItems: 'center', gap: 5, ...style }}>
-      {children}{hint && <Hint text={hint} />}
+      {children}{required && <span style={{ color: '#DC2626' }}>*</span>}{hint && <Hint text={hint} />}
     </label>
   )
 }
@@ -1272,6 +1278,18 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
   const sectionLine = { flex: 1, height: 1, background: 'var(--border)' }
   const [lookupState, setLookupState] = useState(null) // null | 'searching' | 'found' | 'not_found'
   const [phoneSug, setPhoneSug] = useState([]) // números que já entraram em contato
+  const [errors, setErrors] = useState({})
+
+  // Valida obrigatórios antes de salvar
+  function handleSave() {
+    const errs = {}
+    if (!modal.nome?.trim()) errs.nome = 'Informe o nome do lead.'
+    const digits = (modal.phone || '').replace(/\D/g, '')
+    if (digits.length < 12) errs.phone = 'Informe um telefone válido com DDD.'
+    setErrors(errs)
+    if (Object.keys(errs).length) return
+    onSave(modal)
+  }
 
   // Carrega números que já mandaram mensagem (pra sugerir no campo Telefone)
   useEffect(() => {
@@ -1353,12 +1371,16 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
             <div style={sectionTitle}><span>Identificação</span><div style={sectionLine} /></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div>
-                <FieldLabel hint="Nome completo do lead. Se o telefone já tiver conversado no WhatsApp, o nome é preenchido sozinho.">Nome</FieldLabel>
-                <input className="nx-input" autoFocus value={modal.nome || ''} onChange={e => setModal(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+                <FieldLabel required hint="Nome completo do lead. Se o telefone já tiver conversado no WhatsApp, o nome é preenchido sozinho.">Nome</FieldLabel>
+                <input className="nx-input" autoFocus value={modal.nome || ''}
+                  onChange={e => { setModal(p => ({ ...p, nome: e.target.value })); if (errors.nome) setErrors(x => ({ ...x, nome: null })) }}
+                  placeholder="Nome completo"
+                  style={errors.nome ? { borderColor: '#DC2626' } : undefined} />
+                {errors.nome && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 5, fontWeight: 500 }}>{errors.nome}</div>}
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                  <FieldLabel style={{ marginBottom: 0 }} hint="Número de WhatsApp com DDD. Clique no campo pra escolher da lista de quem já entrou em contato.">Telefone</FieldLabel>
+                  <FieldLabel required style={{ marginBottom: 0 }} hint="Número de WhatsApp com DDD. Clique no campo pra escolher da lista de quem já entrou em contato.">Telefone</FieldLabel>
                   {lookupState === 'searching' && (
                     <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid #CBD5E1', borderTopColor: 'transparent', animation: 'lookup-spin 0.8s linear infinite' }} />
@@ -1376,9 +1398,11 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
                     </span>
                   )}
                 </div>
-                <PhoneInput value={modal.phone || ''} onChange={v => setModal(p => ({ ...p, phone: v }))}
+                <PhoneInput value={modal.phone || ''}
+                  onChange={v => { setModal(p => ({ ...p, phone: v })); if (errors.phone) setErrors(x => ({ ...x, phone: null })) }}
                   suggestions={phoneSug}
-                  onPickSuggestion={s => setModal(p => ({ ...p, phone: s.numero, nome: p.nome?.trim() ? p.nome : (s.nome || '') }))} />
+                  onPickSuggestion={s => { setModal(p => ({ ...p, phone: s.numero, nome: p.nome?.trim() ? p.nome : (s.nome || '') })); if (errors.phone) setErrors(x => ({ ...x, phone: null })) }} />
+                {errors.phone && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 5, fontWeight: 500 }}>{errors.phone}</div>}
                 <style>{`@keyframes lookup-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
@@ -1477,7 +1501,7 @@ function ContactModal({ modal, setModal, stages, users, onSave, instance }) {
 
         <div style={{ padding: '1.25rem 2rem', borderTop: '1px solid var(--border)', display: 'flex', gap: 12, background: '#FAFBFC' }}>
           <button className="nx-btn-ghost" style={{ flex: 1 }} onClick={() => setModal(null)}>Cancelar</button>
-          <button className="nx-btn-primary" style={{ flex: 2 }} onClick={() => onSave(modal)}>Salvar lead</button>
+          <button className="nx-btn-primary" style={{ flex: 2 }} onClick={handleSave}>Salvar lead</button>
         </div>
       </div>
     </div>, document.body)

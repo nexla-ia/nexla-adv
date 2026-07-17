@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { BellRing, CheckCircle2, Clock, MessageCircle, Forward, X, Copy, User, Phone } from 'lucide-react'
@@ -58,6 +59,7 @@ function formatTime(ts) {
 
 export default function CompanyAlerts() {
   const { session } = useAuth()
+  const navigate = useNavigate()
   const instance   = session?.company?.instance
   const currentUser = session?.user
   const companyUsers = (session?.company?.users || []).filter(u => u.active)
@@ -65,6 +67,7 @@ export default function CompanyAlerts() {
 
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [filter, setFilter] = useState('all')
   const [realtimeStatus, setRealtimeStatus] = useState('connecting')
   const [unreadCount, setUnreadCount] = useState(0)
@@ -75,6 +78,13 @@ export default function CompanyAlerts() {
   const [forwardTarget, setForwardTarget] = useState('')
   const [forwarding, setForwarding] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
+
+  // Abre a conversa desse contato direto na tela de Conversas
+  function openConversation(num) {
+    const clean = (num || '').replace(/@.*$/, '').replace(/\D/g, '')
+    if (!clean) return
+    navigate(`/painel/conversas?contact=${clean}`)
+  }
 
   function copyNumber(id, num) {
     const clean = (num || '').replace(/@.*$/, '').replace(/\D/g, '')
@@ -110,7 +120,15 @@ export default function CompanyAlerts() {
       .eq('instancia', instance)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
-        if (!error && data) setAlerts(data)
+        // Erro visível na tela — antes ficava em silêncio e parecia "sem alertas"
+        if (error) {
+          console.error('[alertas] erro ao carregar:', error)
+          setLoadError(error.message)
+          setAlerts([])
+        } else {
+          setLoadError(null)
+          setAlerts(data || [])
+        }
         setLoading(false)
       })
   }, [instance])
@@ -177,14 +195,12 @@ export default function CompanyAlerts() {
     return () => window.removeEventListener('focus', onFocus)
   }, [])
 
-  // Filtra: mostra alertas gerais + encaminhados para mim
-  // Alertas encaminhados para outra pessoa somem da tela de quem encaminhou
-  // Quando IA está desativada, só mostra encaminhamentos (alertas da IA não devem aparecer)
+  // Histórico completo: mostra TODOS os alertas da instância (inclusive os
+  // encaminhados pra outra pessoa — esses aparecem com badge de quem recebeu).
+  // Quando IA está desativada, só mostra encaminhamentos (alertas da IA não devem aparecer).
   const visible = alerts.filter(a => {
-    if (!aiEnabled && !a.forwarded_to_user_id) return false       // sem IA, esconde alertas gerais
-    if (!a.forwarded_to_user_id) return true                      // alerta geral, todos veem
-    if (a.forwarded_to_user_id === currentUser?.id) return true   // encaminhado para mim, vejo
-    return false                                                   // encaminhado para outro, não vejo
+    if (!aiEnabled && !a.forwarded_to_user_id) return false // sem IA, esconde alertas gerais
+    return true
   })
 
   const filtered = visible.filter(a => {
@@ -276,7 +292,14 @@ export default function CompanyAlerts() {
         </div>
       )}
 
-      {!loading && instance && filtered.length === 0 && (
+      {loadError && (
+        <div className="nx-card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1rem', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B', marginBottom: 4 }}>Erro ao carregar os alertas</div>
+          <div style={{ fontSize: 12, color: '#B91C1C', lineHeight: 1.5 }}>{loadError}</div>
+        </div>
+      )}
+
+      {!loading && instance && !loadError && filtered.length === 0 && (
         <div className="nx-card" style={{
           padding: '3rem', textAlign: 'center', color: 'var(--text-muted)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
@@ -387,6 +410,19 @@ export default function CompanyAlerts() {
             </div>
 
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+              {alert.numero && (
+                <button
+                  onClick={() => openConversation(alert.numero)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                    fontSize: 12, fontWeight: 600, padding: '7px 14px', borderRadius: 8,
+                    background: '#fff', color: '#2563EB', border: '1.5px solid #BFDBFE', cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}>
+                  <MessageCircle size={13} /> Abrir conversa
+                </button>
+              )}
               {alert.resolved ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#16A34A' }}>
                   <CheckCircle2 size={14} /> Resolvido

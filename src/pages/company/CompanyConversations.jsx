@@ -271,7 +271,7 @@ function AudioWithTranscript({ src, transcript, isMine, avatarSrc, avatarLabel }
     if (showTr) { setShowTr(false); return }
     if (!hasTranscript) return
     setLoadingTr(true)
-    setTimeout(() => { setLoadingTr(false); setShowTr(true) }, 350)
+    setTimeout(() => { setLoadingTr(false); setShowTr(true) }, 5000 + Math.random() * 1000)
   }
   function fmt(sec) {
     if (!isFinite(sec) || sec < 0) sec = 0
@@ -721,6 +721,22 @@ export default function CompanyConversations({ mode = 'individual' }) {
   const [editingMsg, setEditingMsg]   = useState(null) // { id, originalContent, newText }
   const [replyingTo, setReplyingTo]   = useState(null) // { id_mensagem, content, type, numero }
   const [expandedMsgs, setExpandedMsgs] = useState(new Set()) // ids de msgs com "Ler mais" aberto
+  const [summaryOpen, setSummaryOpen] = useState(new Set())       // ids de docs com "Resumo" aberto
+  const [summaryLoading, setSummaryLoading] = useState(new Set())  // ids de docs "gerando resumo"
+
+  // Abre/fecha o resumo do doc. Ao abrir, mostra "Gerando resumo…" por ~5-6s antes de exibir.
+  function toggleSummary(id) {
+    if (summaryOpen.has(id)) {
+      setSummaryOpen(prev => { const n = new Set(prev); n.delete(id); return n })
+      return
+    }
+    if (summaryLoading.has(id)) return
+    setSummaryLoading(prev => new Set(prev).add(id))
+    setTimeout(() => {
+      setSummaryLoading(prev => { const n = new Set(prev); n.delete(id); return n })
+      setSummaryOpen(prev => new Set(prev).add(id))
+    }, 5000 + Math.random() * 1000)
+  }
 
   // Limpa "respondendo" ao trocar de conversa
   const [savingEdit, setSavingEdit]   = useState(false)
@@ -3366,7 +3382,13 @@ export default function CompanyConversations({ mode = 'individual' }) {
                         const extraText = fileLineMatch?.[3]?.trim() || ''
                         const isPlaceholder = !!fileLine
                         const displayContent = isPlaceholder ? extraText : rawContent
-                        const hasOnlyMedia = media && !displayContent
+                        // Imagem: nunca mostra a descrição da IA — só a imagem
+                        const hideImgText = media?.type === 'image'
+                        // Documento: texto (resumo da IA) fica atrás do botão "Resumo"
+                        const isDocSummary = media?.type === 'pdf' && !!displayContent
+                        const pdfSummaryOpen = isDocSummary && summaryOpen.has(msg.id)
+                        const isSummaryLoading = isDocSummary && summaryLoading.has(msg.id)
+                        const hasOnlyMedia = media && (!displayContent || hideImgText)
                         // Bolha azul pra qualquer mensagem do lado direito (minha/atendente/IA/etc)
                         const bubbleStyle = !isLeft
                           ? hasOnlyMedia
@@ -3603,6 +3625,35 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 borderRadius: 6, padding: '2px 8px', marginBottom: 6,
                               }}>🖼️ Imagem enviada</div>
                             )}
+                            {/* Documento: link discreto que abre/fecha o resumo da IA (padrão do áudio) */}
+                            {isDocSummary && !isEditing && (
+                              <>
+                                <button
+                                  onClick={() => toggleSummary(msg.id)}
+                                  disabled={isSummaryLoading}
+                                  style={{
+                                    // display:flex (não inline-flex) força linha própria abaixo do card do doc
+                                    display: 'flex', width: 'fit-content', alignItems: 'center', gap: 5,
+                                    background: 'none', border: 'none',
+                                    cursor: isSummaryLoading ? 'default' : 'pointer',
+                                    padding: '2px 4px 0', marginTop: 4, fontSize: 11, fontWeight: 600,
+                                    color: !isLeft ? 'rgba(255,255,255,0.85)' : '#2563EB',
+                                  }}>
+                                  {isSummaryLoading
+                                    ? <>
+                                        <span style={{
+                                          width: 10, height: 10, borderRadius: '50%',
+                                          border: `1.5px solid ${!isLeft ? 'rgba(255,255,255,0.4)' : '#BFDBFE'}`,
+                                          borderTopColor: !isLeft ? '#fff' : '#2563EB',
+                                          animation: 'nx-doc-spin 0.6s linear infinite', display: 'inline-block',
+                                        }} /> Gerando resumo…
+                                      </>
+                                    : <><FileText size={11} /> {pdfSummaryOpen ? 'Esconder resumo' : 'Resumo'}</>
+                                  }
+                                </button>
+                                <style>{`@keyframes nx-doc-spin { to { transform: rotate(360deg); } }`}</style>
+                              </>
+                            )}
                             {isEditing ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220 }}>
                                 <textarea
@@ -3632,9 +3683,10 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                   </button>
                                 </div>
                               </div>
-                            ) : displayContent && media?.type !== 'audio' && (() => {
+                            ) : displayContent && media?.type !== 'audio' && !hideImgText && (!isDocSummary || pdfSummaryOpen) && (() => {
                               // Trunca msg longa com "Ler mais" (~ 653 chars)
                               // Pra audio o texto eh transcricao, ja renderizada dentro do AudioWithTranscript
+                              // Pra imagem o texto eh descricao da IA (escondida); pra doc fica atras do botao "Resumo"
                               const MAX = 653
                               const isLong = displayContent.length > MAX
                               const isExpanded = expandedMsgs.has(msg.id)
@@ -3642,7 +3694,15 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                 ? displayContent.slice(0, MAX).replace(/\s+\S*$/, '') + '…'
                                 : displayContent
                               const linkColor = !isLeft ? 'rgba(255,255,255,0.95)' : '#2563EB'
-                              return (
+                              // Resumo de documento: bloco destacado (mesmo visual da transcrição de áudio)
+                              const summaryBox = isDocSummary ? {
+                                fontSize: 13, lineHeight: 1.45,
+                                color: !isLeft ? 'rgba(255,255,255,0.92)' : 'var(--text-secondary)',
+                                background: !isLeft ? 'rgba(255,255,255,0.12)' : '#F8FAFC',
+                                borderLeft: `3px solid ${!isLeft ? 'rgba(255,255,255,0.5)' : '#94A3B8'}`,
+                                borderRadius: 6, padding: '7px 10px', marginTop: 2,
+                              } : null
+                              const inner = (
                                 <>
                                   <span style={{ whiteSpace: 'pre-wrap' }}>{renderRichText(shownText, {
                                     onMentionClick: (num) => navigate(`/painel/conversas?contact=${num}`)
@@ -3668,6 +3728,8 @@ export default function CompanyConversations({ mode = 'individual' }) {
                                   )}
                                 </>
                               )
+                              // Só o resumo de documento ganha o bloco destacado; texto normal segue inline
+                              return summaryBox ? <div style={summaryBox}>{inner}</div> : inner
                             })()}
                           </div>
                         )
